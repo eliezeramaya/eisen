@@ -11,7 +11,7 @@ Highlights
 
 Getting started
 - flutter pub get
-- flutter run -d chrome (or your device)
+- scripts/dev_web.sh (debug) or scripts/dev_web.sh --release
 - flutter test
 
 Structure
@@ -22,6 +22,10 @@ Structure
 
 Docs
 - See docs/ARCHITECTURE.md and docs/THEME_TOKENS.md
+
+Env and scripts
+- Copy `.env.example` to `.env` to override `CHROME_EXECUTABLE` and `WEB_RENDERER`.
+- `scripts/dev_web.sh` tries Chrome first and falls back to `web-server`.
 
 
 ## Getting Started
