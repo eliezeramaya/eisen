@@ -1,0 +1,28 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-raw-types: true
+  strong-mode:
+    implicit-casts: false
+    implicit-dynamic: false
+  errors:
+    missing_required_param: error
+    missing_return: error
+    dead_code: warning
+
+linter:
+  rules:
+    prefer_final_locals: true
+    prefer_final_in_for_each: true
+    avoid_void_async: true
+    always_declare_return_types: true
+    avoid_print: true
+    directives_ordering: true
+    prefer_single_quotes: true
+    unawaited_futures: true
+    unnecessary_lambdas: true
+    unnecessary_parenthesis: true
+    use_super_parameters: true
+    sort_constructors_first: true
+    sort_unnamed_constructors_first: true

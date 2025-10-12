@@ -1,0 +1,26 @@
+name: Web Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+      - name: Build web
+        run: |
+          cd eisenhower_treemap_flutter
+          flutter pub get
+          flutter build web --release --base-href=/
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: eisenhower_treemap_flutter/build/web
+
