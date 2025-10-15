@@ -53,7 +53,10 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
           },
           canEdit: state.selectedId != null,
-          onExitZoom: () => ctrl.setZoom(null),
+          onExitZoom: () {
+            ctrl.setZoom(null);
+            ctrl.select(null);
+          },
           canExitZoom: state.zoom != null,
           onOpenSettings: () => showModalBottomSheet(
             context: context,
