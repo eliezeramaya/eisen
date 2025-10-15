@@ -20,6 +20,7 @@ class MatrixPage extends ConsumerStatefulWidget {
 }
 
 class _MatrixPageState extends ConsumerState<MatrixPage> {
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   @override
   void initState() {
     super.initState();
@@ -34,6 +35,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
     final layout = ctrl.layout();
 
     return Scaffold(
+      key: _scaffoldKey,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56),
         child: AppToolbar(
@@ -42,6 +44,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           onQuery: ctrl.setQuery,
           compact: state.compact,
           onToggleDensity: ctrl.toggleCompact,
+          onEdit: () => _scaffoldKey.currentState?.openEndDrawer(),
+          canEdit: state.selectedId != null,
         ),
       ),
       body: SafeArea(
@@ -71,7 +75,12 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                   tasks: state.tasks,
                   layout: layout,
                   zoom: state.zoom,
-                  onTap: ctrl.select,
+                  onTap: (id) {
+                    ctrl.select(id);
+                    if (id != null) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
+                    }
+                  },
                   onDropToQuadrant: ctrl.moveTaskToQuadrant,
                   onDoubleTapQuadrant: (q) => ctrl.setZoom(state.zoom == q ? null : q),
                 ),
