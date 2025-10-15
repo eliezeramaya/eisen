@@ -46,6 +46,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           onToggleDensity: ctrl.toggleCompact,
           onEdit: () => _scaffoldKey.currentState?.openEndDrawer(),
           canEdit: state.selectedId != null,
+          onExitZoom: () => ctrl.setZoom(null),
+          canExitZoom: state.zoom != null,
         ),
       ),
       body: SafeArea(

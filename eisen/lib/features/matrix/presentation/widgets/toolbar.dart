@@ -9,6 +9,8 @@ class AppToolbar extends StatefulWidget {
   final bool compact;
   final VoidCallback? onEdit;
   final bool canEdit;
+  final VoidCallback? onExitZoom;
+  final bool canExitZoom;
   const AppToolbar({
     super.key,
     required this.onNew,
@@ -18,6 +20,8 @@ class AppToolbar extends StatefulWidget {
     required this.compact,
     this.onEdit,
     this.canEdit = false,
+    this.onExitZoom,
+    this.canExitZoom = false,
   });
 
   @override
@@ -39,6 +43,11 @@ class _AppToolbarState extends State<AppToolbar> {
         ),
       ),
       actions: [
+        IconButton(
+          onPressed: widget.canExitZoom ? widget.onExitZoom : null,
+          tooltip: 'Full view',
+          icon: const Icon(Icons.grid_view),
+        ),
         IconButton(
           onPressed: widget.canEdit ? widget.onEdit : null,
           tooltip: 'Edit',
