@@ -105,6 +105,10 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                   },
                   onDropToQuadrant: ctrl.moveTaskToQuadrant,
                   onDoubleTapQuadrant: (q) => ctrl.setZoom(state.zoom == q ? null : q),
+                  onEditTask: (id) {
+                    final task = state.tasks.firstWhere((t) => t.id == id);
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
+                  },
                 ),
                 Align(
                   alignment: Alignment.topRight,

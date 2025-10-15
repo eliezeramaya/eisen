@@ -13,6 +13,7 @@ class TreemapCanvas extends StatefulWidget {
   final void Function(String id, Quadrant q)? onDropToQuadrant;
   final void Function(Quadrant q)? onDoubleTapQuadrant;
   final Quadrant? zoom;
+  final void Function(String id)? onEditTask;
 
   const TreemapCanvas({
     super.key,
@@ -22,6 +23,7 @@ class TreemapCanvas extends StatefulWidget {
     this.onDropToQuadrant,
     this.onDoubleTapQuadrant,
     this.zoom,
+    this.onEditTask,
   });
 
   @override
@@ -33,33 +35,64 @@ class _TreemapCanvasState extends State<TreemapCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (d) {
-        final id = _hitTest(d.localPosition, context.size!);
-        widget.onTap?.call(id);
-      },
-      onDoubleTapDown: (d) {
-        final q = _quadrantAt(d.localPosition, context.size!);
-        if (q != null) widget.onDoubleTapQuadrant?.call(q);
-      },
-      onPanStart: (d) {
-        _draggingId = _hitTest(d.localPosition, context.size!);
-      },
-      onPanEnd: (d) {
-        if (_draggingId != null && widget.zoom == null) {
-          final q = _quadrantAt(_lastPos ?? Offset.zero, context.size!);
-          if (q != null) widget.onDropToQuadrant?.call(_draggingId!, q);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = Size(constraints.maxWidth, constraints.maxHeight);
+        final overlay = <Widget>[];
+        if (widget.onEditTask != null) {
+          for (final tr in widget.layout) {
+            final r = _px(tr.rect01, size);
+            // Show edit button only for reasonably large tiles
+            if (r.width * r.height < 12000) continue;
+            const btn = 28.0;
+            overlay.add(Positioned(
+              left: r.right - btn - 6,
+              top: r.top + 6,
+              width: btn,
+              height: btn,
+              child: _EditDot(
+                onPressed: () => widget.onEditTask?.call(tr.task.id),
+              ),
+            ));
+          }
         }
-        _draggingId = null;
+
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: (d) {
+                  final id = _hitTest(d.localPosition, size);
+                  widget.onTap?.call(id);
+                },
+                onDoubleTapDown: (d) {
+                  final q = _quadrantAt(d.localPosition, size);
+                  if (q != null) widget.onDoubleTapQuadrant?.call(q);
+                },
+                onPanStart: (d) {
+                  _draggingId = _hitTest(d.localPosition, size);
+                },
+                onPanEnd: (d) {
+                  if (_draggingId != null && widget.zoom == null) {
+                    final q = _quadrantAt(_lastPos ?? Offset.zero, size);
+                    if (q != null) widget.onDropToQuadrant?.call(_draggingId!, q);
+                  }
+                  _draggingId = null;
+                },
+                onPanUpdate: (d) => _lastPos = d.localPosition,
+                child: CustomPaint(
+                  painter: _TreemapPainter(widget.layout),
+                  isComplex: true,
+                  willChange: true,
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            ),
+            ...overlay,
+          ],
+        );
       },
-      onPanUpdate: (d) => _lastPos = d.localPosition,
-      child: CustomPaint(
-        painter: _TreemapPainter(widget.layout),
-        isComplex: true,
-        willChange: true,
-        child: const SizedBox.expand(),
-      ),
     );
   }
 
@@ -85,6 +118,32 @@ class _TreemapCanvasState extends State<TreemapCanvas> {
   }
 
   Rect _px(Rect r01, Size size) => Rect.fromLTWH(r01.left * size.width, r01.top * size.height, r01.width * size.width, r01.height * size.height);
+}
+
+class _EditDot extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _EditDot({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.45),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withOpacity(0.25), width: 1),
+        ),
+        child: IconButton(
+          onPressed: onPressed,
+          padding: EdgeInsets.zero,
+          splashRadius: 16,
+          icon: const Icon(Icons.edit, size: 16, color: Colors.white),
+          tooltip: 'Edit task',
+        ),
+      ),
+    );
+  }
 }
 
 class _TreemapPainter extends CustomPainter {
