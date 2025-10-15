@@ -12,6 +12,7 @@ import '../widgets/toolbar.dart';
 import '../widgets/treemap_canvas.dart';
 import '../widgets/inspector_drawer.dart';
 import '../widgets/settings_sheet.dart';
+import 'task_editor_page.dart';
 
 class MatrixPage extends ConsumerStatefulWidget {
   const MatrixPage({super.key});
@@ -45,7 +46,12 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           onQuery: ctrl.setQuery,
           compact: state.compact,
           onToggleDensity: ctrl.toggleCompact,
-          onEdit: () => _scaffoldKey.currentState?.openEndDrawer(),
+          onEdit: () {
+            final id = state.selectedId;
+            if (id == null) return;
+            final task = state.tasks.firstWhere((t) => t.id == id);
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
+          },
           canEdit: state.selectedId != null,
           onExitZoom: () => ctrl.setZoom(null),
           canExitZoom: state.zoom != null,
