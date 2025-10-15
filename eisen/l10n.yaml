@@ -3,7 +3,6 @@ template-arb-file: app_en.arb
 output-dir: lib/l10n
 output-class: AppLocalizations
 untranslated-messages-file: l10n/untranslated.txt
-synthetic-package: false
 nullable-getter: false
 preferred-supported-locales:
   - en
