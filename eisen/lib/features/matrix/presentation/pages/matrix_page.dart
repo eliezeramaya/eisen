@@ -11,6 +11,7 @@ import '../widgets/task_tile.dart';
 import '../widgets/toolbar.dart';
 import '../widgets/treemap_canvas.dart';
 import '../widgets/inspector_drawer.dart';
+import '../widgets/settings_sheet.dart';
 
 class MatrixPage extends ConsumerStatefulWidget {
   const MatrixPage({super.key});
@@ -48,6 +49,16 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           canEdit: state.selectedId != null,
           onExitZoom: () => ctrl.setZoom(null),
           canExitZoom: state.zoom != null,
+          onOpenSettings: () => showModalBottomSheet(
+            context: context,
+            showDragHandle: true,
+            useSafeArea: true,
+            builder: (_) => SettingsSheet(
+              onToggleTheme: ctrl.toggleTheme,
+              onToggleDensity: ctrl.toggleCompact,
+              compact: state.compact,
+            ),
+          ),
         ),
       ),
       body: SafeArea(

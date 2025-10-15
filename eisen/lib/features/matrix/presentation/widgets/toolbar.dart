@@ -11,6 +11,7 @@ class AppToolbar extends StatefulWidget {
   final bool canEdit;
   final VoidCallback? onExitZoom;
   final bool canExitZoom;
+  final VoidCallback? onOpenSettings;
   const AppToolbar({
     super.key,
     required this.onNew,
@@ -22,6 +23,7 @@ class AppToolbar extends StatefulWidget {
     this.canEdit = false,
     this.onExitZoom,
     this.canExitZoom = false,
+    this.onOpenSettings,
   });
 
   @override
@@ -52,6 +54,11 @@ class _AppToolbarState extends State<AppToolbar> {
           onPressed: widget.canEdit ? widget.onEdit : null,
           tooltip: 'Edit',
           icon: const Icon(Icons.edit),
+        ),
+        IconButton(
+          onPressed: widget.onOpenSettings,
+          tooltip: 'Settings',
+          icon: const Icon(Icons.settings),
         ),
         IconButton(onPressed: widget.onToggleDensity, tooltip: widget.compact ? 'Comfortable' : 'Compact', icon: const Icon(Icons.density_medium)),
         IconButton(onPressed: widget.onToggleTheme, tooltip: 'Theme', icon: const Icon(Icons.brightness_6)),
