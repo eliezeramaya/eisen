@@ -23,19 +23,25 @@ if [[ -n "${CHROME_EXECUTABLE:-}" ]]; then
   export CHROME_EXECUTABLE
 fi
 
-flutter --version >/dev/null 2>&1 || {
-  echo "Flutter not found on PATH. Ensure 'export PATH=\"$HOME/flutter/bin:$PATH\"' or system install." >&2
+# Prefer vendored Flutter if available; fallback to PATH
+FLUTTER_BIN="$ROOT_DIR/../tools/flutter/bin/flutter"
+if [[ ! -x "$FLUTTER_BIN" ]]; then
+  FLUTTER_BIN="flutter"
+fi
+
+"$FLUTTER_BIN" --version >/dev/null 2>&1 || {
+  echo "Flutter not found (neither vendored nor on PATH)." >&2
   exit 1
 }
 
 # Ensure web is enabled (idempotent)
-flutter config --enable-web >/dev/null 2>&1 || true
+"$FLUTTER_BIN" config --enable-web >/dev/null 2>&1 || true
 
-flutter pub get
+"$FLUTTER_BIN" pub get
 
-HAS_CHROME=$(flutter devices | grep -i "chrome" -c || true)
+HAS_CHROME=$("$FLUTTER_BIN" devices | grep -i "chrome" -c || true)
 # Detect if --web-renderer flag is supported
-if flutter run -h 2>/dev/null | grep -q -- "--web-renderer"; then
+if "$FLUTTER_BIN" run -h 2>/dev/null | grep -q -- "--web-renderer"; then
   RENDER_ARGS=(--web-renderer "$WEB_RENDERER")
 else
   # Fallback for older Flutter: use Skia via dart-define for canvaskit; default to no extra flag
@@ -52,8 +58,8 @@ fi
 
 if [[ "$HAS_CHROME" -gt 0 ]]; then
   echo "Running on Chrome..."
-  flutter run -d chrome ${RENDER_ARGS[@]} $MODE
+  "$FLUTTER_BIN" run -d chrome ${RENDER_ARGS[@]} $MODE
 else
   echo "Chrome not detected. Starting web-server and print URL..."
-  flutter run -d web-server ${RENDER_ARGS[@]} $MODE
+  "$FLUTTER_BIN" run -d web-server ${RENDER_ARGS[@]} $MODE
 fi

@@ -3,5 +3,5 @@ export 'app/app.dart';
 export 'app/router.dart';
 
 export 'core/core.dart';
-export 'features/matrix/matrix.dart';
+export 'features/eisen_matrix/eisen_matrix.dart';
 

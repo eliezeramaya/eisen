@@ -3,7 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import '../core/theme/app_theme.dart';
-import '../features/matrix/application/matrix_controller.dart';
+import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'router.dart';
 
 class EisenApp extends ConsumerWidget {

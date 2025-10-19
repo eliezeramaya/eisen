@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:eisen/features/matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 
 void main() {
   test('weight increases with priority and minutes', () {

@@ -17,7 +17,7 @@ Getting started
 Structure
 - lib/app: app shell, router
 - lib/core: theme, a11y, utils, services
-- lib/features/matrix: domain, application, presentation, infra
+- lib/features/eisen_matrix: domain, data, presentation
 - l10n: ARB files (en/es)
 
 Docs

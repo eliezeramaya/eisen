@@ -1,5 +1,5 @@
-import 'package:eisen/features/matrix/domain/entities.dart';
-import 'package:eisen/features/matrix/domain/treemap_layout.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

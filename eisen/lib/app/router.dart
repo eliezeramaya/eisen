@@ -1,5 +1,5 @@
 import 'package:go_router/go_router.dart';
-import '../features/matrix/presentation/pages/matrix_page.dart';
+import 'package:eisen/features/eisen_matrix/presentation/pages/matrix_page.dart';
 
 GoRouter createRouter() {
   return GoRouter(

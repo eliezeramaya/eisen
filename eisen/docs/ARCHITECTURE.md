@@ -1,6 +1,6 @@
 Architecture Overview
 
-- Feature-first structure: features/matrix contains domain, application (controllers), presentation (widgets), infra (repos).
+- Feature-first structure: features/eisen_matrix contains domain, presentation (controllers/widgets/pages), and data (repos/datasources).
 - Domain: Task and Quadrant, weight formula, and squarified treemap layout producing normalized rects [0..1].
 - Application: Riverpod Notifier (MatrixController) handles CRUD, filters, zoom, theme mode, and persistence.
 - Presentation: CustomPainter-based TreemapCanvas for drawing and hit-testing, Toolbar, Legend, Minimap, and Inspector Drawer for editing.
