@@ -7,7 +7,8 @@ class Minimap extends StatelessWidget {
   final void Function(Quadrant q)? onSelectQuadrant;
   final VoidCallback? onFullView;
   final bool minimal;
-  const Minimap({super.key, required this.zoom, this.onSelectQuadrant, this.onFullView, this.minimal = false});
+  final List<Task>? tasks; // optional: heat density by weights
+  const Minimap({super.key, required this.zoom, this.onSelectQuadrant, this.onFullView, this.minimal = false, this.tasks});
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +52,7 @@ class Minimap extends StatelessWidget {
         ),
         child: CustomPaint(
           size: const Size(80, 80),
-          painter: _MinimapPainter(zoom, doLabel, decideLabel, delegateLabel, deleteLabel, minimal: minimal),
+          painter: _MinimapPainter(zoom, doLabel, decideLabel, delegateLabel, deleteLabel, minimal: minimal, tasks: tasks),
         ),
       ),
     );
@@ -65,7 +66,8 @@ class _MinimapPainter extends CustomPainter {
   final String delegateLabel;
   final String deleteLabel;
   final bool minimal;
-  _MinimapPainter(this.zoom, this.doLabel, this.decideLabel, this.delegateLabel, this.deleteLabel, {this.minimal = false});
+  final List<Task>? tasks;
+  _MinimapPainter(this.zoom, this.doLabel, this.decideLabel, this.delegateLabel, this.deleteLabel, {this.minimal = false, this.tasks});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -73,6 +75,30 @@ class _MinimapPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..color = minimal ? Colors.black87 : Colors.white70;
     final cell = Rect.fromLTWH(0, 0, size.width / 2, size.height / 2);
+
+    // Optional heat density by total weight per quadrant
+    if (tasks != null && tasks!.isNotEmpty) {
+      final sums = <Quadrant, double>{for (final q in Quadrant.values) q: 0.0};
+      for (final t in tasks!) {
+        sums[t.quadrant] = (sums[t.quadrant] ?? 0) + weight(t);
+      }
+      final maxV = sums.values.fold<double>(0, (a, b) => a > b ? a : b);
+      Color heat(double v) {
+        final k = (maxV <= 0) ? 0.0 : (v / maxV).clamp(0.0, 1.0);
+        final base = minimal ? Colors.black : Colors.white;
+        // Use subtle alpha ramp [0.06..0.22]
+        final alpha = 0.06 + 0.16 * k;
+        return base.withValues(alpha: alpha);
+      }
+      void fillQ(Quadrant q, Rect r) {
+        final paint = Paint()..color = heat(sums[q] ?? 0);
+        canvas.drawRect(r, paint);
+      }
+      fillQ(Quadrant.q1, cell);
+      fillQ(Quadrant.q2, cell.shift(Offset(size.width / 2, 0)));
+      fillQ(Quadrant.q3, cell.shift(Offset(0, size.height / 2)));
+      fillQ(Quadrant.q4, cell.shift(Offset(size.width / 2, size.height / 2)));
+    }
     canvas.drawRect(cell, p);
     canvas.drawRect(cell.shift(Offset(size.width / 2, 0)), p);
     canvas.drawRect(cell.shift(Offset(0, size.height / 2)), p);

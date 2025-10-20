@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:eisen/core/theme/app_theme.dart';
 import 'package:flutter/services.dart';
+import 'package:eisen/core/theme/animation_tokens.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/core/services/telemetry.dart';
@@ -56,11 +57,11 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 220))
+    _anim = AnimationController(vsync: this, duration: AnimTokens.layout)
       ..addListener(() {
         setState(() => _t = _anim.value);
       });
-    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 280))
+    _pulse = AnimationController(vsync: this, duration: AnimTokens.pulse)
       ..addListener(() {
         setState(() => _pulseT = _pulse.value);
       })
@@ -529,7 +530,7 @@ class _TreemapPainter extends CustomPainter {
       canvas.drawRect(qRect.deflate(1), border);
     }
 
-    final curveT = Curves.easeOutCubic.transform(t.clamp(0.0, 1.0));
+    final curveT = AnimTokens.curve.transform(t.clamp(0.0, 1.0));
     // Drop pulse feedback
     if (pulseQuadrant != null && pulseT > 0) {
       final qRect = _quadrantRect(pulseQuadrant!, size);
@@ -636,13 +637,17 @@ class _TreemapPainter extends CustomPainter {
       final availableHeight = drawRect.height - 12; // padding top+bottom
       double currentY = drawRect.top + 6;
       
-      // Title (max 2 lines when space)
+      // Title (max 2 lines when space). If not enough space, fallback to icon-only.
       if (availableHeight > 16) {
         final titleSize = area > 30000 ? 14.0 : (area > 16000 ? 13.0 : 12.0);
         final maxLines = area > 18000 ? 2 : 1;
         final tp = _textPainter(tr.task.title, drawRect, titleSize, FontWeight.w700, textColor: minimal ? Colors.black : Colors.white, maxLines: maxLines);
         tp.paint(canvas, Offset(drawRect.left + 8, currentY));
         currentY += tp.height + 2;
+      } else {
+        // Icon-only fallback (glyph)
+        final tp = _textPainter('•', drawRect, 14, FontWeight.w700, textColor: minimal ? Colors.black : Colors.white);
+        tp.paint(canvas, Offset(drawRect.left + 8, drawRect.top + 6));
       }
       
       // Priority and time (if medium+ size)

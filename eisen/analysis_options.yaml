@@ -12,7 +12,6 @@ analyzer:
     dead_code: warning
   exclude:
     - lib/features/importance/**
-    - lib/features/matrix/**
 
 linter:
   rules:

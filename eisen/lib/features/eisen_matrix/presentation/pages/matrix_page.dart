@@ -273,6 +273,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         minimap: Minimap(
           zoom: zoom,
           minimal: minimal,
+          tasks: tasks,
           onSelectQuadrant: (q) => ctrl.setZoom(q),
           onFullView: () {
             ctrl.setZoom(null);
