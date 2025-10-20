@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 
+/// A tile in the computed treemap layout.
+///
+/// - [rect01]: Normalized rectangle in [0..1] range (relative to quadrant or full canvas)
+/// - [task]: The task represented by this tile
+/// - [stackChildren]: Tasks grouped into this tile if below minimum area threshold
 class TreemapRect {
   final Rect rect01; // normalized [0..1]
   final Task task;
@@ -21,12 +26,22 @@ double ema(double prev, double cur, {double? alpha}) {
 
 double minTileAreaPx(double devicePixelRatio) => 44.0 * 44.0;
 
+/// Persistent cache for stable treemap layouts.
+///
+/// Stores previous weights, rects, and ranks to apply EMA smoothing
+/// and minimize layout churn between frames.
 class LayoutCache {
   final lastWeight = <String, double>{};
   final lastRect = <String, Rect>{};
   final lastRank = <String, int>{};
 }
 
+/// Computes a basic squarified treemap layout for tasks.
+///
+/// If [zoom] is provided, only tasks from that quadrant are laid out in [0..1] rect.
+/// Otherwise, each quadrant gets a 0.5 × 0.5 subregion and tasks are distributed.
+///
+/// This is the original non-stable layout without EMA or bandit tie-breaking.
 List<TreemapRect> computeSquarifiedLayout(List<Task> tasks, {Quadrant? zoom}) {
   final byQuadrant = <Quadrant, List<Task>>{
     Quadrant.q1: [],
@@ -154,13 +169,16 @@ class _Item {
 
 // ---- Stable layout with smoothing, root-scale, and bandit tie-breaker ----
 
-/// Computes a visually stable squarified treemap.
-/// - EMA smoothing of weights using [cache] if available
-/// - Root-scale area basis (sqrt) for perceptual stability
-/// - Stable ordering; applies bandit-based tie-break when areas ≈ within 5%
+/// Computes a visually stable squarified treemap with smoothing and stacking.
 ///
-/// Note: Does not enforce minimum tile area; that decision is handled at
-/// paint/hit-test time where actual pixels are known.
+/// Features:
+/// - EMA smoothing of weights using [cache] to reduce layout churn
+/// - Root-scale area basis (sqrt) for perceptual stability
+/// - Stable ordering with bandit-based tie-break when areas ≈ within 5%
+/// - [minTileArea01]: Tiles below this area are stacked into a single '+N' tile
+///
+/// If [zoom] is set, only that quadrant is laid out in the full [0..1] rect.
+/// Otherwise all four quadrants are laid out in their respective 0.5 × 0.5 subregions.
 List<TreemapRect> computeStableLayout(
   List<Task> tasks, {
   Quadrant? zoom,
@@ -197,6 +215,10 @@ List<TreemapRect> computeStableLayout(
   return out;
 }
 
+/// Lays out a single quadrant with stable layout logic.
+///
+/// Used internally by [computeStableLayout]. Can be called directly to lay out
+/// a specific quadrant's tasks into a given normalized [rect].
 List<TreemapRect> layoutQuadrantStable(
   List<Task> tasks,
   Rect rect,
@@ -206,6 +228,10 @@ List<TreemapRect> layoutQuadrantStable(
   double? minTileArea01,
 }) => _layoutStableIntoRect(tasks, rect, cache, bandit, quadrant, minTileArea01: minTileArea01);
 
+/// Computes a penalty cost for reordering stability.
+///
+/// [tau]: Hyperparameter controlling penalty sensitivity (default 0.02).
+/// Returns tau × |newRank - prevRank|.
 double reorderPenalty(int prevRank, int newRank, {double tau = 0.02}) => tau * (newRank - prevRank).abs();
 
 List<TreemapRect> _layoutStableIntoRect(

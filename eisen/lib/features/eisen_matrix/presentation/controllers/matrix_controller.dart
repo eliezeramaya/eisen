@@ -10,7 +10,25 @@ import 'package:eisen/features/eisen_matrix/data/local_repo.dart';
 import 'package:eisen/core/services/storage_prefs.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/services/telemetry.dart';
+import 'package:eisen/features/eisen_matrix/domain/usecases/create_task_usecase.dart';
+import 'package:eisen/features/eisen_matrix/domain/usecases/update_task_usecase.dart';
+import 'package:eisen/features/eisen_matrix/domain/usecases/delete_task_usecase.dart';
+import 'package:eisen/features/eisen_matrix/domain/usecases/compute_layout_usecase.dart';
+import 'package:eisen/features/eisen_matrix/domain/usecases/suggest_top_spots_usecase.dart';
+import 'package:eisen/features/eisen_matrix/domain/usecases/compute_reorder_delta_usecase.dart';
 
+/// Immutable state for the Eisenhower matrix.
+///
+/// - [tasks]: All tasks in the system
+/// - [selectedId]: Currently selected task ID (null if none)
+/// - [zoom]: Zoomed quadrant (null for full 4-quadrant view)
+/// - [presentQuadrant]: Current quadrant in presentation mode
+/// - [themeMode]: Light, dark, or system theme
+/// - [query]: Search/filter query
+/// - [compact]: Compact UI mode flag
+/// - [showAxisLegends]: Show urgency/importance axis labels
+/// - [minimal]: Minimal UI mode (hide extra chrome)
+/// - [version]: Increments on mutations to help .select detect changes
 class MatrixState {
   final List<Task> tasks;
   final String? selectedId;
@@ -62,30 +80,54 @@ class MatrixState {
       );
 }
 
+/// Main controller (Riverpod Notifier) for the Eisenhower matrix.
+///
+/// Orchestrates use cases and manages state. Delegates business logic to:
+/// - [CreateTaskUseCase]: Task creation
+/// - [UpdateTaskUseCase]: Task updates
+/// - [DeleteTaskUseCase]: Task deletion and cache cleanup
+/// - [ComputeLayoutUseCase]: Treemap layout computation
+/// - [SuggestTopSpotsUseCase]: Bandit-based suggestions
+/// - [ComputeReorderDeltaUseCase]: Layout stability metrics
 class MatrixController extends Notifier<MatrixState> {
   late final MatrixRepository _repo;
   late final UiPrefs _ui;
+  
+  // Use cases
+  late final CreateTaskUseCase _createTaskUseCase;
+  late final UpdateTaskUseCase _updateTaskUseCase;
+  late final DeleteTaskUseCase _deleteTaskUseCase;
+  late final ComputeLayoutUseCase _computeLayoutUseCase;
+  late final SuggestTopSpotsUseCase _suggestTopSpotsUseCase;
+  late final ComputeReorderDeltaUseCase _computeReorderDeltaUseCase;
+  
   final LayoutCache _cache = LayoutCache();
   final BanditService _bandit = BanditService();
-  // Small memoization to avoid recompute if inputs unchanged within a frame
-  int _lastHash = 0;
-  List<TreemapRect> _lastLayout = const [];
-  Set<Quadrant> _dirtyQuadrants = {};
-  Quadrant? _lastZoom;
-  Size? _lastViewport;
   Set<String> _suggested = {};
 
   @override
   MatrixState build() {
     _repo = LocalPrefsMatrixRepository(StoragePrefs());
     _ui = UiPrefs();
-    // Seed with some demo tasks if empty
+    
+    // Initialize use cases
+    _createTaskUseCase = CreateTaskUseCase();
+    _updateTaskUseCase = UpdateTaskUseCase();
+    _deleteTaskUseCase = DeleteTaskUseCase();
+    _computeLayoutUseCase = ComputeLayoutUseCase(cache: _cache, bandit: _bandit);
+    _suggestTopSpotsUseCase = SuggestTopSpotsUseCase(_bandit);
+    _computeReorderDeltaUseCase = ComputeReorderDeltaUseCase(_cache);
+    
     return const MatrixState(tasks: [], presentQuadrant: Quadrant.q2);
   }
 
   Future<void> load() async {
     final loaded = await _repo.load();
-    if (loaded.isEmpty) {
+    // Check if there are any active (non-completed) tasks
+    final activeTasks = loaded.where((t) => t.completedAt == null).toList();
+    
+    if (activeTasks.isEmpty) {
+      // No active tasks - load demo data
       final demo = _demoTasks();
       state = state.copyWith(tasks: demo);
       await _repo.save(demo);
@@ -100,6 +142,13 @@ class MatrixController extends Notifier<MatrixState> {
       showAxisLegends: ui.showAxisLegends,
       minimal: ui.minimal,
     );
+  }
+
+  /// Reset to demo tasks (useful for testing and demos)
+  Future<void> resetToDemo() async {
+    final demo = _demoTasks();
+    state = state.copyWith(tasks: demo, version: state.version + 1);
+    await _repo.save(demo);
   }
 
   Future<void> persist() => _repo.save(state.tasks);
@@ -143,45 +192,53 @@ class MatrixController extends Notifier<MatrixState> {
   }
 
   String createTask({Quadrant quadrant = Quadrant.q2, String title = 'New Task'}) {
-    final id = DateTime.now().millisecondsSinceEpoch.toString();
-    final t = Task(
-      id: id,
-      title: title,
-      quadrant: quadrant,
-      priority: 5,
-      minutes: 30,
-      createdAt: DateTime.now(),
+    final task = _createTaskUseCase.execute(quadrant: quadrant, title: title);
+    final tasks = [...state.tasks, task];
+    
+    state = state.copyWith(
+      tasks: tasks,
+      selectedId: task.id,
+      version: state.version + 1,
     );
-    final tasks = [...state.tasks, t];
-    state = state.copyWith(tasks: tasks, selectedId: id, version: state.version + 1);
-    _dirtyQuadrants.add(quadrant);
+    
+    _computeLayoutUseCase.markDirty({quadrant});
     unawaited(persist());
-    return id;
+    
+    return task.id;
   }
 
   void updateTask(String id, Task Function(Task) updater) {
     final prev = state.tasks.firstWhere((t) => t.id == id);
-    final next = updater(prev).copyWith(updatedAt: DateTime.now());
+    final next = _updateTaskUseCase.execute(prev, updater);
     final tasks = state.tasks.map((t) => t.id == id ? next : t).toList();
+    
     state = state.copyWith(tasks: tasks, version: state.version + 1);
+    
+    // Mark dirty quadrants
+    final dirtyQuadrants = <Quadrant>{};
     if (prev.quadrant != next.quadrant) {
-      _dirtyQuadrants.add(prev.quadrant);
-      _dirtyQuadrants.add(next.quadrant);
+      dirtyQuadrants.addAll([prev.quadrant, next.quadrant]);
     } else {
-      _dirtyQuadrants.add(next.quadrant);
+      dirtyQuadrants.add(next.quadrant);
     }
+    _computeLayoutUseCase.markDirty(dirtyQuadrants);
+    
     unawaited(persist());
   }
 
   void deleteTask(String id) {
     final prev = state.tasks.firstWhere((t) => t.id == id, orElse: () => state.tasks.first);
     final tasks = state.tasks.where((t) => t.id != id).toList();
-    state = state.copyWith(tasks: tasks, selectedId: state.selectedId == id ? null : state.selectedId, version: state.version + 1);
-    _dirtyQuadrants.add(prev.quadrant);
-    // Clean caches to prevent leaks
-    _cache.lastWeight.remove(id);
-    _cache.lastRect.remove(id);
-    _cache.lastRank.remove(id);
+    
+    state = state.copyWith(
+      tasks: tasks,
+      selectedId: state.selectedId == id ? null : state.selectedId,
+      version: state.version + 1,
+    );
+    
+    _computeLayoutUseCase.markDirty({prev.quadrant});
+    _deleteTaskUseCase.cleanupCache(id, _cache);
+    
     unawaited(persist());
   }
 
@@ -191,182 +248,246 @@ class MatrixController extends Notifier<MatrixState> {
     updateTask(id, (t) => t.copyWith(completedAt: DateTime.now()));
   }
 
-  /// Computes a stable layout. If there are pending dirty quadrants and not zoomed,
-  /// recomputes only affected quadrants and merges with cached layout.
+  /// Computes the treemap layout with filtering and delegates to use case.
   List<TreemapRect> layout({Quadrant? only, Size? viewport}) {
-    final filtered = state.query.isEmpty
-        ? state.tasks
-        : state.tasks.where((t) => t.title.toLowerCase().contains(state.query.toLowerCase())).toList();
-    int h = Object.hashAllUnordered(filtered.map((t) => t.id)) ^ filtered.length ^ (state.zoom?.index ?? -1);
-    double? minArea01;
-    if (viewport != null && viewport.width > 0 && viewport.height > 0) {
-      final minPx = 44.0 * 44.0;
-      final totalPx = viewport.width * viewport.height;
-      minArea01 = (minPx / totalPx).clamp(0.0, 1.0);
-    }
-    final zoom = state.zoom;
-    final viewportChanged = _lastViewport == null || viewport == null || _lastViewport != viewport;
-    final zoomChanged = _lastZoom != zoom;
-    if (viewport != null) {
-      h ^= viewport.width.round();
-      h ^= (viewport.height.round() << 16);
-    }
-    if (only == null && _dirtyQuadrants.isEmpty && !zoomChanged && !viewportChanged && _lastHash == h) {
-      return _lastLayout;
-    }
-    if (zoom != null) {
-      final rect = const Rect.fromLTWH(0, 0, 1, 1);
-      final tasksInQ = filtered.where((t) => t.quadrant == zoom).toList();
-      final sw = Stopwatch()..start();
-      final part = layoutQuadrantStable(tasksInQ, rect, _cache, _bandit, zoom, minTileArea01: minArea01);
-      sw.stop(); Telemetry.layoutTime(zoom.name, sw.elapsedMicroseconds / 1000.0);
-      _lastLayout = part;
-      _lastHash = h;
-      _lastZoom = zoom;
-      _lastViewport = viewport;
-      _dirtyQuadrants.clear();
-      _computeTopSpots(_lastLayout);
-      return _lastLayout;
-    }
-    if (only != null) {
-      _dirtyQuadrants.add(only);
-    }
-    if (_lastLayout.isEmpty || viewportChanged || zoomChanged || _dirtyQuadrants.length >= 4) {
-      final sw = Stopwatch()..start();
-      final out = computeStableLayout(filtered, zoom: null, cache: _cache, bandit: _bandit, minTileArea01: minTileArea01);
-      sw.stop(); Telemetry.layoutTime(null, sw.elapsedMicroseconds / 1000.0);
-      _lastLayout = out;
-      _lastHash = h;
-      _lastZoom = zoom;
-      _lastViewport = viewport;
-      _dirtyQuadrants.clear();
-      _computeTopSpots(_lastLayout);
-      return out;
-    }
-    final keepQuadrants = {Quadrant.q1, Quadrant.q2, Quadrant.q3, Quadrant.q4}..removeAll(_dirtyQuadrants);
-    final prevByQ = <Quadrant, List<TreemapRect>>{for (final q in Quadrant.values) q: []};
-    for (final tr in _lastLayout) {
-      prevByQ[tr.task.quadrant]!.add(tr);
-    }
-    final qRects = <Quadrant, Rect>{
-      Quadrant.q1: const Rect.fromLTWH(0, 0, 0.5, 0.5),
-      Quadrant.q2: const Rect.fromLTWH(0.5, 0, 0.5, 0.5),
-      Quadrant.q3: const Rect.fromLTWH(0, 0.5, 0.5, 0.5),
-      Quadrant.q4: const Rect.fromLTWH(0.5, 0.5, 0.5, 0.5),
-    };
-    final tasksByQ = <Quadrant, List<Task>>{for (final q in Quadrant.values) q: []};
-    for (final t in filtered) {
-      tasksByQ[t.quadrant]!.add(t);
-    }
-    final merged = <TreemapRect>[];
-    final existingIds = filtered.map((t) => t.id).toSet();
-    for (final q in keepQuadrants) {
-      final kept = prevByQ[q]!.where((tr) => existingIds.contains(tr.task.id)).toList();
-      merged.addAll(kept);
-    }
-    for (final q in _dirtyQuadrants) {
-      final sw = Stopwatch()..start();
-      final part = layoutQuadrantStable(tasksByQ[q]!, qRects[q]!, _cache, _bandit, q, minTileArea01: minTileArea01);
-      sw.stop(); Telemetry.layoutTime(q.name, sw.elapsedMicroseconds / 1000.0);
-      merged.addAll(part);
-    }
-    _lastLayout = merged;
-    _lastHash = h;
-    _lastZoom = zoom;
-    _lastViewport = viewport;
-    _dirtyQuadrants.clear();
-    _computeTopSpots(_lastLayout);
-    _computeTop3ReorderDelta(_lastLayout);
-    return merged;
-  }
+    // Filter out completed tasks and apply search query
+    final filtered = state.tasks
+        .where((t) => t.completedAt == null)
+        .where((t) => state.query.isEmpty || 
+                     t.title.toLowerCase().contains(state.query.toLowerCase()))
+        .toList();
 
-  void _computeTopSpots(List<TreemapRect> layout) {
-    final byQ = <Quadrant, List<TreemapRect>>{for (final q in Quadrant.values) q: []};
-    for (final tr in layout) {
-      if (tr.stackChildren.isNotEmpty) continue;
-      byQ[tr.task.quadrant]!.add(tr);
-    }
-    final sug = <String>{};
-    for (final q in Quadrant.values) {
-      final list = byQ[q]!;
-      if (list.isEmpty) continue;
-      // Areas
-      final areas = list.map((e) => e.rect01.width * e.rect01.height).toList();
-      final maxA = areas.reduce((a, b) => a > b ? a : b);
-      final cand = <Task>[];
-      for (var i = 0; i < list.length; i++) {
-        if (areas[i] >= maxA * 0.95) cand.add(list[i].task);
-      }
-      if (cand.isEmpty) continue;
-      final top = _bandit.pickTopSpot(cand, q);
-      if (top != null) sug.add(top);
-    }
-    _suggested = sug;
-    if (sug.isNotEmpty) Telemetry.suggestedExpose(sug);
-  }
+    final layout = _computeLayoutUseCase.execute(
+      tasks: filtered,
+      zoom: state.zoom,
+      viewport: viewport,
+      only: only,
+    );
 
-  void _computeTop3ReorderDelta(List<TreemapRect> layout) {
-    // Compare previous vs current top-3 ids per quadrant
-    final prevByQ = <Quadrant, List<String>>{for (final q in Quadrant.values) q: []};
-    final currByQ = <Quadrant, List<String>>{for (final q in Quadrant.values) q: []};
-    // previous top3 from _lastLayout is not available here (we just replaced it). So track via cache.lastRank
-    // Build previous ordering list by ascending lastRank
+    // Update suggestions and compute metrics
+    _suggested = _suggestTopSpotsUseCase.execute(layout);
+    
     final taskById = {for (final t in state.tasks) t.id: t};
-    for (final q in Quadrant.values) {
-      final ids = _cache.lastRank.keys.where((id) {
-        final t = taskById[id];
-        return t != null && t.quadrant == q;
-      }).toList();
-      ids.sort((a,b) => (_cache.lastRank[a] ?? 1<<30).compareTo(_cache.lastRank[b] ?? 1<<30));
-      prevByQ[q] = ids.take(3).toList();
-    }
-    for (final q in Quadrant.values) {
-      final items = layout.where((e) => e.task.quadrant == q && e.stackChildren.isEmpty).toList();
-      if (items.isEmpty) continue;
-      items.sort((a,b) => (b.rect01.width*b.rect01.height).compareTo(a.rect01.width*a.rect01.height));
-      currByQ[q] = items.map((e)=>e.task.id).take(3).toList();
-    }
-    int delta = 0;
-    for (final q in Quadrant.values) {
-      final a = prevByQ[q]!;
-      final b = currByQ[q]!;
-      // count symmetric difference in positions
-      final setA = a.toSet();
-      final setB = b.toSet();
-      final sym = {...setA.difference(setB), ...setB.difference(setA)};
-      delta += sym.length;
-    }
-    if (delta > 0) Telemetry.top3ReorderDelta(delta);
+    _computeReorderDeltaUseCase.execute(layout, taskById);
+
+    return layout;
   }
 
   Set<String> get suggestedTopSpots => _suggested;
 
-  /// Public API alias for layout, for clarity in call sites.
-  /// If [only] is provided, marks that quadrant dirty and recomputes just it.
-  List<TreemapRect> computeLayout({Quadrant? only, Size? viewport}) => layout(only: only, viewport: viewport);
+  /// Public API: Computes layout for given viewport.
+  List<TreemapRect> computeLayout({Quadrant? only, Size? viewport}) {
+    return layout(only: only, viewport: viewport);
+  }
 
   /// Manually invalidate layout cache for [q] (or all if null).
   void invalidateLayout([Quadrant? q]) {
-    if (q == null) {
-      _dirtyQuadrants = {Quadrant.q1, Quadrant.q2, Quadrant.q3, Quadrant.q4};
-    } else {
-      _dirtyQuadrants.add(q);
-    }
+    _computeLayoutUseCase.invalidate(q);
   }
 
   List<Task> _demoTasks() {
-    final r = Random(42);
-    Quadrant q(int i) => Quadrant.values[i % 4];
-    return List.generate(24, (i) {
-      return Task(
-        id: 't$i',
-        title: 'Task ${i + 1}',
-        quadrant: q(i + 1),
-        priority: 1 + r.nextInt(10),
-        minutes: 10 + r.nextInt(120),
-        createdAt: DateTime.now().subtract(Duration(days: r.nextInt(10))),
-      );
-    });
+    final now = DateTime.now();
+    return [
+      // Q1: Urgente e Importante (Do First)
+      Task(
+        id: 't1',
+        title: 'Presentación ejecutiva',
+        quadrant: Quadrant.q1,
+        priority: 10,
+        minutes: 120,
+        due: now.add(const Duration(hours: 4)),
+        notes: 'Reunión con CEO a las 2pm',
+        createdAt: now.subtract(const Duration(days: 1)),
+      ),
+      Task(
+        id: 't2',
+        title: 'Bug crítico en producción',
+        quadrant: Quadrant.q1,
+        priority: 10,
+        minutes: 180,
+        due: now.add(const Duration(hours: 2)),
+        tags: ['urgente', 'backend'],
+        createdAt: now.subtract(const Duration(hours: 3)),
+      ),
+      Task(
+        id: 't3',
+        title: 'Entregar propuesta cliente',
+        quadrant: Quadrant.q1,
+        priority: 9,
+        minutes: 90,
+        due: now.add(const Duration(days: 1)),
+        category: 'Ventas',
+        createdAt: now.subtract(const Duration(days: 2)),
+      ),
+      Task(
+        id: 't4',
+        title: 'Revisar contratos legales',
+        quadrant: Quadrant.q1,
+        priority: 8,
+        minutes: 60,
+        due: now.add(const Duration(hours: 6)),
+        createdAt: now.subtract(const Duration(days: 1)),
+      ),
+
+      // Q2: No urgente e Importante (Schedule)
+      Task(
+        id: 't5',
+        title: 'Planificación estratégica Q4',
+        quadrant: Quadrant.q2,
+        priority: 9,
+        minutes: 240,
+        due: now.add(const Duration(days: 7)),
+        notes: 'Definir OKRs y roadmap',
+        category: 'Estrategia',
+        createdAt: now.subtract(const Duration(days: 5)),
+      ),
+      Task(
+        id: 't6',
+        title: 'Refactorizar arquitectura',
+        quadrant: Quadrant.q2,
+        priority: 8,
+        minutes: 360,
+        due: now.add(const Duration(days: 14)),
+        tags: ['tech-debt', 'backend'],
+        notes: 'Implementar Clean Architecture',
+        createdAt: now.subtract(const Duration(days: 3)),
+      ),
+      Task(
+        id: 't7',
+        title: 'Curso de liderazgo',
+        quadrant: Quadrant.q2,
+        priority: 7,
+        minutes: 120,
+        due: now.add(const Duration(days: 10)),
+        category: 'Desarrollo personal',
+        createdAt: now.subtract(const Duration(days: 7)),
+      ),
+      Task(
+        id: 't8',
+        title: 'Documentar API v2',
+        quadrant: Quadrant.q2,
+        priority: 7,
+        minutes: 180,
+        due: now.add(const Duration(days: 5)),
+        tags: ['docs', 'backend'],
+        createdAt: now.subtract(const Duration(days: 4)),
+      ),
+      Task(
+        id: 't9',
+        title: 'Ejercicio y meditación',
+        quadrant: Quadrant.q2,
+        priority: 8,
+        minutes: 60,
+        category: 'Salud',
+        notes: '30min cardio + 30min yoga',
+        createdAt: now.subtract(const Duration(days: 2)),
+      ),
+      Task(
+        id: 't10',
+        title: 'Leer sobre ML/AI',
+        quadrant: Quadrant.q2,
+        priority: 6,
+        minutes: 90,
+        category: 'Aprendizaje',
+        tags: ['ai', 'research'],
+        createdAt: now.subtract(const Duration(days: 6)),
+      ),
+
+      // Q3: Urgente pero No importante (Delegate)
+      Task(
+        id: 't11',
+        title: 'Responder emails rutinarios',
+        quadrant: Quadrant.q3,
+        priority: 5,
+        minutes: 45,
+        due: now.add(const Duration(hours: 8)),
+        notes: 'Delegar a asistente',
+        createdAt: now.subtract(const Duration(hours: 5)),
+      ),
+      Task(
+        id: 't12',
+        title: 'Llamada de seguimiento',
+        quadrant: Quadrant.q3,
+        priority: 4,
+        minutes: 30,
+        due: now.add(const Duration(hours: 3)),
+        category: 'Comunicación',
+        createdAt: now.subtract(const Duration(hours: 2)),
+      ),
+      Task(
+        id: 't13',
+        title: 'Actualizar presentación',
+        quadrant: Quadrant.q3,
+        priority: 5,
+        minutes: 60,
+        due: now.add(const Duration(days: 1)),
+        createdAt: now.subtract(const Duration(days: 1)),
+      ),
+      Task(
+        id: 't14',
+        title: 'Organizar archivo digital',
+        quadrant: Quadrant.q3,
+        priority: 3,
+        minutes: 40,
+        due: now.add(const Duration(hours: 12)),
+        createdAt: now.subtract(const Duration(days: 3)),
+      ),
+      Task(
+        id: 't15',
+        title: 'Reunión status semanal',
+        quadrant: Quadrant.q3,
+        priority: 4,
+        minutes: 45,
+        due: now.add(const Duration(hours: 24)),
+        category: 'Reuniones',
+        createdAt: now.subtract(const Duration(days: 2)),
+      ),
+
+      // Q4: No urgente y No importante (Eliminate)
+      Task(
+        id: 't16',
+        title: 'Revisar redes sociales',
+        quadrant: Quadrant.q4,
+        priority: 2,
+        minutes: 20,
+        notes: 'Considerar eliminar o reducir',
+        createdAt: now.subtract(const Duration(hours: 6)),
+      ),
+      Task(
+        id: 't17',
+        title: 'Ver videos de YouTube',
+        quadrant: Quadrant.q4,
+        priority: 1,
+        minutes: 45,
+        createdAt: now.subtract(const Duration(hours: 8)),
+      ),
+      Task(
+        id: 't18',
+        title: 'Reorganizar escritorio',
+        quadrant: Quadrant.q4,
+        priority: 2,
+        minutes: 25,
+        createdAt: now.subtract(const Duration(days: 1)),
+      ),
+      Task(
+        id: 't19',
+        title: 'Configurar widgets',
+        quadrant: Quadrant.q4,
+        priority: 2,
+        minutes: 30,
+        category: 'Personalización',
+        createdAt: now.subtract(const Duration(days: 4)),
+      ),
+      Task(
+        id: 't20',
+        title: 'Jugar videojuegos',
+        quadrant: Quadrant.q4,
+        priority: 1,
+        minutes: 60,
+        notes: 'Tiempo de ocio',
+        createdAt: now.subtract(const Duration(days: 2)),
+      ),
+    ];
   }
 }
 

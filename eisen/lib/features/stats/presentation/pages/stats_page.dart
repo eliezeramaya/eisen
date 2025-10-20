@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/stats_controller.dart';
+import '../../domain/models.dart';
 import '../widgets/card_today.dart';
 import '../widgets/card_week.dart';
 import '../widgets/card_balance.dart';
@@ -14,10 +15,10 @@ class StatsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final weekly = ref.watch(weeklyStatsProvider);
-    final streak = ref.watch(streakProvider);
-    final balance = ref.watch(balanceProvider);
-    final trends = ref.watch(trendsProvider);
+  final weekly = ref.watch(weeklyStatsProvider);
+  final streak = ref.watch(streakProvider);
+  final balance = ref.watch(balanceProvider);
+  final trends = ref.watch(trendsProvider);
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 250),
@@ -25,12 +26,15 @@ class StatsPage extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         child: LayoutBuilder(builder: (context, constraints) {
           final isWide = constraints.maxWidth > 720;
+          final weeklyVal = weekly.when<WeeklyStats?>(data: (v) => v, loading: () => null, error: (_, __) => null);
+          final balanceVal = balance.when<BalanceBreakdown?>(data: (v) => v, loading: () => null, error: (_, __) => null);
+          final trendsVal = trends.when<List<TrendPoint>?>(data: (v) => v, loading: () => null, error: (_, __) => null);
           final children = <Widget>[
-            CardToday(weekly: weekly.valueOrNull, streak: streak),
-            CardWeek(weekly: weekly.valueOrNull),
-            CardBalance(balance: balance.valueOrNull),
-            CardFocus(weekly: weekly.valueOrNull),
-            CardTrends(trend: trends.valueOrNull),
+            CardToday(weekly: weeklyVal, streak: streak),
+            CardWeek(weekly: weeklyVal),
+            CardBalance(balance: balanceVal),
+            CardFocus(weekly: weeklyVal),
+            CardTrends(trend: trendsVal),
             const CardNudges(),
           ];
           if (!isWide) {

@@ -80,6 +80,17 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
               compact: compact,
               showAxisLegends: showAxisLegends,
               onToggleAxisLegends: ctrl.toggleAxisLegends,
+              onResetToDemo: () async {
+                await ctrl.resetToDemo();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✨ Tareas demo restauradas (20 tareas)'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
             ),
           ),
         ),
@@ -127,12 +138,12 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                 ),
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: state.minimal ? Colors.white : tokens.glassBg,
+                    color: minimal ? Colors.white : tokens.glassBg,
                     borderRadius: BorderRadius.circular(tokens.radius),
-                    border: state.minimal
+                    border: minimal
                         ? Border.all(color: Colors.transparent, width: 0)
                         : Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1),
-                    boxShadow: state.minimal
+                    boxShadow: minimal
                         ? const []
                         : [
                             BoxShadow(color: tokens.halo.withValues(alpha: 0.15), blurRadius: 24, spreadRadius: 2),
@@ -140,7 +151,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                   ),
                 ),
                 ColorFiltered(
-                  colorFilter: state.minimal
+                  colorFilter: minimal
                       ? const ColorFilter.matrix(<double>[
                           0.2126, 0.7152, 0.0722, 0, 0,
                           0.2126, 0.7152, 0.0722, 0, 0,
@@ -154,65 +165,98 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                       // Recompute incrementally based on current viewport
                       final dynamicLayout = ctrl.computeLayout(viewport: size);
                       final suggested = ctrl.suggestedTopSpots;
-                      return AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 240),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeOutCubic,
-                        child: TreemapCanvas(
-                          key: ValueKey('${zoom}_${dynamicLayout.length}_${suggested.length}'),
-                          tasks: tasks,
-                          layout: dynamicLayout,
-                          suggestedIds: suggested,
-                          minimal: minimal,
-                          zoom: zoom,
-                          presentQuadrant: zoom ?? ref.read(matrixControllerProvider).presentQuadrant,
-                          inlineEditId: _inlineEditId,
-                          onInlineSubmit: (id, title) {
-                            ctrl.updateTask(id, (t) => t.copyWith(title: title));
-                            setState(() => _inlineEditId = null);
-                          },
-                          onInlineCancel: (id) {
-                            final t = tasks.firstWhere((e) => e.id == id);
-                            if (t.title == 'New Task' && (t.notes == null || t.notes!.isEmpty)) {
-                              ctrl.deleteTask(id);
-                            }
-                            setState(() => _inlineEditId = null);
-                          },
-                          onTap: (id) {
-                            ctrl.select(id);
-                            if (id != null) {
-                              WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
-                            }
-                          },
-                          onDropToQuadrant: (id, q) {
-                            final prev = tasks.firstWhere((t) => t.id == id).quadrant;
-                            if (prev == q) return; // no-op
-                            ctrl.moveTaskToQuadrant(id, q);
-                            final qName = q.name.toUpperCase();
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Tarea movida a $qName'),
-                                action: SnackBarAction(
-                                  label: 'Deshacer',
-                                  onPressed: () {
-                                    ctrl.moveTaskToQuadrant(id, prev);
-                                  },
-                                ),
-                                duration: const Duration(seconds: 4),
+                      final l10n = AppLocalizations.of(context);
+                      return Stack(
+                        children: [
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 240),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeOutCubic,
+                            child: TreemapCanvas(
+                              key: ValueKey('${zoom}_${dynamicLayout.length}_${suggested.length}'),
+                              tasks: tasks,
+                              layout: dynamicLayout,
+                              suggestedIds: suggested,
+                              minimal: minimal,
+                              zoom: zoom,
+                              presentQuadrant: zoom ?? ref.read(matrixControllerProvider).presentQuadrant,
+                              inlineEditId: _inlineEditId,
+                              onInlineSubmit: (id, title) {
+                                ctrl.updateTask(id, (t) => t.copyWith(title: title));
+                                setState(() => _inlineEditId = null);
+                              },
+                              onInlineCancel: (id) {
+                                final t = tasks.firstWhere((e) => e.id == id);
+                                if (t.title == 'New Task' && (t.notes == null || t.notes!.isEmpty)) {
+                                  ctrl.deleteTask(id);
+                                }
+                                setState(() => _inlineEditId = null);
+                              },
+                              onTap: (id) {
+                                ctrl.select(id);
+                                if (id != null) {
+                                  WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
+                                }
+                              },
+                              onDropToQuadrant: (id, q) {
+                                final prev = tasks.firstWhere((t) => t.id == id).quadrant;
+                                if (prev == q) return; // no-op
+                                ctrl.moveTaskToQuadrant(id, q);
+                                final qName = q.name.toUpperCase();
+                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Tarea movida a $qName'),
+                                    action: SnackBarAction(
+                                      label: 'Deshacer',
+                                      onPressed: () {
+                                        ctrl.moveTaskToQuadrant(id, prev);
+                                      },
+                                    ),
+                                    duration: const Duration(seconds: 4),
+                                  ),
+                                );
+                              },
+                              onDoubleTapQuadrant: (q) { ctrl.setZoom(zoom == q ? null : q); ctrl.setPresentQuadrant(q); },
+                              onEditTask: (id) {
+                                final task = tasks.firstWhere((t) => t.id == id);
+                                Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
+                              },
+                              onMarkDone: (id) {
+                                ctrl.markTaskDone(id);
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('¡Tarea completada!'), duration: Duration(milliseconds: 900)));
+                              },
+                            ),
+                          ),
+                          if (dynamicLayout.isEmpty)
+                            Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.grid_view_rounded, size: 40, color: minimal ? Colors.black54 : Colors.white70),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    query.isEmpty ? 'No hay tareas para mostrar' : 'Sin resultados para "${query}"',
+                                    style: TextStyle(
+                                      color: minimal ? Colors.black87 : Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  FilledButton.icon(
+                                    onPressed: () {
+                                      final q = zoom ?? Quadrant.q2;
+                                      final id = ctrl.createTask(quadrant: q);
+                                      ctrl.select(id);
+                                      setState(() => _inlineEditId = id);
+                                    },
+                                    icon: const Icon(Icons.add),
+                                    label: Text(l10n.newTask),
+                                  ),
+                                ],
                               ),
-                            );
-                          },
-                          onDoubleTapQuadrant: (q) { ctrl.setZoom(zoom == q ? null : q); ctrl.setPresentQuadrant(q); },
-                          onEditTask: (id) {
-                            final task = tasks.firstWhere((t) => t.id == id);
-                            Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
-                          },
-                          onMarkDone: (id) {
-                            ctrl.markTaskDone(id);
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('¡Tarea completada!'), duration: Duration(milliseconds: 900)));
-                          },
-                        ),
+                            ),
+                        ],
                       );
                     },
                   ),
@@ -297,6 +341,27 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
   }
 }
 
+class _ProgressBanner extends StatelessWidget {
+  final bool minimal;
+  const _ProgressBanner({required this.minimal});
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: minimal ? Colors.black87 : Colors.white.withValues(alpha: 0.9),
+          fontWeight: FontWeight.w600,
+        );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.auto_awesome, size: 14, color: minimal ? Colors.black87 : Colors.white.withValues(alpha: 0.9)),
+        const SizedBox(width: 6),
+        Text('Beta • Mejoras activas', style: style),
+      ],
+    );
+  }
+}
+
 class _QuickAddButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
@@ -326,54 +391,6 @@ void _quickAdd(BuildContext context, Quadrant q, MatrixController ctrl) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text('Tarea creada en ${q.name.toUpperCase()}'), duration: const Duration(seconds: 3)),
   );
-}
-
-class _AxisLegends extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: IgnorePointer(
-        ignoring: true,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final w = constraints.maxWidth;
-            final h = constraints.maxHeight;
-            final halfW = w / 2;
-            final halfH = h / 2;
-    final style = Theme.of(context).textTheme.labelLarge?.copyWith(
-      color: Colors.white.withValues(alpha: 0.85),
-                  fontWeight: FontWeight.w600,
-                );
-            final l10n = AppLocalizations.of(context);
-            return Stack(children: [
-              // X-axis (horizontal): No importante (left) — Importante (right)
-              Positioned(
-                left: 16,
-                top: halfH - 18,
-                child: Text(l10n.axisNotImportant, style: style),
-              ),
-              Positioned(
-                right: 16,
-                top: halfH - 18,
-                child: Text(l10n.axisImportant, style: style),
-              ),
-              // Y-axis (vertical): Urgente (top) — No urgente (bottom)
-              Positioned(
-                left: halfW - 50,
-                top: 12,
-                child: Text(l10n.axisUrgent, style: style),
-              ),
-              Positioned(
-                left: halfW - 62,
-                bottom: 12,
-                child: Text(l10n.axisNotUrgent, style: style),
-              ),
-            ]);
-          },
-        ),
-      ),
-    );
-  }
 }
 
 class _TopAxisLegends extends StatelessWidget {

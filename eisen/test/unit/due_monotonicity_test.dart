@@ -22,9 +22,11 @@ void main() {
 
     final cache = LayoutCache();
     final layoutFar = computeStableLayout([t1_far, ...others], zoom: Quadrant.q2, cache: cache);
-    final areaFar = layoutFar.firstWhere((e) => e.task.id == 't1').rect01.size.area;
+  final farSize = layoutFar.firstWhere((e) => e.task.id == 't1').rect01.size;
+  final areaFar = farSize.width * farSize.height;
     final layoutNear = computeStableLayout([t1_near, ...others], zoom: Quadrant.q2, cache: cache);
-    final areaNear = layoutNear.firstWhere((e) => e.task.id == 't1').rect01.size.area;
+  final nearSize = layoutNear.firstWhere((e) => e.task.id == 't1').rect01.size;
+  final areaNear = nearSize.width * nearSize.height;
     expect(areaNear >= areaFar, isTrue);
   });
 }

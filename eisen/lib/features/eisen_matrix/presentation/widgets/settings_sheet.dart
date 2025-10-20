@@ -6,7 +6,17 @@ class SettingsSheet extends StatelessWidget {
   final bool compact;
   final bool showAxisLegends;
   final VoidCallback onToggleAxisLegends;
-  const SettingsSheet({super.key, required this.onToggleTheme, required this.onToggleDensity, required this.compact, required this.showAxisLegends, required this.onToggleAxisLegends});
+  final VoidCallback? onResetToDemo;
+  
+  const SettingsSheet({
+    super.key,
+    required this.onToggleTheme,
+    required this.onToggleDensity,
+    required this.compact,
+    required this.showAxisLegends,
+    required this.onToggleAxisLegends,
+    this.onResetToDemo,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +61,37 @@ class SettingsSheet extends StatelessWidget {
               secondary: const Icon(Icons.label_outline),
               title: const Text('Mostrar leyendas de ejes'),
             ),
+            if (onResetToDemo != null) ...[
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.refresh, color: Colors.orange),
+                title: const Text('Restaurar tareas demo'),
+                subtitle: const Text('Reemplazar todas las tareas con ejemplos'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('¿Restaurar tareas demo?'),
+                      content: const Text('Esto eliminará todas tus tareas actuales y las reemplazará con 20 tareas de ejemplo.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('Cancelar'),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            onResetToDemo!();
+                          },
+                          child: const Text('Restaurar'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
             const SizedBox(height: 8),
           ],
         ),

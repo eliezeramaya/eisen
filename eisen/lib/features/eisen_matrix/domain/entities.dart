@@ -1,12 +1,25 @@
 import 'dart:math' as math;
 
+/// Eisenhower matrix quadrant.
+///
+/// - [q1]: Urgent & Important (Do first)
+/// - [q2]: Not urgent & Important (Schedule)
+/// - [q3]: Urgent & Not important (Delegate)
+/// - [q4]: Not urgent & Not important (Eliminate)
 enum Quadrant { q1, q2, q3, q4 }
 
+/// Extension providing urgency and importance flags for quadrants.
 extension QuadrantX on Quadrant {
   bool get isUrgent => this == Quadrant.q1 || this == Quadrant.q2;
   bool get isImportant => this == Quadrant.q1 || this == Quadrant.q4;
 }
 
+/// A task in the Eisenhower matrix.
+///
+/// Represents a single task with priority (1-10), estimated minutes,
+/// and optional due date, tags, notes, and category.
+///
+/// Weight for layout is computed from priority × minutes × due-date urgency.
 class Task {
   final String id;
   final String title;
@@ -98,7 +111,11 @@ class Task {
   double get minutesNorm => ((normalizedMinutes ?? (minutesClamped - 5.0) / (240.0 - 5.0))).clamp(0.0, 1.0);
 }
 
-/// Returns the base weight for a task used by the treemap layout.
+/// Computes the visual weight for a task used by the treemap layout.
+///
+/// Weight = priority × minutes × due-date urgency multiplier.
+/// Tasks without due dates receive a base multiplier of 1.0.
+/// Closer due dates receive higher multipliers exponentially.
 ///
 /// Monotonicity guarantee w.r.t. due date proximity:
 ///   For two otherwise-identical tasks A and B, if A has an earlier due date

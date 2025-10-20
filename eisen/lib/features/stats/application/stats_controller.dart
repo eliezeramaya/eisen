@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/stats_repo.dart';
 import '../domain/models.dart';
 
-final statsRepoProvider = Provider<StatsRepo>((ref) => StatsRepo(ref.read));
+final statsRepoProvider = Provider<StatsRepo>((ref) => StatsRepo(ref));
 
 final weeklyStatsProvider = FutureProvider<WeeklyStats>((ref) async {
   final repo = ref.read(statsRepoProvider);

@@ -5,10 +5,10 @@ import '../domain/models.dart';
 import '../domain/calculators.dart' as calc;
 
 class StatsRepo {
-  final Reader read;
-  StatsRepo(this.read);
+  final Ref ref;
+  StatsRepo(this.ref);
 
-  List<Task> _tasks() => read(matrixControllerProvider).tasks;
+  List<Task> _tasks() => ref.read(matrixControllerProvider).tasks;
 
   Future<WeeklyStats> computeWeeklyStats(DateTime now) async {
     final tasks = _tasks();
@@ -17,7 +17,7 @@ class StatsRepo {
     final daysActive = calc.streakDays(tasks, now).clamp(0, 7);
     final balance = calc.weeklyBalance(tasks, weekStart, weekEnd);
     final total = (balance.q1 + balance.q2 + balance.q3 + balance.q4).clamp(1, 1 << 30);
-    final q2Share = total == 0 ? 0 : balance.q2 / total;
+  final q2Share = total == 0 ? 0.0 : balance.q2 / total;
     int focusMinutes = 0;
     for (int i = 0; i < 7; i++) {
       final dayEnd = weekEnd.subtract(Duration(days: i));

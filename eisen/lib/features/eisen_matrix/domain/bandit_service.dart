@@ -1,17 +1,24 @@
 import 'dart:math' as math;
 import 'entities.dart';
 
-/// Minimal bandit hook for tie-breaking only (does not affect areas).
+/// Bandit-inspired tie-breaking service for stable treemap ordering.
 ///
-/// - Applies a guardrail for Q2: if any task in Q2 has due < 48h, it gets
-///   priority among ties (returned with lower rank value).
-/// - Otherwise returns a stable ranking influenced by priority and recency with
-///   light noise to emulate Thompson Top-2 without heavy dependencies.
+/// Implements a lightweight Thompson-sampling approach for tie-breaking tasks
+/// with similar weights. Does NOT affect area computation, only ordering.
+///
+/// Features:
+/// - Q2 guardrail: Tasks in Q2 with due < 48h get priority in tie-breaks
+/// - Scoring: Combines priority (scaled 1-10) + recency boost + small noise
+/// - Deterministic seeding (default seed=42) for reproducible layouts
 class BanditService {
   final math.Random _rng;
+  
   BanditService({math.Random? rng}) : _rng = rng ?? math.Random(42);
 
-  /// Returns a rank map (lower is better) for given [tasks] within [quadrant].
+  /// Returns rank map (lower rank = higher priority) for [tasks] within [quadrant].
+  ///
+  /// Ranks are used to break ties when tasks have similar visual weights.
+  /// Q2 tasks with due dates < 48h are prioritized among ties.
   Map<String, int> tieBreakRanks(List<Task> tasks, Quadrant quadrant) {
     if (tasks.isEmpty) return const {};
     final now = DateTime.now();

@@ -1,4 +1,7 @@
+import 'dart:ui' as ui show lerpDouble;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:eisen/core/theme/app_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:eisen/core/theme/animation_tokens.dart';
@@ -44,7 +47,7 @@ class TreemapCanvas extends StatefulWidget {
   State<TreemapCanvas> createState() => _TreemapCanvasState();
 }
 
-class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProviderStateMixin {
+class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateMixin {
   String? _draggingId;
   Offset? _lastPos;
   Quadrant? _hoverQuadrant;
@@ -125,6 +128,17 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
+        // Provide a safe fallback for theme tokens so tests that don't install the app theme don't crash
+        final glassTokens = Theme.of(context).extension<GlassTokens>() ?? const GlassTokens(
+          glassBg: Color(0xCCFFFFFF),
+          blur: 12,
+          radius: 20,
+          q1: Color(0xFFD92D20),
+          q2: Color(0xFF12B76A),
+          q3: Color(0xFFF79009),
+          q4: Color(0xFF2E90FA),
+          halo: Color(0x332E90FA),
+        );
         final overlay = <Widget>[];
         // If layout already contains stack tiles, skip overlay fallback
         final hasStackTiles = widget.layout.any((e) => e.stackChildren.isNotEmpty);
@@ -251,7 +265,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
                     prevRects01: _prevRects01,
                     nextRects01: _nextRects01,
                     t: _t,
-                    tokens: Theme.of(context).extension<GlassTokens>()!,
+                    tokens: glassTokens,
                     minimal: widget.minimal,
                     pulseQuadrant: _pulseQuadrant,
                     pulseT: _pulseT,
@@ -333,7 +347,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
     final m = <String, Rect>{};
     // Reorder paint z-order: if a suggested id exists in a tie group (±5% area)
     // within its quadrant, paint it last so it sits "on top". Geometry is not changed.
-    final paintList = _reorderForTieBreak(layout);
+  final paintList = reorderForTieBreak(layout, widget.suggestedIds);
     for (final tr in paintList) {
       m[tr.task.id] = tr.rect01;
     }
@@ -559,6 +573,18 @@ class _TreemapPainter extends CustomPainter {
     final paint = Paint()..isAntiAlias = true;
     const double gap = 4.0; // space between tiles to avoid clipped corners
 
+    // Always draw subtle quadrant grid (center cross) so the matrix is visible even with no tiles
+    final centerLine = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = minimal ? Colors.black.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.08);
+    final halfW = size.width / 2;
+    final halfH = size.height / 2;
+    // Vertical center line
+    canvas.drawLine(Offset(halfW, 0), Offset(halfW, size.height), centerLine);
+    // Horizontal center line
+    canvas.drawLine(Offset(0, halfH), Offset(size.width, halfH), centerLine);
+
     // Present quadrant glow
     if (presentQuadrant != null && hoverQuadrant == null) {
       final qRect = _quadrantRect(presentQuadrant!, size);
@@ -590,7 +616,7 @@ class _TreemapPainter extends CustomPainter {
       final qRect = _quadrantRect(pulseQuadrant!, size);
       final c = qRect.center;
       final color = minimal ? Colors.black : _byQuadrant(pulseQuadrant!);
-      final r = lerpDouble(8, 28, Curves.easeOut.transform(pulseT))!;
+  final r = ui.lerpDouble(8, 28, Curves.easeOut.transform(pulseT))!;
       final a = (1.0 - pulseT).clamp(0.0, 1.0);
       final ring = Paint()
         ..style = PaintingStyle.stroke
@@ -766,6 +792,7 @@ class _TreemapPainter extends CustomPainter {
             properties: SemanticsProperties(
               label: label,
               button: true,
+              textDirection: TextDirection.ltr,
             ),
           ));
         }
@@ -807,55 +834,54 @@ class _TreemapPainter extends CustomPainter {
     return Rect.fromCenter(center: c, width: w, height: h);
   }
 
-  List<TreemapRect> _reorderForTieBreak(List<TreemapRect> items) {
-    if (suggested == null || suggested!.isEmpty) return items;
-    // Group by quadrant for localized reordering
-    final byQ = <Quadrant, List<TreemapRect>>{for (final q in Quadrant.values) q: []};
-    for (final it in items) {
-      byQ[it.task.quadrant]!.add(it);
-    }
-    final out = <TreemapRect>[];
-    for (final q in Quadrant.values) {
-      final list = byQ[q]!;
-      if (list.isEmpty) continue;
-      // keep existing order by default
-      final areas = list.map((e) => e.rect01.width * e.rect01.height).toList();
-      // suggested id in this quadrant
-      final sid = suggested!.firstWhere(
-        (id) => list.any((e) => e.task.id == id),
-        orElse: () => '',
-      );
-      if (sid.isEmpty) {
-        out.addAll(list);
-        continue;
-      }
-      final idx = list.indexWhere((e) => e.task.id == sid);
-      if (idx < 0) {
-        out.addAll(list);
-        continue;
-      }
-      final aS = areas[idx];
-      // Check if any other tile is within ±5% area to form a tie group
-      final hasTie = areas.asMap().entries.any((e) => e.key != idx && aS > 0 && ((e.value - aS).abs() / aS) <= 0.05);
-      if (!hasTie) {
-        out.addAll(list);
-        continue;
-      }
-      // Move suggested to be painted after its tie group peers (end of this quadrant batch)
-      final reordered = [...list]..removeAt(idx);
-      reordered.add(list[idx]);
-      out.addAll(reordered);
-    }
-    return out;
-  }
-
   TextPainter _textPainter(String text, Rect r, double size, FontWeight fw, {double alpha = 0.92, int maxLines = 1, Color? textColor}) {
+    final maxW = math.max(0.0, r.width - 16);
     final tp = TextPainter(
       text: TextSpan(text: text, style: TextStyle(fontSize: size, fontWeight: fw, color: (textColor ?? Colors.white).withValues(alpha: alpha))),
       textDirection: TextDirection.ltr,
       maxLines: maxLines,
       ellipsis: '…',
-    )..layout(maxWidth: r.width - 16);
+    )..layout(maxWidth: maxW);
     return tp;
   }
+
 }
+
+// Top-level helper: reorder paint z-order so suggested ids in tie groups paint last per quadrant.
+List<TreemapRect> reorderForTieBreak(List<TreemapRect> items, Set<String>? suggested) {
+  if (suggested == null || suggested.isEmpty) return items;
+  final byQ = <Quadrant, List<TreemapRect>>{for (final q in Quadrant.values) q: []};
+  for (final it in items) {
+    byQ[it.task.quadrant]!.add(it);
+  }
+  final out = <TreemapRect>[];
+  for (final q in Quadrant.values) {
+    final list = byQ[q]!;
+    if (list.isEmpty) continue;
+    final areas = list.map((e) => e.rect01.width * e.rect01.height).toList();
+    final sid = suggested.firstWhere(
+      (id) => list.any((e) => e.task.id == id),
+      orElse: () => '',
+    );
+    if (sid.isEmpty) {
+      out.addAll(list);
+      continue;
+    }
+    final idx = list.indexWhere((e) => e.task.id == sid);
+    if (idx < 0) {
+      out.addAll(list);
+      continue;
+    }
+    final aS = areas[idx];
+    final hasTie = areas.asMap().entries.any((e) => e.key != idx && aS > 0 && ((e.value - aS).abs() / aS) <= 0.05);
+    if (!hasTie) {
+      out.addAll(list);
+      continue;
+    }
+    final reordered = [...list]..removeAt(idx);
+    reordered.add(list[idx]);
+    out.addAll(reordered);
+  }
+  return out;
+}
+

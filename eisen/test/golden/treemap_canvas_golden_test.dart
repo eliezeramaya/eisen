@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
@@ -6,21 +7,20 @@ import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_canvas.dart';
 
 Future<ui.Image> _capture(WidgetTester tester, Key key) async {
-  final boundary = tester.firstWidget<RepaintBoundary>(find.byKey(key));
-  return await boundary.toImage(pixelRatio: 1.0);
+  final render = tester.renderObject(find.byKey(key)) as RenderRepaintBoundary;
+  return await render.toImage(pixelRatio: 1.0);
 }
 
-int _diffPixels(ui.Image a, ui.Image b) {
+Future<int> _diffPixels(ui.Image a, ui.Image b) async {
   final w = a.width;
   final h = a.height;
   assert(w == b.width && h == b.height);
   int diffs = 0;
   // Warning: This reads image bytes synchronously; fine for small sizes
   // Use RGBA
-  // ignore: deprecated_member_use
-  final ba = a.toByteData(format: ui.ImageByteFormat.rawRgba)!;
-  // ignore: deprecated_member_use
-  final bb = b.toByteData(format: ui.ImageByteFormat.rawRgba)!;
+  final ba = await a.toByteData(format: ui.ImageByteFormat.rawRgba);
+  final bb = await b.toByteData(format: ui.ImageByteFormat.rawRgba);
+  if (ba == null || bb == null) return diffs;
   final da = ba.buffer.asUint8List();
   final db = bb.buffer.asUint8List();
   for (int i = 0; i < da.length; i += 4) {
@@ -80,7 +80,7 @@ void main() {
     await tester.pumpAndSettle();
     final img2 = await _capture(tester, key);
 
-    final diffs = _diffPixels(img1, img2);
+  final diffs = await _diffPixels(img1, img2);
     // On a 300x220 canvas ~ 66000 pixels. Allow small delta threshold.
     expect(diffs < 2000, isTrue);
   });
