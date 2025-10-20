@@ -289,8 +289,10 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
   }
 
   String? _hitTest(Offset pos, Size size) {
+    const minAreaPx = 44.0 * 44.0;
     for (final tr in widget.layout) {
       final r = _px(tr.rect01, size);
+      if (r.width * r.height < minAreaPx) continue; // not interactive; represented by stack tile
       if (r.contains(pos)) return tr.task.id;
     }
     return null;
@@ -311,7 +313,10 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
 
   Map<String, Rect> _rectMap(List<TreemapRect> layout) {
     final m = <String, Rect>{};
-    for (final tr in layout) {
+    // Reorder paint z-order: if a suggested id exists in a tie group (±5% area)
+    // within its quadrant, paint it last so it sits "on top". Geometry is not changed.
+    final paintList = _reorderForTieBreak(layout);
+    for (final tr in paintList) {
       m[tr.task.id] = tr.rect01;
     }
     return m;
@@ -741,6 +746,48 @@ class _TreemapPainter extends CustomPainter {
     final w = r.width * scale;
     final h = r.height * scale;
     return Rect.fromCenter(center: c, width: w, height: h);
+  }
+
+  List<TreemapRect> _reorderForTieBreak(List<TreemapRect> items) {
+    if (suggested == null || suggested!.isEmpty) return items;
+    // Group by quadrant for localized reordering
+    final byQ = <Quadrant, List<TreemapRect>>{for (final q in Quadrant.values) q: []};
+    for (final it in items) {
+      byQ[it.task.quadrant]!.add(it);
+    }
+    final out = <TreemapRect>[];
+    for (final q in Quadrant.values) {
+      final list = byQ[q]!;
+      if (list.isEmpty) continue;
+      // keep existing order by default
+      final areas = list.map((e) => e.rect01.width * e.rect01.height).toList();
+      // suggested id in this quadrant
+      final sid = suggested!.firstWhere(
+        (id) => list.any((e) => e.task.id == id),
+        orElse: () => '',
+      );
+      if (sid.isEmpty) {
+        out.addAll(list);
+        continue;
+      }
+      final idx = list.indexWhere((e) => e.task.id == sid);
+      if (idx < 0) {
+        out.addAll(list);
+        continue;
+      }
+      final aS = areas[idx];
+      // Check if any other tile is within ±5% area to form a tie group
+      final hasTie = areas.asMap().entries.any((e) => e.key != idx && aS > 0 && ((e.value - aS).abs() / aS) <= 0.05);
+      if (!hasTie) {
+        out.addAll(list);
+        continue;
+      }
+      // Move suggested to be painted after its tie group peers (end of this quadrant batch)
+      final reordered = [...list]..removeAt(idx);
+      reordered.add(list[idx]);
+      out.addAll(reordered);
+    }
+    return out;
   }
 
   TextPainter _textPainter(String text, Rect r, double size, FontWeight fw, {double alpha = 0.92, int maxLines = 1, Color? textColor}) {

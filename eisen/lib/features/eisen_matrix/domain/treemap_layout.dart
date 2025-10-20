@@ -263,8 +263,6 @@ List<TreemapRect> _layoutStableIntoRect(
     tuples.add((_Item(area: sumSmall, stackChildren: children), stackTask));
   }
 
-  // Bandit tie ranks for near-equal areas
-  final tieRanks = bandit?.tieBreakRanks(tasks, quadrant) ?? const <String, int>{};
   // Previous ranks to minimize reorder churn
   final prevRanks = cache?.lastRank ?? const <String, int>{};
 
@@ -276,17 +274,11 @@ List<TreemapRect> _layoutStableIntoRect(
       final nearEqual = (aa > 0 && ( (aa - bb).abs() / aa ) <= 0.05);
       if (!nearEqual) return da; // regular area sort
     }
-    // Tie-break using previous rank (keep stability), then bandit rank, then id
+    // Tie-break using previous rank (keep stability), then id
     final pra = prevRanks[a.$2.id] ?? 1 << 20;
     final prb = prevRanks[b.$2.id] ?? 1 << 20;
     final dp = pra.compareTo(prb);
     if (dp != 0) return dp;
-
-    // Bandit rank (lower better)
-    final ra = tieRanks[a.$2.id] ?? 1 << 20;
-    final rb = tieRanks[b.$2.id] ?? 1 << 20;
-    final dr = ra.compareTo(rb);
-    if (dr != 0) return dr;
     return a.$2.id.compareTo(b.$2.id);
   });
 
