@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:eisen/core/theme/app_theme.dart';
+import 'package:flutter/services.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/core/services/telemetry.dart';
@@ -46,6 +47,9 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
   Map<String, Rect> _nextRects01 = {};
   final _inlineController = TextEditingController();
   final _inlineFocus = FocusNode();
+  late final AnimationController _pulse;
+  double _pulseT = 0.0;
+  Quadrant? _pulseQuadrant;
 
   @override
   void initState() {
@@ -53,6 +57,15 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
     _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 220))
       ..addListener(() {
         setState(() => _t = _anim.value);
+      });
+    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 280))
+      ..addListener(() {
+        setState(() => _pulseT = _pulse.value);
+      })
+      ..addStatusListener((s) {
+        if (s == AnimationStatus.completed) {
+          setState(() => _pulseQuadrant = null);
+        }
       });
     // Initialize next rects with initial layout
     _nextRects01 = _rectMap(widget.layout);
@@ -94,6 +107,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
   @override
   void dispose() {
     _anim.dispose();
+    _pulse.dispose();
     _inlineController.dispose();
     _inlineFocus.dispose();
     super.dispose();
@@ -166,6 +180,15 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
                     widget.onDoubleTapQuadrant?.call(q);
                   }
                 },
+                onLongPressStart: (d) {
+                  final id = _hitTest(d.localPosition, size);
+                  if (id == null) return;
+                  final t = widget.tasks.firstWhere((e) => e.id == id, orElse: () => widget.tasks.first);
+                  final msg = '${t.title} • P${t.priority} • ${t.minutes}m';
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(msg), duration: const Duration(milliseconds: 1200)),
+                  );
+                },
                 onPanStart: (d) {
                   if (widget.inlineEditId != null) return; // disable drag while editing
                   setState(() {
@@ -181,6 +204,9 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
                     if (q != null) {
                       widget.onDropToQuadrant?.call(_draggingId!, q);
                       Telemetry.tileDrop(_draggingId!, q.name);
+                      _pulseQuadrant = q;
+                      _pulse.forward(from: 0);
+                      HapticFeedback.lightImpact();
                     }
                   }
                   setState(() {
@@ -207,6 +233,8 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
                     t: _t,
                     tokens: Theme.of(context).extension<GlassTokens>()!,
                     minimal: widget.minimal,
+                    pulseQuadrant: _pulseQuadrant,
+                    pulseT: _pulseT,
                   ),
                   isComplex: true,
                   willChange: true,
@@ -453,6 +481,8 @@ class _TreemapPainter extends CustomPainter {
   final double t; // 0..1
   final GlassTokens tokens;
   final bool minimal;
+  final Quadrant? pulseQuadrant;
+  final double pulseT; // 0..1
   _TreemapPainter(
     this.layout, {
     this.draggingId,
@@ -463,6 +493,8 @@ class _TreemapPainter extends CustomPainter {
     required this.t,
     required this.tokens,
     required this.minimal,
+    this.pulseQuadrant,
+    this.pulseT = 0.0,
   });
 
   @override
@@ -488,6 +520,19 @@ class _TreemapPainter extends CustomPainter {
     }
 
     final curveT = Curves.easeOutCubic.transform(t.clamp(0.0, 1.0));
+    // Drop pulse feedback
+    if (pulseQuadrant != null && pulseT > 0) {
+      final qRect = _quadrantRect(pulseQuadrant!, size);
+      final c = qRect.center;
+      final color = minimal ? Colors.black : _byQuadrant(pulseQuadrant!);
+      final r = lerpDouble(8, 28, Curves.easeOut.transform(pulseT))!;
+      final a = (1.0 - pulseT).clamp(0.0, 1.0);
+      final ring = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..color = color.withValues(alpha: minimal ? 0.35 * a : 0.45 * a);
+      canvas.drawCircle(c, r, ring);
+    }
     for (final tr in layout) {
       final id = tr.task.id;
       final r01From = prevRects01[id] ?? tr.rect01;
@@ -502,15 +547,24 @@ class _TreemapPainter extends CustomPainter {
       if (isDragging) {
         // Scale around center and slightly offset towards pointer
         final scaled = _scaleRect(r, 1.04);
+        Offset shift = Offset.zero;
         if (pointer != null) {
           final v = pointer! - scaled.center;
           final len = v.distance;
           final maxShift = 6.0;
-          final shift = len > 0 ? Offset(v.dx / len * maxShift, v.dy / len * maxShift) : Offset.zero;
-          drawRect = scaled.shift(shift);
-        } else {
-          drawRect = scaled;
+          shift += len > 0 ? Offset(v.dx / len * maxShift, v.dy / len * maxShift) : Offset.zero;
         }
+        // Magnetism: bias towards center of hovered quadrant
+        if (hoverQuadrant != null) {
+          final qCenter = _quadrantRect(hoverQuadrant!, size).center;
+          final mv = qCenter - scaled.center;
+          final mlen = mv.distance;
+          final mMax = 8.0;
+          final bias = 0.12; // fraction towards center
+          final mshift = mlen > 0 ? Offset(mv.dx / mlen * mMax * bias, mv.dy / mlen * mMax * bias) : Offset.zero;
+          shift += mshift;
+        }
+        drawRect = scaled.shift(shift);
         // No shadow in minimal mode
         if (!minimal) {
           canvas.drawShadow(
@@ -572,28 +626,29 @@ class _TreemapPainter extends CustomPainter {
       final availableHeight = drawRect.height - 12; // padding top+bottom
       double currentY = drawRect.top + 6;
       
-      // Title (always shown if space)
+      // Title (max 2 lines when space)
       if (availableHeight > 16) {
-        final titleSize = area > 20000 ? 13.0 : 12.0;
-        final tp = _textPainter(tr.task.title, drawRect, titleSize, FontWeight.w600, textColor: minimal ? Colors.black : Colors.white);
+        final titleSize = area > 30000 ? 14.0 : (area > 16000 ? 13.0 : 12.0);
+        final maxLines = area > 18000 ? 2 : 1;
+        final tp = _textPainter(tr.task.title, drawRect, titleSize, FontWeight.w700, textColor: minimal ? Colors.black : Colors.white, maxLines: maxLines);
         tp.paint(canvas, Offset(drawRect.left + 8, currentY));
-        currentY += tp.height + 3;
+        currentY += tp.height + 2;
       }
       
       // Priority and time (if medium+ size)
       if (area > 12000 && currentY + 14 < drawRect.bottom - 6) {
         final meta = 'P${tr.task.priority} • ${tr.task.minutes}m';
-        final tp2 = _textPainter(meta, drawRect, 11, FontWeight.w400, alpha: 0.9, textColor: minimal ? Colors.black : Colors.white);
+        final tp2 = _textPainter(meta, drawRect, 12, FontWeight.w500, alpha: minimal ? 0.95 : 0.9, textColor: minimal ? Colors.black : Colors.white);
         tp2.paint(canvas, Offset(drawRect.left + 8, currentY));
-        currentY += tp2.height + 3;
+        currentY += tp2.height + 2;
       }
       
       // Notes preview (if large size and has notes)
-      if (area > 25000 && tr.task.notes != null && tr.task.notes!.isNotEmpty && currentY + 14 < drawRect.bottom - 6) {
+      if (area > 26000 && tr.task.notes != null && tr.task.notes!.isNotEmpty && currentY + 14 < drawRect.bottom - 6) {
         final notesPreview = tr.task.notes!.length > 50 
             ? '${tr.task.notes!.substring(0, 50)}...' 
             : tr.task.notes!;
-        final tp3 = _textPainter(notesPreview, drawRect, 10, FontWeight.w300, alpha: 0.85, maxLines: 2, textColor: minimal ? Colors.black : Colors.white);
+        final tp3 = _textPainter(notesPreview, drawRect, 12, FontWeight.w400, alpha: minimal ? 0.9 : 0.85, maxLines: 2, textColor: minimal ? Colors.black : Colors.white);
         tp3.paint(canvas, Offset(drawRect.left + 8, currentY));
       }
 
@@ -613,8 +668,33 @@ class _TreemapPainter extends CustomPainter {
       oldDelegate.pointer != pointer ||
       oldDelegate.hoverQuadrant != hoverQuadrant ||
       oldDelegate.t != t ||
+      oldDelegate.pulseQuadrant != pulseQuadrant ||
+      oldDelegate.pulseT != pulseT ||
       oldDelegate.prevRects01 != prevRects01 ||
       oldDelegate.nextRects01 != nextRects01;
+
+  @override
+  bool shouldRebuildSemantics(covariant _TreemapPainter oldDelegate) => oldDelegate.layout != layout;
+
+  @override
+  SemanticsBuilderCallback get semanticsBuilder => (Size size) {
+        final nodes = <CustomPainterSemantics>[];
+        for (final tr in layout) {
+          final r = Rect.fromLTWH(tr.rect01.left * size.width, tr.rect01.top * size.height, tr.rect01.width * size.width, tr.rect01.height * size.height);
+          final meta = 'P${tr.task.priority} • ${tr.task.minutes}m';
+          final label = tr.stackChildren.isNotEmpty
+              ? 'Grupo ${tr.task.quadrant.name.toUpperCase()} (+${tr.stackChildren.length})'
+              : '${tr.task.title}, $meta, ${tr.task.quadrant.name.toUpperCase()}';
+          nodes.add(CustomPainterSemantics(
+            rect: r,
+            properties: SemanticsProperties(
+              label: label,
+              button: true,
+            ),
+          ));
+        }
+        return nodes;
+      };
 
   Color _byQuadrant(Quadrant q) {
     switch (q) {
