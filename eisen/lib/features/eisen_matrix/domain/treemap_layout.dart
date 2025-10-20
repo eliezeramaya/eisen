@@ -16,6 +16,7 @@ double minTileAreaPx(double devicePixelRatio) => 44.0 * 44.0;
 class LayoutCache {
   final lastWeight = <String, double>{};
   final lastRect = <String, Rect>{};
+  final lastRank = <String, int>{};
 }
 
 List<TreemapRect> computeSquarifiedLayout(List<Task> tasks, {Quadrant? zoom}) {
@@ -193,6 +194,8 @@ List<TreemapRect> layoutQuadrantStable(
   Quadrant quadrant,
 ) => _layoutStableIntoRect(tasks, rect, cache, bandit, quadrant);
 
+double reorderPenalty(int prevRank, int newRank, {double tau = 0.02}) => tau * (newRank - prevRank).abs();
+
 List<TreemapRect> _layoutStableIntoRect(
   List<Task> tasks,
   Rect rect,
@@ -217,7 +220,7 @@ List<TreemapRect> _layoutStableIntoRect(
   if (sum <= 0) return tasks.map((t) => TreemapRect(rect, t)).toList();
   final rawAreas = values.map((v) => (v / sum) * rect.width * rect.height).toList(growable: false);
 
-  // Build sortable list with stable ordering and bandit tiebreaks
+  // Build sortable list with stable ordering and tie-breaks
   final tuples = <(_Item, Task)>[];
   for (var i = 0; i < rawAreas.length; i++) {
     tuples.add((_Item(area: rawAreas[i]), tasks[i]));
@@ -225,6 +228,8 @@ List<TreemapRect> _layoutStableIntoRect(
 
   // Bandit tie ranks for near-equal areas
   final tieRanks = bandit?.tieBreakRanks(tasks, quadrant) ?? const <String, int>{};
+  // Previous ranks to minimize reorder churn
+  final prevRanks = cache?.lastRank ?? const <String, int>{};
 
   tuples.sort((a, b) {
     final da = b.$1.area.compareTo(a.$1.area);
@@ -234,7 +239,13 @@ List<TreemapRect> _layoutStableIntoRect(
       final nearEqual = (aa > 0 && ( (aa - bb).abs() / aa ) <= 0.05);
       if (!nearEqual) return da; // regular area sort
     }
-    // Tie-break using bandit rank (lower is better), then stable id order
+    // Tie-break using previous rank (keep stability), then bandit rank, then id
+    final pra = prevRanks[a.$2.id] ?? 1 << 20;
+    final prb = prevRanks[b.$2.id] ?? 1 << 20;
+    final dp = pra.compareTo(prb);
+    if (dp != 0) return dp;
+
+    // Bandit rank (lower better)
     final ra = tieRanks[a.$2.id] ?? 1 << 20;
     final rb = tieRanks[b.$2.id] ?? 1 << 20;
     final dr = ra.compareTo(rb);
@@ -303,7 +314,7 @@ List<TreemapRect> _layoutStableIntoRect(
   layoutRow(row, cur);
 
   // Clamp to rect bounds
-  return result
+  final clamped = result
       .map((e) {
         final r = Rect.fromLTWH(
           (e.rect01.left).clamp(rect.left, rect.right),
@@ -314,4 +325,12 @@ List<TreemapRect> _layoutStableIntoRect(
         return TreemapRect(r, e.task);
       })
       .toList();
+
+  // Update last ranks for stability on next passes
+  if (cache != null) {
+    for (var i = 0; i < tuples.length; i++) {
+      cache.lastRank[tuples[i].$2.id] = i;
+    }
+  }
+  return clamped;
 }
