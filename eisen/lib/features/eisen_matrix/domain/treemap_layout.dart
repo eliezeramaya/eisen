@@ -196,8 +196,9 @@ List<TreemapRect> layoutQuadrantStable(
   Rect rect,
   LayoutCache? cache,
   BanditService? bandit,
-  Quadrant quadrant,
-) => _layoutStableIntoRect(tasks, rect, cache, bandit, quadrant);
+  Quadrant quadrant, {
+  double? minTileArea01,
+}) => _layoutStableIntoRect(tasks, rect, cache, bandit, quadrant, minTileArea01: minTileArea01);
 
 double reorderPenalty(int prevRank, int newRank, {double tau = 0.02}) => tau * (newRank - prevRank).abs();
 

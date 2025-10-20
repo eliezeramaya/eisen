@@ -65,6 +65,9 @@ class MatrixController extends Notifier<MatrixState> {
   // Small memoization to avoid recompute if inputs unchanged within a frame
   int _lastHash = 0;
   List<TreemapRect> _lastLayout = const [];
+  Set<Quadrant> _dirtyQuadrants = {};
+  Quadrant? _lastZoom;
+  Size? _lastViewport;
 
   @override
   MatrixState build() {
@@ -144,44 +147,112 @@ class MatrixController extends Notifier<MatrixState> {
     );
     final tasks = [...state.tasks, t];
     state = state.copyWith(tasks: tasks, selectedId: id, version: state.version + 1);
+    _dirtyQuadrants.add(quadrant);
     unawaited(persist());
     return id;
   }
 
   void updateTask(String id, Task Function(Task) updater) {
-    final tasks = state.tasks.map((t) => t.id == id ? updater(t).copyWith(updatedAt: DateTime.now()) : t).toList();
+    final prev = state.tasks.firstWhere((t) => t.id == id);
+    final next = updater(prev).copyWith(updatedAt: DateTime.now());
+    final tasks = state.tasks.map((t) => t.id == id ? next : t).toList();
     state = state.copyWith(tasks: tasks, version: state.version + 1);
+    if (prev.quadrant != next.quadrant) {
+      _dirtyQuadrants.add(prev.quadrant);
+      _dirtyQuadrants.add(next.quadrant);
+    } else {
+      _dirtyQuadrants.add(next.quadrant);
+    }
     unawaited(persist());
   }
 
   void deleteTask(String id) {
+    final prev = state.tasks.firstWhere((t) => t.id == id, orElse: () => state.tasks.first);
     final tasks = state.tasks.where((t) => t.id != id).toList();
     state = state.copyWith(tasks: tasks, selectedId: state.selectedId == id ? null : state.selectedId, version: state.version + 1);
+    _dirtyQuadrants.add(prev.quadrant);
     unawaited(persist());
   }
 
   void moveTaskToQuadrant(String id, Quadrant q) => updateTask(id, (t) => t.copyWith(quadrant: q));
 
-  /// Computes a stable layout using cached smoothing and bandit tie-breaks.
-  /// Uses a simple hash to memoize within a frame to limit rebuild work.
+  /// Computes a stable layout. If there are pending dirty quadrants and not zoomed,
+  /// recomputes only affected quadrants and merges with cached layout.
   List<TreemapRect> layout({Quadrant? only, Size? viewport}) {
     final filtered = state.query.isEmpty
         ? state.tasks
         : state.tasks.where((t) => t.title.toLowerCase().contains(state.query.toLowerCase())).toList();
-    final h = Object.hashAllUnordered(filtered.map((t) => t.id)) ^ filtered.length ^ (state.zoom?.index ?? -1);
-    if (_lastHash == h && only == null) return _lastLayout;
+    int h = Object.hashAllUnordered(filtered.map((t) => t.id)) ^ filtered.length ^ (state.zoom?.index ?? -1);
     double? minArea01;
     if (viewport != null && viewport.width > 0 && viewport.height > 0) {
       final minPx = 44.0 * 44.0;
       final totalPx = viewport.width * viewport.height;
       minArea01 = (minPx / totalPx).clamp(0.0, 1.0);
     }
-    final out = computeStableLayout(filtered, zoom: state.zoom, cache: _cache, bandit: _bandit, minTileArea01: minArea01);
-    if (only == null) {
-      _lastHash = h;
-      _lastLayout = out;
+    final zoom = state.zoom;
+    final viewportChanged = _lastViewport == null || viewport == null || _lastViewport != viewport;
+    final zoomChanged = _lastZoom != zoom;
+    if (viewport != null) {
+      h ^= viewport.width.round();
+      h ^= (viewport.height.round() << 16);
     }
-    return out;
+    if (only == null && _dirtyQuadrants.isEmpty && !zoomChanged && !viewportChanged && _lastHash == h) {
+      return _lastLayout;
+    }
+    if (zoom != null) {
+      final rect = const Rect.fromLTWH(0, 0, 1, 1);
+      final tasksInQ = filtered.where((t) => t.quadrant == zoom).toList();
+      final part = layoutQuadrantStable(tasksInQ, rect, _cache, _bandit, zoom, minTileArea01: minArea01);
+      _lastLayout = part;
+      _lastHash = h;
+      _lastZoom = zoom;
+      _lastViewport = viewport;
+      _dirtyQuadrants.clear();
+      return _lastLayout;
+    }
+    if (only != null) {
+      _dirtyQuadrants.add(only);
+    }
+    if (_lastLayout.isEmpty || viewportChanged || zoomChanged || _dirtyQuadrants.length >= 4) {
+      final out = computeStableLayout(filtered, zoom: null, cache: _cache, bandit: _bandit, minTileArea01: minArea01);
+      _lastLayout = out;
+      _lastHash = h;
+      _lastZoom = zoom;
+      _lastViewport = viewport;
+      _dirtyQuadrants.clear();
+      return out;
+    }
+    final keepQuadrants = {Quadrant.q1, Quadrant.q2, Quadrant.q3, Quadrant.q4}..removeAll(_dirtyQuadrants);
+    final prevByQ = <Quadrant, List<TreemapRect>>{for (final q in Quadrant.values) q: []};
+    for (final tr in _lastLayout) {
+      prevByQ[tr.task.quadrant]!.add(tr);
+    }
+    final qRects = <Quadrant, Rect>{
+      Quadrant.q1: const Rect.fromLTWH(0, 0, 0.5, 0.5),
+      Quadrant.q2: const Rect.fromLTWH(0.5, 0, 0.5, 0.5),
+      Quadrant.q3: const Rect.fromLTWH(0, 0.5, 0.5, 0.5),
+      Quadrant.q4: const Rect.fromLTWH(0.5, 0.5, 0.5, 0.5),
+    };
+    final tasksByQ = <Quadrant, List<Task>>{for (final q in Quadrant.values) q: []};
+    for (final t in filtered) {
+      tasksByQ[t.quadrant]!.add(t);
+    }
+    final merged = <TreemapRect>[];
+    final existingIds = filtered.map((t) => t.id).toSet();
+    for (final q in keepQuadrants) {
+      final kept = prevByQ[q]!.where((tr) => existingIds.contains(tr.task.id)).toList();
+      merged.addAll(kept);
+    }
+    for (final q in _dirtyQuadrants) {
+      final part = layoutQuadrantStable(tasksByQ[q]!, qRects[q]!, _cache, _bandit, q, minTileArea01: minArea01);
+      merged.addAll(part);
+    }
+    _lastLayout = merged;
+    _lastHash = h;
+    _lastZoom = zoom;
+    _lastViewport = viewport;
+    _dirtyQuadrants.clear();
+    return merged;
   }
 
   List<Task> _demoTasks() {

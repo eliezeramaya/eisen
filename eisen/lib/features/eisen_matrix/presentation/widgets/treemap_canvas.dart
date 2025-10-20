@@ -559,6 +559,14 @@ class _TreemapPainter extends CustomPainter {
         canvas.drawRRect(rr.deflate(1), ring);
       }
       
+      // If this is a stack tile, render a centered +N label and skip details
+      if (tr.stackChildren.isNotEmpty) {
+        final label = '+${tr.stackChildren.length}';
+        final tp = _textPainter(label, drawRect, 14, FontWeight.w700, textColor: minimal ? Colors.black : Colors.white);
+        tp.paint(canvas, Offset(drawRect.center.dx - tp.width / 2, drawRect.center.dy - tp.height / 2));
+        continue;
+      }
+
       // Adaptive text rendering based on tile size
       final area = drawRect.width * drawRect.height;
       final availableHeight = drawRect.height - 12; // padding top+bottom
