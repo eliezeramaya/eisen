@@ -10,11 +10,13 @@ class TreemapCanvas extends StatefulWidget {
   final List<Task> tasks;
   final List<TreemapRect> layout;
   final Set<String>? suggestedIds;
+  final Quadrant? presentQuadrant;
   final void Function(String? id)? onTap;
   final void Function(String id, Quadrant q)? onDropToQuadrant;
   final void Function(Quadrant q)? onDoubleTapQuadrant;
   final Quadrant? zoom;
   final void Function(String id)? onEditTask;
+  final void Function(String id)? onMarkDone;
   final String? inlineEditId;
   final void Function(String id, String title)? onInlineSubmit;
   final void Function(String id)? onInlineCancel;
@@ -25,11 +27,13 @@ class TreemapCanvas extends StatefulWidget {
     required this.tasks,
     required this.layout,
     this.suggestedIds,
+    this.presentQuadrant,
     this.onTap,
     this.onDropToQuadrant,
     this.onDoubleTapQuadrant,
     this.zoom,
     this.onEditTask,
+    this.onMarkDone,
     this.inlineEditId,
     this.onInlineSubmit,
     this.onInlineCancel,
@@ -137,12 +141,24 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
             }
           }
         }
-        if (widget.onEditTask != null) {
+        if (widget.onEditTask != null || widget.onMarkDone != null) {
           for (final tr in widget.layout) {
             final r = _px(tr.rect01, size);
             // Show edit button only for reasonably large tiles
             if (r.width * r.height < 12000) continue;
             const btn = 28.0;
+            if (widget.onMarkDone != null) {
+              overlay.add(Positioned(
+                left: r.left + 6,
+                top: r.top + 6,
+                width: btn,
+                height: btn,
+                child: _CheckDot(
+                  onPressed: () => widget.onMarkDone?.call(tr.task.id),
+                  minimal: widget.minimal,
+                ),
+              ));
+            }
             overlay.add(Positioned(
               left: r.right - btn - 6,
               top: r.top + 6,
@@ -231,6 +247,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
                     draggingId: _draggingId,
                     pointer: _lastPos,
                     hoverQuadrant: widget.zoom == null ? _hoverQuadrant : null,
+                    presentQuadrant: widget.presentQuadrant,
                     prevRects01: _prevRects01,
                     nextRects01: _nextRects01,
                     t: _t,
@@ -480,11 +497,39 @@ class _EditDot extends StatelessWidget {
   }
 }
 
+class _CheckDot extends StatelessWidget {
+  final VoidCallback onPressed;
+  final bool minimal;
+  const _CheckDot({required this.onPressed, required this.minimal});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: minimal ? Colors.white.withValues(alpha: 0.9) : Colors.black.withValues(alpha: 0.45),
+          shape: BoxShape.circle,
+          border: Border.all(color: minimal ? Colors.black26 : Colors.white.withValues(alpha: 0.25), width: 1),
+        ),
+        child: IconButton(
+          onPressed: onPressed,
+          padding: EdgeInsets.zero,
+          splashRadius: 16,
+          icon: Icon(Icons.check, size: 16, color: minimal ? Colors.black : Colors.white),
+          tooltip: 'Completar',
+        ),
+      ),
+    );
+  }
+}
+
 class _TreemapPainter extends CustomPainter {
   final List<TreemapRect> layout;
   final String? draggingId;
   final Offset? pointer;
   final Quadrant? hoverQuadrant;
+  final Quadrant? presentQuadrant;
   final Map<String, Rect> prevRects01;
   final Map<String, Rect> nextRects01;
   final double t; // 0..1
@@ -498,6 +543,7 @@ class _TreemapPainter extends CustomPainter {
     this.draggingId,
     this.pointer,
     this.hoverQuadrant,
+    this.presentQuadrant,
     required this.prevRects01,
     required this.nextRects01,
     required this.t,
@@ -513,7 +559,15 @@ class _TreemapPainter extends CustomPainter {
     final paint = Paint()..isAntiAlias = true;
     const double gap = 4.0; // space between tiles to avoid clipped corners
 
-    // Highlight hovered quadrant as a subtle overlay
+    // Present quadrant glow
+    if (presentQuadrant != null && hoverQuadrant == null) {
+      final qRect = _quadrantRect(presentQuadrant!, size);
+      final grad = RadialGradient(colors: [Colors.white.withValues(alpha: minimal ? 0.12 : 0.06), Colors.transparent]);
+      final paintGlow = Paint()..shader = grad.createShader(qRect);
+      canvas.drawRect(qRect, paintGlow);
+    }
+
+    // Highlight hovered quadrant as a subtle overlay (takes precedence)
     if (hoverQuadrant != null) {
       final qRect = _quadrantRect(hoverQuadrant!, size);
       final qColor = minimal ? Colors.black : _byQuadrant(hoverQuadrant!);

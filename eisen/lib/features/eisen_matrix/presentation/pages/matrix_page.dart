@@ -113,7 +113,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                     ),
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      child: Text('Dev banner • Hot reload ready', style: TextStyle(color: minimal ? Colors.black : Colors.white, fontSize: 12)),
+                      child: _ProgressBanner(minimal: minimal),
                     ),
                   ),
                 ),
@@ -154,54 +154,65 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                       // Recompute incrementally based on current viewport
                       final dynamicLayout = ctrl.computeLayout(viewport: size);
                       final suggested = ctrl.suggestedTopSpots;
-                      return TreemapCanvas(
-                        tasks: tasks,
-                        layout: dynamicLayout,
-                        suggestedIds: suggested,
-                        minimal: minimal,
-                        zoom: zoom,
-                        inlineEditId: _inlineEditId,
-                        onInlineSubmit: (id, title) {
-                          ctrl.updateTask(id, (t) => t.copyWith(title: title));
-                          setState(() => _inlineEditId = null);
-                        },
-                        onInlineCancel: (id) {
-                          final t = tasks.firstWhere((e) => e.id == id);
-                          if (t.title == 'New Task' && (t.notes == null || t.notes!.isEmpty)) {
-                            ctrl.deleteTask(id);
-                          }
-                          setState(() => _inlineEditId = null);
-                        },
-                        onTap: (id) {
-                          ctrl.select(id);
-                          if (id != null) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
-                          }
-                        },
-                        onDropToQuadrant: (id, q) {
-                          final prev = tasks.firstWhere((t) => t.id == id).quadrant;
-                          if (prev == q) return; // no-op
-                          ctrl.moveTaskToQuadrant(id, q);
-                          final qName = q.name.toUpperCase();
-                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Tarea movida a $qName'),
-                              action: SnackBarAction(
-                                label: 'Deshacer',
-                                onPressed: () {
-                                  ctrl.moveTaskToQuadrant(id, prev);
-                                },
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 240),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeOutCubic,
+                        child: TreemapCanvas(
+                          key: ValueKey('${zoom}_${dynamicLayout.length}_${suggested.length}'),
+                          tasks: tasks,
+                          layout: dynamicLayout,
+                          suggestedIds: suggested,
+                          minimal: minimal,
+                          zoom: zoom,
+                          presentQuadrant: zoom ?? ref.read(matrixControllerProvider).presentQuadrant,
+                          inlineEditId: _inlineEditId,
+                          onInlineSubmit: (id, title) {
+                            ctrl.updateTask(id, (t) => t.copyWith(title: title));
+                            setState(() => _inlineEditId = null);
+                          },
+                          onInlineCancel: (id) {
+                            final t = tasks.firstWhere((e) => e.id == id);
+                            if (t.title == 'New Task' && (t.notes == null || t.notes!.isEmpty)) {
+                              ctrl.deleteTask(id);
+                            }
+                            setState(() => _inlineEditId = null);
+                          },
+                          onTap: (id) {
+                            ctrl.select(id);
+                            if (id != null) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
+                            }
+                          },
+                          onDropToQuadrant: (id, q) {
+                            final prev = tasks.firstWhere((t) => t.id == id).quadrant;
+                            if (prev == q) return; // no-op
+                            ctrl.moveTaskToQuadrant(id, q);
+                            final qName = q.name.toUpperCase();
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Tarea movida a $qName'),
+                                action: SnackBarAction(
+                                  label: 'Deshacer',
+                                  onPressed: () {
+                                    ctrl.moveTaskToQuadrant(id, prev);
+                                  },
+                                ),
+                                duration: const Duration(seconds: 4),
                               ),
-                              duration: const Duration(seconds: 4),
-                            ),
-                          );
-                        },
-                        onDoubleTapQuadrant: (q) => ctrl.setZoom(zoom == q ? null : q),
-                        onEditTask: (id) {
-                          final task = tasks.firstWhere((t) => t.id == id);
-                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
-                        },
+                            );
+                          },
+                          onDoubleTapQuadrant: (q) { ctrl.setZoom(zoom == q ? null : q); ctrl.setPresentQuadrant(q); },
+                          onEditTask: (id) {
+                            final task = tasks.firstWhere((t) => t.id == id);
+                            Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
+                          },
+                          onMarkDone: (id) {
+                            ctrl.markTaskDone(id);
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('¡Tarea completada!'), duration: Duration(milliseconds: 900)));
+                          },
+                        ),
                       );
                     },
                   ),

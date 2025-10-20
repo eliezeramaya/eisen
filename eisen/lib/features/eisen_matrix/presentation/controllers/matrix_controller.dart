@@ -15,6 +15,7 @@ class MatrixState {
   final List<Task> tasks;
   final String? selectedId;
   final Quadrant? zoom;
+  final Quadrant? presentQuadrant;
   final ThemeMode themeMode;
   final String query;
   final bool compact;
@@ -32,12 +33,14 @@ class MatrixState {
     this.showAxisLegends = true,
     this.minimal = false,
     this.version = 0,
+    this.presentQuadrant,
   });
 
   MatrixState copyWith({
     List<Task>? tasks,
     String? selectedId,
     Quadrant? zoom,
+    Quadrant? presentQuadrant,
     ThemeMode? themeMode,
     String? query,
     bool? compact,
@@ -49,6 +52,7 @@ class MatrixState {
         tasks: tasks ?? this.tasks,
         selectedId: selectedId ?? this.selectedId,
         zoom: zoom ?? this.zoom,
+        presentQuadrant: presentQuadrant ?? this.presentQuadrant,
         themeMode: themeMode ?? this.themeMode,
         query: query ?? this.query,
         compact: compact ?? this.compact,
@@ -76,7 +80,7 @@ class MatrixController extends Notifier<MatrixState> {
     _repo = LocalPrefsMatrixRepository(StoragePrefs());
     _ui = UiPrefs();
     // Seed with some demo tasks if empty
-    return const MatrixState(tasks: []);
+    return const MatrixState(tasks: [], presentQuadrant: Quadrant.q2);
   }
 
   Future<void> load() async {
@@ -113,6 +117,7 @@ class MatrixController extends Notifier<MatrixState> {
   }
 
   void setZoom(Quadrant? q) => state = state.copyWith(zoom: q);
+  void setPresentQuadrant(Quadrant q) => state = state.copyWith(presentQuadrant: q);
   void toggleCompact() {
     state = state.copyWith(compact: !state.compact);
     _saveUi();
@@ -181,6 +186,10 @@ class MatrixController extends Notifier<MatrixState> {
   }
 
   void moveTaskToQuadrant(String id, Quadrant q) => updateTask(id, (t) => t.copyWith(quadrant: q));
+
+  void markTaskDone(String id) {
+    updateTask(id, (t) => t.copyWith(completedAt: DateTime.now()));
+  }
 
   /// Computes a stable layout. If there are pending dirty quadrants and not zoomed,
   /// recomputes only affected quadrants and merges with cached layout.
