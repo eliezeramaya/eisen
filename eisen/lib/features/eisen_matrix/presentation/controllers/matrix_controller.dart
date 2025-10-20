@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
+import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/features/eisen_matrix/data/local_repo.dart';
 import 'package:eisen/core/services/storage_prefs.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
@@ -18,6 +19,7 @@ class MatrixState {
   final bool compact;
   final bool showAxisLegends;
   final bool minimal;
+  final int version; // increments on task list mutations to help .select
 
   const MatrixState({
     required this.tasks,
@@ -28,6 +30,7 @@ class MatrixState {
     this.compact = false,
     this.showAxisLegends = true,
     this.minimal = false,
+    this.version = 0,
   });
 
   MatrixState copyWith({
@@ -39,6 +42,7 @@ class MatrixState {
     bool? compact,
     bool? showAxisLegends,
     bool? minimal,
+    int? version,
   }) =>
       MatrixState(
         tasks: tasks ?? this.tasks,
@@ -49,12 +53,18 @@ class MatrixState {
         compact: compact ?? this.compact,
         showAxisLegends: showAxisLegends ?? this.showAxisLegends,
         minimal: minimal ?? this.minimal,
+        version: version ?? this.version,
       );
 }
 
 class MatrixController extends Notifier<MatrixState> {
   late final MatrixRepository _repo;
   late final UiPrefs _ui;
+  final LayoutCache _cache = LayoutCache();
+  final BanditService _bandit = BanditService();
+  // Small memoization to avoid recompute if inputs unchanged within a frame
+  int _lastHash = 0;
+  List<TreemapRect> _lastLayout = const [];
 
   @override
   MatrixState build() {
@@ -130,32 +140,42 @@ class MatrixController extends Notifier<MatrixState> {
       quadrant: quadrant,
       priority: 5,
       minutes: 30,
+      createdAt: DateTime.now(),
     );
     final tasks = [...state.tasks, t];
-    state = state.copyWith(tasks: tasks, selectedId: id);
+    state = state.copyWith(tasks: tasks, selectedId: id, version: state.version + 1);
     unawaited(persist());
     return id;
   }
 
   void updateTask(String id, Task Function(Task) updater) {
-    final tasks = state.tasks.map((t) => t.id == id ? updater(t) : t).toList();
-    state = state.copyWith(tasks: tasks);
+    final tasks = state.tasks.map((t) => t.id == id ? updater(t).copyWith(updatedAt: DateTime.now()) : t).toList();
+    state = state.copyWith(tasks: tasks, version: state.version + 1);
     unawaited(persist());
   }
 
   void deleteTask(String id) {
     final tasks = state.tasks.where((t) => t.id != id).toList();
-    state = state.copyWith(tasks: tasks, selectedId: state.selectedId == id ? null : state.selectedId);
+    state = state.copyWith(tasks: tasks, selectedId: state.selectedId == id ? null : state.selectedId, version: state.version + 1);
     unawaited(persist());
   }
 
   void moveTaskToQuadrant(String id, Quadrant q) => updateTask(id, (t) => t.copyWith(quadrant: q));
 
-  List<TreemapRect> layout() {
+  /// Computes a stable layout using cached smoothing and bandit tie-breaks.
+  /// Uses a simple hash to memoize within a frame to limit rebuild work.
+  List<TreemapRect> layout({Quadrant? only}) {
     final filtered = state.query.isEmpty
         ? state.tasks
         : state.tasks.where((t) => t.title.toLowerCase().contains(state.query.toLowerCase())).toList();
-    return computeSquarifiedLayout(filtered, zoom: state.zoom);
+    final h = Object.hashAllUnordered(filtered.map((t) => t.id)) ^ filtered.length ^ (state.zoom?.index ?? -1);
+    if (_lastHash == h && only == null) return _lastLayout;
+    final out = computeStableLayout(filtered, zoom: state.zoom, cache: _cache, bandit: _bandit);
+    if (only == null) {
+      _lastHash = h;
+      _lastLayout = out;
+    }
+    return out;
   }
 
   List<Task> _demoTasks() {
@@ -168,9 +188,15 @@ class MatrixController extends Notifier<MatrixState> {
         quadrant: q(i + 1),
         priority: 1 + r.nextInt(10),
         minutes: 10 + r.nextInt(120),
+        createdAt: DateTime.now().subtract(Duration(days: r.nextInt(10))),
       );
     });
   }
 }
 
 final matrixControllerProvider = NotifierProvider<MatrixController, MatrixState>(() => MatrixController());
+
+// Example of selective providers to minimize rebuilds where used
+final matrixVersionProvider = Provider<int>((ref) => ref.watch(matrixControllerProvider.select((s) => s.version)));
+final matrixZoomProvider = Provider<Quadrant?>((ref) => ref.watch(matrixControllerProvider.select((s) => s.zoom)));
+final matrixTasksProvider = Provider<List<Task>>((ref) => ref.watch(matrixControllerProvider.select((s) => s.tasks)));

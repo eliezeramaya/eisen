@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:eisen/core/theme/app_theme.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
+import 'package:eisen/core/services/telemetry.dart';
 
 class TreemapCanvas extends StatefulWidget {
   final List<Task> tasks;
@@ -104,6 +105,17 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
         final overlay = <Widget>[];
+        // Compute tiny tiles per quadrant (non-clickable), to expose stack overlays
+        final minAreaPx = 44.0 * 44.0;
+        final tinyByQ = <Quadrant, List<TreemapRect>>{
+          Quadrant.q1: [], Quadrant.q2: [], Quadrant.q3: [], Quadrant.q4: []
+        };
+        for (final tr in widget.layout) {
+          final r = _px(tr.rect01, size);
+          if (r.width * r.height < minAreaPx) {
+            tinyByQ[tr.task.quadrant]!.add(tr);
+          }
+        }
         if (widget.onEditTask != null) {
           for (final tr in widget.layout) {
             final r = _px(tr.rect01, size);
@@ -131,11 +143,15 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
                 behavior: HitTestBehavior.opaque,
                 onTapDown: (d) {
                   final id = _hitTest(d.localPosition, size);
+                  if (id != null) Telemetry.tileTap(id);
                   widget.onTap?.call(id);
                 },
                 onDoubleTapDown: (d) {
                   final q = _quadrantAt(d.localPosition, size);
-                  if (q != null) widget.onDoubleTapQuadrant?.call(q);
+                  if (q != null) {
+                    Telemetry.zoomQuadrant(q.name);
+                    widget.onDoubleTapQuadrant?.call(q);
+                  }
                 },
                 onPanStart: (d) {
                   if (widget.inlineEditId != null) return; // disable drag while editing
@@ -144,11 +160,15 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
                     _lastPos = d.localPosition;
                     _hoverQuadrant = _quadrantAt(_lastPos!, size);
                   });
+                  if (_draggingId != null) Telemetry.tileDragStart(_draggingId!);
                 },
                 onPanEnd: (d) {
                   if (widget.inlineEditId == null && _draggingId != null && widget.zoom == null) {
                     final q = _quadrantAt(_lastPos ?? Offset.zero, size);
-                    if (q != null) widget.onDropToQuadrant?.call(_draggingId!, q);
+                    if (q != null) {
+                      widget.onDropToQuadrant?.call(_draggingId!, q);
+                      Telemetry.tileDrop(_draggingId!, q.name);
+                    }
                   }
                   setState(() {
                     _draggingId = null;
@@ -182,6 +202,39 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
                 ),
               ),
             ),
+            // Stack overlays per quadrant
+            ...Quadrant.values.map((q) {
+              final count = tinyByQ[q]!.length;
+              if (count == 0) return const SizedBox.shrink();
+              final pos = _stackOverlayPosition(q, size);
+              return Positioned(
+                key: ValueKey('stack_${q.name}'),
+                left: pos.dx,
+                top: pos.dy,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      Telemetry.stackOpen(q.name, count);
+                      _openStackSheet(context, q, tinyByQ[q]!.map((e) => e.task).toList());
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: widget.minimal ? Colors.white.withValues(alpha: 0.9) : Colors.black.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.18), width: 1),
+                      ),
+                      child: Text('+${count}', style: TextStyle(
+                        color: widget.minimal ? Colors.black : Colors.white,
+                        fontWeight: FontWeight.w600,
+                      )),
+                    ),
+                  ),
+                ),
+              );
+            }),
             if (widget.inlineEditId != null)
               _buildInlineEditor(context, size),
             ...overlay,
@@ -192,8 +245,10 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
   }
 
   String? _hitTest(Offset pos, Size size) {
+    final minAreaPx = 44.0 * 44.0;
     for (final tr in widget.layout) {
       final r = _px(tr.rect01, size);
+      if (r.width * r.height < minAreaPx) continue; // not clickable, stacked
       if (r.contains(pos)) return tr.task.id;
     }
     return null;
@@ -218,6 +273,68 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
       m[tr.task.id] = tr.rect01;
     }
     return m;
+  }
+
+  Offset _stackOverlayPosition(Quadrant q, Size size) {
+    // Position near top-left of each quadrant, with margin
+    final halfW = size.width / 2;
+    final halfH = size.height / 2;
+    const m = 8.0;
+    switch (q) {
+      case Quadrant.q1:
+        return const Offset(8, 8);
+      case Quadrant.q2:
+        return Offset(halfW + m, 8);
+      case Quadrant.q3:
+        return Offset(8, halfH + m);
+      case Quadrant.q4:
+        return Offset(halfW + m, halfH + m);
+    }
+  }
+
+  void _openStackSheet(BuildContext context, Quadrant q, List<Task> tasks) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (_) {
+        return SafeArea(
+          child: ListView.builder(
+            itemCount: tasks.length,
+            itemBuilder: (context, i) {
+              final t = tasks[i];
+              return ListTile(
+                title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle: Text('P${t.priority} • ${t.minutes}m${t.due != null ? ' • due' : ''}'),
+                trailing: Wrap(spacing: 8, children: [
+                  IconButton(
+                    tooltip: '+15m',
+                    icon: const Icon(Icons.add_alarm),
+                    onPressed: widget.onEditTask == null ? null : () => widget.onEditTask!(t.id),
+                  ),
+                  PopupMenuButton<Quadrant>(
+                    tooltip: 'Mover a',
+                    onSelected: (dest) => widget.onDropToQuadrant?.call(t.id, dest),
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(value: Quadrant.q1, child: Text('Q1')),
+                      const PopupMenuItem(value: Quadrant.q2, child: Text('Q2')),
+                      const PopupMenuItem(value: Quadrant.q3, child: Text('Q3')),
+                      const PopupMenuItem(value: Quadrant.q4, child: Text('Q4')),
+                    ],
+                    child: const Icon(Icons.open_in_full),
+                  ),
+                  IconButton(
+                    tooltip: 'Marcar done',
+                    icon: const Icon(Icons.check_circle_outline),
+                    onPressed: () => widget.onEditTask?.call(t.id),
+                  ),
+                ]),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 }
 

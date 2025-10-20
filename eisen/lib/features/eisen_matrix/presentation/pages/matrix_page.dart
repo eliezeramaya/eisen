@@ -35,8 +35,16 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
   @override
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<GlassTokens>()!;
-    final state = ref.watch(matrixControllerProvider);
     final ctrl = ref.read(matrixControllerProvider.notifier);
+    // Minimize rebuild noise via .select
+    final zoom = ref.watch(matrixZoomProvider);
+    final themeMode = ref.watch(matrixControllerProvider.select((s) => s.themeMode));
+    final query = ref.watch(matrixControllerProvider.select((s) => s.query));
+    final compact = ref.watch(matrixControllerProvider.select((s) => s.compact));
+    final showAxisLegends = ref.watch(matrixControllerProvider.select((s) => s.showAxisLegends));
+    final minimal = ref.watch(matrixControllerProvider.select((s) => s.minimal));
+    final tasks = ref.watch(matrixTasksProvider);
+    final selectedId = ref.watch(matrixControllerProvider.select((s) => s.selectedId));
     final layout = ctrl.layout();
 
     return Scaffold(
@@ -46,8 +54,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         child: AppToolbar(
           onToggleTheme: ctrl.toggleTheme,
           onQuery: ctrl.setQuery,
-          themeMode: state.themeMode,
-          minimal: state.minimal,
+          themeMode: themeMode,
+          minimal: minimal,
           onToggleMinimal: ctrl.toggleMinimal,
           onOpenStats: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StatsPage())),
           onOpenProfile: () => showModalBottomSheet(
@@ -59,10 +67,9 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           onExitZoom: () {
             ctrl.setZoom(null);
             ctrl.select(null);
-            // Clear search to truly return to full matrix view
             ctrl.setQuery('');
           },
-          canExitZoom: state.zoom != null,
+          canExitZoom: zoom != null,
           onOpenSettings: () => showModalBottomSheet(
             context: context,
             showDragHandle: true,
@@ -70,8 +77,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             builder: (_) => SettingsSheet(
               onToggleTheme: ctrl.toggleTheme,
               onToggleDensity: ctrl.toggleCompact,
-              compact: state.compact,
-              showAxisLegends: state.showAxisLegends,
+              compact: compact,
+              showAxisLegends: showAxisLegends,
               onToggleAxisLegends: ctrl.toggleAxisLegends,
             ),
           ),
@@ -83,14 +90,14 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (state.showAxisLegends && state.zoom == null)
-                _LeftAxisLegends(minimal: state.minimal),
+              if (showAxisLegends && zoom == null)
+                _LeftAxisLegends(minimal: minimal),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (state.showAxisLegends && state.zoom == null)
-                      _TopAxisLegends(minimal: state.minimal),
+                    if (showAxisLegends && zoom == null)
+                      _TopAxisLegends(minimal: minimal),
                     Expanded(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(tokens.radius),
@@ -101,17 +108,17 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                   top: 8,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: state.minimal ? Colors.white.withValues(alpha: 0.7) : Colors.black.withValues(alpha: 0.28),
+                      color: minimal ? Colors.white.withValues(alpha: 0.7) : Colors.black.withValues(alpha: 0.28),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      child: Text('Dev banner • Hot reload ready', style: TextStyle(color: state.minimal ? Colors.black : Colors.white, fontSize: 12)),
+                      child: Text('Dev banner • Hot reload ready', style: TextStyle(color: minimal ? Colors.black : Colors.white, fontSize: 12)),
                     ),
                   ),
                 ),
                 Positioned.fill(
-                  child: state.minimal
+                  child: minimal
                       ? const SizedBox.expand()
                       : BackdropFilter(
                           filter: ImageFilter.blur(sigmaX: tokens.blur, sigmaY: tokens.blur),
@@ -142,10 +149,10 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                         ])
                       : const ColorFilter.mode(Colors.transparent, BlendMode.srcOver),
                   child: TreemapCanvas(
-                  tasks: state.tasks,
+                  tasks: tasks,
                   layout: layout,
-                  minimal: state.minimal,
-                  zoom: state.zoom,
+                  minimal: minimal,
+                  zoom: zoom,
                   inlineEditId: _inlineEditId,
                   onInlineSubmit: (id, title) {
                     ctrl.updateTask(id, (t) => t.copyWith(title: title));
@@ -153,7 +160,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                   },
                   onInlineCancel: (id) {
                     // If it's still default title and untouched, we can delete; otherwise, just exit inline
-                    final t = state.tasks.firstWhere((e) => e.id == id);
+                    final t = tasks.firstWhere((e) => e.id == id);
                     if (t.title == 'New Task' && (t.notes == null || t.notes!.isEmpty)) {
                       ctrl.deleteTask(id);
                     }
@@ -166,7 +173,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                     }
                   },
                   onDropToQuadrant: (id, q) {
-                    final prev = state.tasks.firstWhere((t) => t.id == id).quadrant;
+                    final prev = tasks.firstWhere((t) => t.id == id).quadrant;
                     if (prev == q) return; // no-op
                     ctrl.moveTaskToQuadrant(id, q);
                     final qName = q.name.toUpperCase();
@@ -184,9 +191,9 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                       ),
                     );
                   },
-                  onDoubleTapQuadrant: (q) => ctrl.setZoom(state.zoom == q ? null : q),
+                  onDoubleTapQuadrant: (q) => ctrl.setZoom(zoom == q ? null : q),
                   onEditTask: (id) {
-                    final task = state.tasks.firstWhere((t) => t.id == id);
+                    final task = tasks.firstWhere((t) => t.id == id);
                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
                   },
                   ),
@@ -195,22 +202,22 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                 Positioned(
                   left: 12,
                   top: 56,
-                  child: _QuickAddButton(label: 'Q1', minimal: state.minimal, onTap: () => _quickAdd(context, Quadrant.q1, ctrl)),
+                  child: _QuickAddButton(label: 'Q1', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q1, ctrl)),
                 ),
                 Positioned(
                   right: 12,
                   top: 56,
-                  child: _QuickAddButton(label: 'Q2', minimal: state.minimal, onTap: () => _quickAdd(context, Quadrant.q2, ctrl)),
+                  child: _QuickAddButton(label: 'Q2', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q2, ctrl)),
                 ),
                 Positioned(
                   left: 12,
                   bottom: 56,
-                  child: _QuickAddButton(label: 'Q3', minimal: state.minimal, onTap: () => _quickAdd(context, Quadrant.q3, ctrl)),
+                  child: _QuickAddButton(label: 'Q3', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q3, ctrl)),
                 ),
                 Positioned(
                   right: 12,
                   bottom: 56,
-                  child: _QuickAddButton(label: 'Q4', minimal: state.minimal, onTap: () => _quickAdd(context, Quadrant.q4, ctrl)),
+                  child: _QuickAddButton(label: 'Q4', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q4, ctrl)),
                 ),
                 
                 
@@ -225,17 +232,17 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           ),
         ),
       ),
-      endDrawer: state.selectedId == null
+      endDrawer: selectedId == null
           ? null
           : InspectorDrawer(
-              key: ValueKey(state.selectedId),
-              task: state.tasks.firstWhere((t) => t.id == state.selectedId),
+              key: ValueKey(selectedId),
+              task: tasks.firstWhere((t) => t.id == selectedId),
               onChanged: (t) => ctrl.updateTask(t.id, (_) => t),
-              onDelete: () => ctrl.deleteTask(state.selectedId!),
+              onDelete: () => ctrl.deleteTask(selectedId!),
             ),
       bottomNavigationBar: _BottomActionBar(
         onNew: () {
-          final q = state.zoom ?? Quadrant.q2;
+          final q = zoom ?? Quadrant.q2;
           final id = ctrl.createTask(quadrant: q);
           ctrl.select(id);
           setState(() => _inlineEditId = id);
@@ -254,10 +261,10 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           );
         },
         onToggleDensity: ctrl.toggleCompact,
-        compact: state.compact,
+        compact: compact,
         minimap: Minimap(
-          zoom: state.zoom,
-          minimal: state.minimal,
+          zoom: zoom,
+          minimal: minimal,
           onSelectQuadrant: (q) => ctrl.setZoom(q),
           onFullView: () {
             ctrl.setZoom(null);
