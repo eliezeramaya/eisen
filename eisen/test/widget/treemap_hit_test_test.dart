@@ -16,7 +16,9 @@ void main() {
       Task(id: 'big2', title: 'Big 2', quadrant: Quadrant.q1, priority: 9, minutes: 180),
       Task(id: 'tiny', title: 'Tiny', quadrant: Quadrant.q1, priority: 1, minutes: 5),
     ];
-    final layout = computeStableLayout(tasks, zoom: Quadrant.q1, cache: LayoutCache());
+    final size = const Size(220, 220);
+    final minArea01 = (44.0 * 44.0) / (size.width * size.height);
+    final layout = computeStableLayout(tasks, zoom: Quadrant.q1, cache: LayoutCache(), minTileArea01: minArea01);
 
     String? tapped;
     await tester.pumpWidget(MaterialApp(
@@ -34,12 +36,11 @@ void main() {
       ),
     ));
 
-    final size = const Size(220, 220);
-    final tinyRect01 = layout.firstWhere((e) => e.task.id == 'tiny').rect01;
+    final stackRect01 = layout.firstWhere((e) => e.stackChildren.isNotEmpty).rect01;
     final bigRect01 = layout.firstWhere((e) => e.task.id == 'big1').rect01;
 
-    // Tap inside tiny tile -> should be treated as stacked => onTap gets null
-    await tester.tapAt(_centerPx(tinyRect01, size));
+    // Tap inside stack tile -> TreemapCanvas intercepts and opens sheet, onTap remains null
+    await tester.tapAt(_centerPx(stackRect01, size));
     await tester.pump();
     expect(tapped, isNull);
 
@@ -49,4 +50,3 @@ void main() {
     expect(tapped, equals('big1'));
   });
 }
-
