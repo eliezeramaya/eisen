@@ -153,9 +153,11 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                       final size = Size(constraints.maxWidth, constraints.maxHeight);
                       // Recompute incrementally based on current viewport
                       final dynamicLayout = ctrl.computeLayout(viewport: size);
+                      final suggested = ctrl.suggestedTopSpots;
                       return TreemapCanvas(
                         tasks: tasks,
                         layout: dynamicLayout,
+                        suggestedIds: suggested,
                         minimal: minimal,
                         zoom: zoom,
                         inlineEditId: _inlineEditId,

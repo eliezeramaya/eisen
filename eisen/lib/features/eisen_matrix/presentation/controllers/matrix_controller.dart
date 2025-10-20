@@ -68,6 +68,7 @@ class MatrixController extends Notifier<MatrixState> {
   Set<Quadrant> _dirtyQuadrants = {};
   Quadrant? _lastZoom;
   Size? _lastViewport;
+  Set<String> _suggested = {};
 
   @override
   MatrixState build() {
@@ -212,6 +213,7 @@ class MatrixController extends Notifier<MatrixState> {
       _lastZoom = zoom;
       _lastViewport = viewport;
       _dirtyQuadrants.clear();
+      _computeTopSpots(_lastLayout);
       return _lastLayout;
     }
     if (only != null) {
@@ -224,6 +226,7 @@ class MatrixController extends Notifier<MatrixState> {
       _lastZoom = zoom;
       _lastViewport = viewport;
       _dirtyQuadrants.clear();
+      _computeTopSpots(_lastLayout);
       return out;
     }
     final keepQuadrants = {Quadrant.q1, Quadrant.q2, Quadrant.q3, Quadrant.q4}..removeAll(_dirtyQuadrants);
@@ -256,8 +259,35 @@ class MatrixController extends Notifier<MatrixState> {
     _lastZoom = zoom;
     _lastViewport = viewport;
     _dirtyQuadrants.clear();
+    _computeTopSpots(_lastLayout);
     return merged;
   }
+
+  void _computeTopSpots(List<TreemapRect> layout) {
+    final byQ = <Quadrant, List<TreemapRect>>{for (final q in Quadrant.values) q: []};
+    for (final tr in layout) {
+      if (tr.stackChildren.isNotEmpty) continue;
+      byQ[tr.task.quadrant]!.add(tr);
+    }
+    final sug = <String>{};
+    for (final q in Quadrant.values) {
+      final list = byQ[q]!;
+      if (list.isEmpty) continue;
+      // Areas
+      final areas = list.map((e) => e.rect01.width * e.rect01.height).toList();
+      final maxA = areas.reduce((a, b) => a > b ? a : b);
+      final cand = <Task>[];
+      for (var i = 0; i < list.length; i++) {
+        if (areas[i] >= maxA * 0.95) cand.add(list[i].task);
+      }
+      if (cand.isEmpty) continue;
+      final top = _bandit.pickTopSpot(cand, q);
+      if (top != null) sug.add(top);
+    }
+    _suggested = sug;
+  }
+
+  Set<String> get suggestedTopSpots => _suggested;
 
   /// Public API alias for layout, for clarity in call sites.
   /// If [only] is provided, marks that quadrant dirty and recomputes just it.

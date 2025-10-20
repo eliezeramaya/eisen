@@ -3,10 +3,10 @@ import 'entities.dart';
 
 /// Minimal bandit hook for tie-breaking only (does not affect areas).
 ///
-/// - Applies a guardrail for Q2: if any task in Q2 has due < 48h and is urgent,
-///   it gets priority among ties (returned with lower rank value).
-/// - Otherwise returns a stable ranking influenced by priority and light noise
-///   to emulate Thompson Top-2 without introducing heavy dependencies.
+/// - Applies a guardrail for Q2: if any task in Q2 has due < 48h, it gets
+///   priority among ties (returned with lower rank value).
+/// - Otherwise returns a stable ranking influenced by priority and recency with
+///   light noise to emulate Thompson Top-2 without heavy dependencies.
 class BanditService {
   final math.Random _rng;
   BanditService({math.Random? rng}) : _rng = rng ?? math.Random(42);
@@ -50,5 +50,21 @@ class BanditService {
     }
     return ranks;
   }
-}
 
+  /// Pick a single top-spot candidate among [tasks] using the same scoring
+  /// and guardrails used for tie-breaking. Returns the task id or null.
+  String? pickTopSpot(List<Task> tasks, Quadrant quadrant) {
+    if (tasks.isEmpty) return null;
+    final ranks = tieBreakRanks(tasks, quadrant);
+    String? best;
+    int bestRank = 1 << 30;
+    for (final t in tasks) {
+      final r = ranks[t.id] ?? (1 << 29);
+      if (r < bestRank) {
+        best = t.id;
+        bestRank = r;
+      }
+    }
+    return best;
+  }
+}

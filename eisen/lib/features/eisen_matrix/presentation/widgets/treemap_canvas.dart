@@ -8,6 +8,7 @@ import 'package:eisen/core/services/telemetry.dart';
 class TreemapCanvas extends StatefulWidget {
   final List<Task> tasks;
   final List<TreemapRect> layout;
+  final Set<String>? suggestedIds;
   final void Function(String? id)? onTap;
   final void Function(String id, Quadrant q)? onDropToQuadrant;
   final void Function(Quadrant q)? onDoubleTapQuadrant;
@@ -22,6 +23,7 @@ class TreemapCanvas extends StatefulWidget {
     super.key,
     required this.tasks,
     required this.layout,
+    this.suggestedIds,
     this.onTap,
     this.onDropToQuadrant,
     this.onDoubleTapQuadrant,
@@ -235,6 +237,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
                     minimal: widget.minimal,
                     pulseQuadrant: _pulseQuadrant,
                     pulseT: _pulseT,
+                    suggested: widget.suggestedIds,
                   ),
                   isComplex: true,
                   willChange: true,
@@ -483,6 +486,7 @@ class _TreemapPainter extends CustomPainter {
   final bool minimal;
   final Quadrant? pulseQuadrant;
   final double pulseT; // 0..1
+  final Set<String>? suggested;
   _TreemapPainter(
     this.layout, {
     this.draggingId,
@@ -495,6 +499,7 @@ class _TreemapPainter extends CustomPainter {
     required this.minimal,
     this.pulseQuadrant,
     this.pulseT = 0.0,
+    this.suggested,
   });
 
   @override
@@ -658,6 +663,12 @@ class _TreemapPainter extends CustomPainter {
         ..color = minimal ? Colors.black.withValues(alpha: 0.5) : color.withValues(alpha: 0.12);
       final ind = Rect.fromLTWH(drawRect.right - 10, drawRect.top + 4, 6, 6);
       canvas.drawRRect(RRect.fromRectAndRadius(ind, const Radius.circular(2)), paint);
+
+      // Suggested by bandit badge (small star)
+      if (suggested?.contains(tr.task.id) == true) {
+        final star = _textPainter('★', drawRect, 12, FontWeight.w700, alpha: minimal ? 0.95 : 0.9, textColor: minimal ? Colors.black : Colors.white);
+        star.paint(canvas, Offset(drawRect.left + 6, drawRect.top + 4));
+      }
     }
   }
 
@@ -668,6 +679,7 @@ class _TreemapPainter extends CustomPainter {
       oldDelegate.pointer != pointer ||
       oldDelegate.hoverQuadrant != hoverQuadrant ||
       oldDelegate.t != t ||
+      oldDelegate.suggested != suggested ||
       oldDelegate.pulseQuadrant != pulseQuadrant ||
       oldDelegate.pulseT != pulseT ||
       oldDelegate.prevRects01 != prevRects01 ||
@@ -684,7 +696,7 @@ class _TreemapPainter extends CustomPainter {
           final meta = 'P${tr.task.priority} • ${tr.task.minutes}m';
           final label = tr.stackChildren.isNotEmpty
               ? 'Grupo ${tr.task.quadrant.name.toUpperCase()} (+${tr.stackChildren.length})'
-              : '${tr.task.title}, $meta, ${tr.task.quadrant.name.toUpperCase()}';
+              : '${tr.task.title}, $meta, ${tr.task.quadrant.name.toUpperCase()}${(suggested?.contains(tr.task.id) ?? false) ? ', sugerida' : ''}';
           nodes.add(CustomPainterSemantics(
             rect: r,
             properties: SemanticsProperties(
