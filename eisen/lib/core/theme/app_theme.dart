@@ -76,10 +76,11 @@ ThemeData buildAppTheme(Brightness brightness) {
             background: Color(0xFF0D0F13),
           )
         : const ColorScheme.light(
-            primary: Color(0xFF2B63FF),
-            secondary: Color(0xFF1BB273),
-            surface: Color(0xFFF7F9FC),
-            background: Color(0xFFF2F4F8),
+            // Higher-contrast light palette
+            primary: Color(0xFF0B57D0), // deep blue
+            secondary: Color(0xFF006C47), // deep green
+            surface: Color(0xFFFFFFFF),
+            background: Color(0xFFF5F7FB),
           ),
     useMaterial3: true,
   );
@@ -96,14 +97,16 @@ ThemeData buildAppTheme(Brightness brightness) {
           halo: Color(0x662B63FF),
         )
       : const GlassTokens(
-          glassBg: Color(0x66FFFFFF),
+          // More opaque glass for contrast on light backgrounds
+          glassBg: Color(0xCCFFFFFF),
           blur: 12,
           radius: 20,
-          q1: Color(0xFFEF476F),
-          q2: Color(0xFF06D6A0),
-          q3: Color(0xFFFFB300),
-          q4: Color(0xFF118AB2),
-          halo: Color(0x552B63FF),
+          // Higher-contrast quadrant colors (paired for light bg)
+          q1: Color(0xFFD92D20), // red-600
+          q2: Color(0xFF12B76A), // green-600
+          q3: Color(0xFFF79009), // amber-600
+          q4: Color(0xFF2E90FA), // blue-600
+          halo: Color(0x332E90FA),
         );
 
   return base.copyWith(
@@ -114,13 +117,18 @@ ThemeData buildAppTheme(Brightness brightness) {
       color: tokens.glassBg,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(tokens.radius),
-        side: BorderSide(color: Colors.white.withOpacity(isDark ? 0.06 : 0.12), width: 1),
+        side: BorderSide(
+      color: isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.08),
+          width: 1,
+        ),
       ),
     ),
     scaffoldBackgroundColor: base.colorScheme.surface,
     appBarTheme: AppBarTheme(
       elevation: 0,
-      backgroundColor: base.colorScheme.surface.withOpacity(isDark ? 0.4 : 0.6),
+  backgroundColor: base.colorScheme.surface.withValues(alpha: isDark ? 0.4 : 0.9),
       foregroundColor: base.colorScheme.onSurface,
     ),
   );

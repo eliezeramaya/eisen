@@ -1,5 +1,14 @@
 {
   "appTitle": "Matriz de Eisenhower",
   "newTask": "Nueva tarea",
-  "searchHint": "Buscar o filtrar por etiqueta…"
+  "searchHint": "Buscar o filtrar por etiqueta…",
+  "axisUrgent": "Urgente",
+  "axisNotUrgent": "No urgente",
+  "axisImportant": "Importante",
+  "axisNotImportant": "No importante",
+  "minimapDo": "Hacer",
+  "minimapDecide": "Decidir",
+  "minimapDelegate": "Delegar",
+  "minimapDelete": "Borrar",
+  "settingsShowAxisLegends": "Mostrar leyendas de ejes"
 }

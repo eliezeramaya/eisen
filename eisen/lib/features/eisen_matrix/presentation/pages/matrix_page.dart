@@ -7,12 +7,14 @@ import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_cont
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/legend.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/minimap.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/task_tile.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/toolbar.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/profile_sheet.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_canvas.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/inspector_drawer.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/task_editor_page.dart';
+import 'package:eisen/l10n/app_localizations.dart';
+import 'package:eisen/features/eisen_matrix/presentation/pages/stats_page.dart';
 
 class MatrixPage extends ConsumerStatefulWidget {
   const MatrixPage({super.key});
@@ -23,6 +25,7 @@ class MatrixPage extends ConsumerStatefulWidget {
 
 class _MatrixPageState extends ConsumerState<MatrixPage> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+  String? _inlineEditId;
   @override
   void initState() {
     super.initState();
@@ -41,21 +44,23 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56),
         child: AppToolbar(
-          onNew: () => ctrl.createTask(quadrant: state.zoom ?? Quadrant.q2),
           onToggleTheme: ctrl.toggleTheme,
           onQuery: ctrl.setQuery,
-          compact: state.compact,
-          onToggleDensity: ctrl.toggleCompact,
-          onEdit: () {
-            final id = state.selectedId;
-            if (id == null) return;
-            final task = state.tasks.firstWhere((t) => t.id == id);
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
-          },
-          canEdit: state.selectedId != null,
+          themeMode: state.themeMode,
+          minimal: state.minimal,
+          onToggleMinimal: ctrl.toggleMinimal,
+          onOpenStats: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StatsPage())),
+          onOpenProfile: () => showModalBottomSheet(
+            context: context,
+            showDragHandle: true,
+            useSafeArea: true,
+            builder: (_) => const ProfileSheet(),
+          ),
           onExitZoom: () {
             ctrl.setZoom(null);
             ctrl.select(null);
+            // Clear search to truly return to full matrix view
+            ctrl.setQuery('');
           },
           canExitZoom: state.zoom != null,
           onOpenSettings: () => showModalBottomSheet(
@@ -66,6 +71,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
               onToggleTheme: ctrl.toggleTheme,
               onToggleDensity: ctrl.toggleCompact,
               compact: state.compact,
+              showAxisLegends: state.showAxisLegends,
+              onToggleAxisLegends: ctrl.toggleAxisLegends,
             ),
           ),
         ),
@@ -73,59 +80,148 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12.0),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(tokens.radius),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: tokens.blur, sigmaY: tokens.blur),
-                    child: const SizedBox.expand(),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (state.showAxisLegends && state.zoom == null)
+                _LeftAxisLegends(minimal: state.minimal),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (state.showAxisLegends && state.zoom == null)
+                      _TopAxisLegends(minimal: state.minimal),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(tokens.radius),
+                        child: Stack(
+                          children: [
+                Positioned(
+                  left: 8,
+                  top: 8,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: state.minimal ? Colors.white.withValues(alpha: 0.7) : Colors.black.withValues(alpha: 0.28),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Text('Dev banner • Hot reload ready', style: TextStyle(color: state.minimal ? Colors.black : Colors.white, fontSize: 12)),
+                    ),
                   ),
+                ),
+                Positioned.fill(
+                  child: state.minimal
+                      ? const SizedBox.expand()
+                      : BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: tokens.blur, sigmaY: tokens.blur),
+                          child: const SizedBox.expand(),
+                        ),
                 ),
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: tokens.glassBg,
+                    color: state.minimal ? Colors.white : tokens.glassBg,
                     borderRadius: BorderRadius.circular(tokens.radius),
-                    border: Border.all(color: Colors.white.withOpacity(0.08), width: 1),
-                    boxShadow: [
-                      BoxShadow(color: tokens.halo.withOpacity(0.15), blurRadius: 24, spreadRadius: 2),
-                    ],
+                    border: state.minimal
+                        ? Border.all(color: Colors.transparent, width: 0)
+                        : Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1),
+                    boxShadow: state.minimal
+                        ? const []
+                        : [
+                            BoxShadow(color: tokens.halo.withValues(alpha: 0.15), blurRadius: 24, spreadRadius: 2),
+                          ],
                   ),
                 ),
-                TreemapCanvas(
+                ColorFiltered(
+                  colorFilter: state.minimal
+                      ? const ColorFilter.matrix(<double>[
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0.2126, 0.7152, 0.0722, 0, 0,
+                          0,      0,      0,      1, 0,
+                        ])
+                      : const ColorFilter.mode(Colors.transparent, BlendMode.srcOver),
+                  child: TreemapCanvas(
                   tasks: state.tasks,
                   layout: layout,
+                  minimal: state.minimal,
                   zoom: state.zoom,
+                  inlineEditId: _inlineEditId,
+                  onInlineSubmit: (id, title) {
+                    ctrl.updateTask(id, (t) => t.copyWith(title: title));
+                    setState(() => _inlineEditId = null);
+                  },
+                  onInlineCancel: (id) {
+                    // If it's still default title and untouched, we can delete; otherwise, just exit inline
+                    final t = state.tasks.firstWhere((e) => e.id == id);
+                    if (t.title == 'New Task' && (t.notes == null || t.notes!.isEmpty)) {
+                      ctrl.deleteTask(id);
+                    }
+                    setState(() => _inlineEditId = null);
+                  },
                   onTap: (id) {
                     ctrl.select(id);
                     if (id != null) {
                       WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
                     }
                   },
-                  onDropToQuadrant: ctrl.moveTaskToQuadrant,
+                  onDropToQuadrant: (id, q) {
+                    final prev = state.tasks.firstWhere((t) => t.id == id).quadrant;
+                    if (prev == q) return; // no-op
+                    ctrl.moveTaskToQuadrant(id, q);
+                    final qName = q.name.toUpperCase();
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Tarea movida a $qName'),
+                        action: SnackBarAction(
+                          label: 'Deshacer',
+                          onPressed: () {
+                            ctrl.moveTaskToQuadrant(id, prev);
+                          },
+                        ),
+                        duration: const Duration(seconds: 4),
+                      ),
+                    );
+                  },
                   onDoubleTapQuadrant: (q) => ctrl.setZoom(state.zoom == q ? null : q),
                   onEditTask: (id) {
                     final task = state.tasks.firstWhere((t) => t.id == id);
                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
                   },
-                ),
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Legend(tasks: state.tasks),
                   ),
                 ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Minimap(zoom: state.zoom),
-                  ),
+                // Quick add buttons por cuadrante
+                Positioned(
+                  left: 12,
+                  top: 56,
+                  child: _QuickAddButton(label: 'Q1', minimal: state.minimal, onTap: () => _quickAdd(context, Quadrant.q1, ctrl)),
                 ),
-              ],
-            ),
+                Positioned(
+                  right: 12,
+                  top: 56,
+                  child: _QuickAddButton(label: 'Q2', minimal: state.minimal, onTap: () => _quickAdd(context, Quadrant.q2, ctrl)),
+                ),
+                Positioned(
+                  left: 12,
+                  bottom: 56,
+                  child: _QuickAddButton(label: 'Q3', minimal: state.minimal, onTap: () => _quickAdd(context, Quadrant.q3, ctrl)),
+                ),
+                Positioned(
+                  right: 12,
+                  bottom: 56,
+                  child: _QuickAddButton(label: 'Q4', minimal: state.minimal, onTap: () => _quickAdd(context, Quadrant.q4, ctrl)),
+                ),
+                
+                
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -137,6 +233,268 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
               onChanged: (t) => ctrl.updateTask(t.id, (_) => t),
               onDelete: () => ctrl.deleteTask(state.selectedId!),
             ),
+      bottomNavigationBar: _BottomActionBar(
+        onNew: () {
+          final q = state.zoom ?? Quadrant.q2;
+          final id = ctrl.createTask(quadrant: q);
+          ctrl.select(id);
+          setState(() => _inlineEditId = id);
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Tarea creada en ${q.name.toUpperCase()}'), duration: const Duration(seconds: 3)),
+          );
+        },
+        onNewInQuadrant: (q) {
+          final id = ctrl.createTask(quadrant: q);
+          ctrl.select(id);
+          setState(() => _inlineEditId = id);
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Tarea creada en ${q.name.toUpperCase()}'), duration: const Duration(seconds: 3)),
+          );
+        },
+        onToggleDensity: ctrl.toggleCompact,
+        compact: state.compact,
+        minimap: Minimap(
+          zoom: state.zoom,
+          minimal: state.minimal,
+          onSelectQuadrant: (q) => ctrl.setZoom(q),
+          onFullView: () {
+            ctrl.setZoom(null);
+            ctrl.select(null);
+            ctrl.setQuery('');
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickAddButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  final bool minimal;
+  const _QuickAddButton({required this.label, required this.onTap, this.minimal = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: minimal ? Colors.white.withValues(alpha: 0.85) : Colors.black.withValues(alpha: 0.35),
+        foregroundColor: minimal ? Colors.black : Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        visualDensity: VisualDensity.compact,
+      ),
+      onPressed: onTap,
+      icon: const Icon(Icons.add, size: 16),
+      label: Text(label),
+    );
+  }
+}
+
+void _quickAdd(BuildContext context, Quadrant q, MatrixController ctrl) {
+  final id = ctrl.createTask(quadrant: q);
+  ctrl.select(id);
+  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('Tarea creada en ${q.name.toUpperCase()}'), duration: const Duration(seconds: 3)),
+  );
+}
+
+class _AxisLegends extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: true,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final w = constraints.maxWidth;
+            final h = constraints.maxHeight;
+            final halfW = w / 2;
+            final halfH = h / 2;
+    final style = Theme.of(context).textTheme.labelLarge?.copyWith(
+      color: Colors.white.withValues(alpha: 0.85),
+                  fontWeight: FontWeight.w600,
+                );
+            final l10n = AppLocalizations.of(context);
+            return Stack(children: [
+              // X-axis (horizontal): No importante (left) — Importante (right)
+              Positioned(
+                left: 16,
+                top: halfH - 18,
+                child: Text(l10n.axisNotImportant, style: style),
+              ),
+              Positioned(
+                right: 16,
+                top: halfH - 18,
+                child: Text(l10n.axisImportant, style: style),
+              ),
+              // Y-axis (vertical): Urgente (top) — No urgente (bottom)
+              Positioned(
+                left: halfW - 50,
+                top: 12,
+                child: Text(l10n.axisUrgent, style: style),
+              ),
+              Positioned(
+                left: halfW - 62,
+                bottom: 12,
+                child: Text(l10n.axisNotUrgent, style: style),
+              ),
+            ]);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _TopAxisLegends extends StatelessWidget {
+  final bool minimal;
+  const _TopAxisLegends({this.minimal = false});
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final style = Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: minimal ? Colors.black : Colors.white.withValues(alpha: 0.85),
+          fontWeight: FontWeight.w600,
+        );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(child: Center(child: Text(l10n.axisUrgent, style: style))),
+          Expanded(child: Center(child: Text(l10n.axisNotUrgent, style: style))),
+        ],
+      ),
+    );
+  }
+}
+
+class _LeftAxisLegends extends StatelessWidget {
+  final bool minimal;
+  const _LeftAxisLegends({this.minimal = false});
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final style = Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: minimal ? Colors.black : Colors.white.withValues(alpha: 0.85),
+          fontWeight: FontWeight.w600,
+        );
+    return SizedBox(
+      width: 64,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 8, top: 20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            RotatedBox(quarterTurns: 3, child: Text(l10n.axisImportant, style: style)),
+            RotatedBox(quarterTurns: 3, child: Text(l10n.axisNotImportant, style: style)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomActionBar extends StatelessWidget {
+  final VoidCallback onNew;
+  final void Function(Quadrant q) onNewInQuadrant;
+  final VoidCallback onToggleDensity;
+  final bool compact;
+  final Widget? minimap;
+
+  const _BottomActionBar({
+    required this.onNew,
+    required this.onNewInQuadrant,
+    required this.onToggleDensity,
+    required this.compact,
+    this.minimap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final densityLabel = isEs
+        ? (compact ? 'Cómodo' : 'Compacto')
+        : (compact ? 'Comfortable' : 'Compact');
+    final densityIcon = compact ? Icons.view_comfortable : Icons.view_compact;
+    
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
+          border: Border(
+            top: BorderSide(
+              color: Colors.white.withValues(alpha: 0.1),
+              width: 1,
+            ),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Density toggle button
+            TextButton.icon(
+              onPressed: onToggleDensity,
+              icon: Icon(densityIcon),
+              label: Text(densityLabel),
+            ),
+            // New task with quadrant menu
+            MenuAnchor(
+              builder: (context, controller, child) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: onNew,
+                      icon: const Icon(Icons.add),
+                      label: Text(AppLocalizations.of(context).newTask),
+                    ),
+                    IconButton(
+                      onPressed: () => controller.isOpen ? controller.close() : controller.open(),
+                      tooltip: isEs ? 'Elegir cuadrante' : 'Choose quadrant',
+                      icon: const Icon(Icons.arrow_drop_down),
+                    ),
+                  ],
+                );
+              },
+              menuChildren: [
+                MenuItemButton(
+                  onPressed: onNew,
+                  leadingIcon: const Icon(Icons.add),
+                  child: Text(isEs ? 'Rápido (cuadrante actual)' : 'Quick (current quadrant)'),
+                ),
+                MenuItemButton(
+                  onPressed: () => onNewInQuadrant(Quadrant.q1),
+                  leadingIcon: const Icon(Icons.filter_1),
+                  child: const Text('Q1'),
+                ),
+                MenuItemButton(
+                  onPressed: () => onNewInQuadrant(Quadrant.q2),
+                  leadingIcon: const Icon(Icons.filter_2),
+                  child: const Text('Q2'),
+                ),
+                MenuItemButton(
+                  onPressed: () => onNewInQuadrant(Quadrant.q3),
+                  leadingIcon: const Icon(Icons.filter_3),
+                  child: const Text('Q3'),
+                ),
+                MenuItemButton(
+                  onPressed: () => onNewInQuadrant(Quadrant.q4),
+                  leadingIcon: const Icon(Icons.filter_4),
+                  child: const Text('Q4'),
+                ),
+              ],
+            ),
+            if (minimap != null) ...[
+              const SizedBox(width: 12),
+              minimap!,
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

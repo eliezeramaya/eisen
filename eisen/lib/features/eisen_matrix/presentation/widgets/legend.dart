@@ -10,7 +10,7 @@ class Legend extends StatelessWidget {
     final double total = tasks.length.toDouble().clamp(1.0, double.infinity) as double;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.25),
+        color: Colors.black.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),

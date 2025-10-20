@@ -1,21 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/l10n/app_localizations.dart';
 
 class Minimap extends StatelessWidget {
   final Quadrant? zoom;
-  const Minimap({super.key, required this.zoom});
+  final void Function(Quadrant q)? onSelectQuadrant;
+  final VoidCallback? onFullView;
+  final bool minimal;
+  const Minimap({super.key, required this.zoom, this.onSelectQuadrant, this.onFullView, this.minimal = false});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.25),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: CustomPaint(
-        size: const Size(80, 80),
-        painter: _MinimapPainter(zoom),
+  final l10n = AppLocalizations.of(context);
+  final doLabel = l10n.minimapDo;
+  final decideLabel = l10n.minimapDecide;
+  final delegateLabel = l10n.minimapDelegate;
+  final deleteLabel = l10n.minimapDelete;
+    return GestureDetector(
+      onTapDown: (details) {
+        final local = details.localPosition;
+        final size = const Size(80, 80);
+        final halfW = size.width / 2;
+        final halfH = size.height / 2;
+        // Center hit area (full view)
+        final center = Offset(halfW, halfH);
+        if ((local - center).distance <= 10) {
+          onFullView?.call();
+          return;
+        }
+        // Quadrant hit tests
+        if (onSelectQuadrant != null) {
+          final left = local.dx < halfW;
+          final top = local.dy < halfH;
+          final q = left && top
+              ? Quadrant.q1
+              : (!left && top)
+                  ? Quadrant.q2
+                  : (left && !top)
+                      ? Quadrant.q3
+                      : Quadrant.q4;
+          onSelectQuadrant!(q);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: minimal ? Colors.white.withValues(alpha: 0.85) : Colors.black.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(10),
+          border: minimal ? Border.all(color: Colors.black54, width: 1) : null,
+        ),
+        child: CustomPaint(
+          size: const Size(80, 80),
+          painter: _MinimapPainter(zoom, doLabel, decideLabel, delegateLabel, deleteLabel, minimal: minimal),
+        ),
       ),
     );
   }
@@ -23,21 +60,39 @@ class Minimap extends StatelessWidget {
 
 class _MinimapPainter extends CustomPainter {
   final Quadrant? zoom;
-  _MinimapPainter(this.zoom);
+  final String doLabel;
+  final String decideLabel;
+  final String delegateLabel;
+  final String deleteLabel;
+  final bool minimal;
+  _MinimapPainter(this.zoom, this.doLabel, this.decideLabel, this.delegateLabel, this.deleteLabel, {this.minimal = false});
 
   @override
   void paint(Canvas canvas, Size size) {
     final p = Paint()
       ..style = PaintingStyle.stroke
-      ..color = Colors.white70;
+      ..color = minimal ? Colors.black87 : Colors.white70;
     final cell = Rect.fromLTWH(0, 0, size.width / 2, size.height / 2);
     canvas.drawRect(cell, p);
     canvas.drawRect(cell.shift(Offset(size.width / 2, 0)), p);
     canvas.drawRect(cell.shift(Offset(0, size.height / 2)), p);
     canvas.drawRect(cell.shift(Offset(size.width / 2, size.height / 2)), p);
 
+  // Prepare label painters helper
+    final tp = (String text) => TextPainter(
+      text: TextSpan(style: TextStyle(color: minimal ? Colors.black : Colors.white, fontSize: 10, fontWeight: FontWeight.w600), text: text),
+          textDirection: TextDirection.ltr,
+          maxLines: 1,
+          ellipsis: '…',
+        )..layout(maxWidth: cell.width - 6);
+    void drawLabel(Rect r, String text) {
+      final t = tp(text);
+      final offset = Offset(r.left + 3, r.top + 2);
+      t.paint(canvas, offset);
+    }
+
     if (zoom != null) {
-      final fill = Paint()..color = Colors.white24;
+      final fill = Paint()..color = minimal ? Colors.black12 : Colors.white24;
       Rect zr;
       switch (zoom!) {
         case Quadrant.q1:
@@ -55,6 +110,19 @@ class _MinimapPainter extends CustomPainter {
       }
       canvas.drawRect(zr, fill);
     }
+
+    // Center full-view dot
+    final center = Offset(size.width / 2, size.height / 2);
+    final centerPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = minimal ? Colors.black54 : Colors.white70;
+    canvas.drawCircle(center, 4, centerPaint);
+
+  // Labels: Q1/Q2/Q3/Q4 (drawn above highlight)
+  drawLabel(cell, doLabel);
+  drawLabel(cell.shift(Offset(size.width / 2, 0)), decideLabel);
+  drawLabel(cell.shift(Offset(0, size.height / 2)), delegateLabel);
+  drawLabel(cell.shift(Offset(size.width / 2, size.height / 2)), deleteLabel);
   }
 
   @override

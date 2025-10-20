@@ -16,4 +16,31 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get searchHint => 'Buscar o filtrar por etiqueta…';
+
+  @override
+  String get axisUrgent => 'Urgente';
+
+  @override
+  String get axisNotUrgent => 'No urgente';
+
+  @override
+  String get axisImportant => 'Importante';
+
+  @override
+  String get axisNotImportant => 'No importante';
+
+  @override
+  String get minimapDo => 'Hacer';
+
+  @override
+  String get minimapDecide => 'Decidir';
+
+  @override
+  String get minimapDelegate => 'Delegar';
+
+  @override
+  String get minimapDelete => 'Borrar';
+
+  @override
+  String get settingsShowAxisLegends => 'Mostrar leyendas de ejes';
 }

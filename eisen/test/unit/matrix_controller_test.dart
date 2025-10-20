@@ -56,6 +56,17 @@ void main() {
     expect(m1 != m2 && m2 != m3 && m3 != m1, isTrue);
   });
 
+  test('axis legends toggle flips flag', () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final c = container.read(matrixControllerProvider.notifier);
+    await c.load();
+    final before = container.read(matrixControllerProvider).showAxisLegends;
+    c.toggleAxisLegends();
+    final after = container.read(matrixControllerProvider).showAxisLegends;
+    expect(after, !before);
+  });
+
   test('query filters layout results', () async {
     final container = ProviderContainer();
     addTearDown(container.dispose);

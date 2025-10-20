@@ -4,7 +4,9 @@ class SettingsSheet extends StatelessWidget {
   final VoidCallback onToggleTheme;
   final VoidCallback onToggleDensity;
   final bool compact;
-  const SettingsSheet({super.key, required this.onToggleTheme, required this.onToggleDensity, required this.compact});
+  final bool showAxisLegends;
+  final VoidCallback onToggleAxisLegends;
+  const SettingsSheet({super.key, required this.onToggleTheme, required this.onToggleDensity, required this.compact, required this.showAxisLegends, required this.onToggleAxisLegends});
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +41,15 @@ class SettingsSheet extends StatelessWidget {
               },
               secondary: const Icon(Icons.density_medium),
               title: Text(compact ? 'Compact density' : 'Comfortable density'),
+            ),
+            SwitchListTile(
+              value: showAxisLegends,
+              onChanged: (_) {
+                onToggleAxisLegends();
+                Navigator.of(context).pop();
+              },
+              secondary: const Icon(Icons.label_outline),
+              title: const Text('Mostrar leyendas de ejes'),
             ),
             const SizedBox(height: 8),
           ],

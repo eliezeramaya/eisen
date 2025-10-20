@@ -1,5 +1,14 @@
 {
   "appTitle": "Eisenhower Matrix",
   "newTask": "New task",
-  "searchHint": "Search or filter by tag…"
+  "searchHint": "Search or filter by tag…",
+  "axisUrgent": "Urgent",
+  "axisNotUrgent": "Not urgent",
+  "axisImportant": "Important",
+  "axisNotImportant": "Not important",
+  "minimapDo": "Do",
+  "minimapDecide": "Decide",
+  "minimapDelegate": "Delegate",
+  "minimapDelete": "Delete",
+  "settingsShowAxisLegends": "Show axis legends"
 }

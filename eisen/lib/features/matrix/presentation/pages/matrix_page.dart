@@ -7,7 +7,6 @@ import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_cont
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/legend.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/minimap.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/task_tile.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/toolbar.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_canvas.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/inspector_drawer.dart';
@@ -45,6 +44,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           onToggleTheme: ctrl.toggleTheme,
           onQuery: ctrl.setQuery,
           compact: state.compact,
+          themeMode: state.themeMode,
           onToggleDensity: ctrl.toggleCompact,
           onEdit: () {
             final id = state.selectedId;
@@ -66,6 +66,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
               onToggleTheme: ctrl.toggleTheme,
               onToggleDensity: ctrl.toggleCompact,
               compact: state.compact,
+              showAxisLegends: state.showAxisLegends,
+              onToggleAxisLegends: ctrl.toggleAxisLegends,
             ),
           ),
         ),
@@ -110,6 +112,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
                   },
                 ),
+                if (state.showAxisLegends && state.zoom == null) const _AxisLegends(),
                 Align(
                   alignment: Alignment.topRight,
                   child: Padding(
@@ -137,6 +140,54 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
               onChanged: (t) => ctrl.updateTask(t.id, (_) => t),
               onDelete: () => ctrl.deleteTask(state.selectedId!),
             ),
+    );
+  }
+}
+
+class _AxisLegends extends StatelessWidget {
+  const _AxisLegends();
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: true,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final w = constraints.maxWidth;
+            final h = constraints.maxHeight;
+            final halfW = w / 2;
+            final halfH = h / 2;
+            final style = Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Colors.white.withOpacity(0.85),
+                  fontWeight: FontWeight.w600,
+                );
+            return Stack(children: [
+              // X-axis labels (Urgent — Not urgent)
+              Positioned(
+                left: 16,
+                top: halfH - 18,
+                child: Text('Urgente', style: style),
+              ),
+              Positioned(
+                right: 16,
+                top: halfH - 18,
+                child: Text('No urgente', style: style),
+              ),
+              // Y-axis labels (Important — Not important)
+              Positioned(
+                left: halfW - 60,
+                top: 24,
+                child: Text('Importante', style: style),
+              ),
+              Positioned(
+                left: halfW - 66,
+                bottom: 12,
+                child: Text('No importante', style: style),
+              ),
+            ]);
+          },
+        ),
+      ),
     );
   }
 }

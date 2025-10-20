@@ -115,6 +115,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search or filter by tag…'**
   String get searchHint;
+
+  /// No description provided for @axisUrgent.
+  ///
+  /// In en, this message translates to:
+  /// **'Urgent'**
+  String get axisUrgent;
+
+  /// No description provided for @axisNotUrgent.
+  ///
+  /// In en, this message translates to:
+  /// **'Not urgent'**
+  String get axisNotUrgent;
+
+  /// No description provided for @axisImportant.
+  ///
+  /// In en, this message translates to:
+  /// **'Important'**
+  String get axisImportant;
+
+  /// No description provided for @axisNotImportant.
+  ///
+  /// In en, this message translates to:
+  /// **'Not important'**
+  String get axisNotImportant;
+
+  /// No description provided for @minimapDo.
+  ///
+  /// In en, this message translates to:
+  /// **'Do'**
+  String get minimapDo;
+
+  /// No description provided for @minimapDecide.
+  ///
+  /// In en, this message translates to:
+  /// **'Decide'**
+  String get minimapDecide;
+
+  /// No description provided for @minimapDelegate.
+  ///
+  /// In en, this message translates to:
+  /// **'Delegate'**
+  String get minimapDelegate;
+
+  /// No description provided for @minimapDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get minimapDelete;
+
+  /// No description provided for @settingsShowAxisLegends.
+  ///
+  /// In en, this message translates to:
+  /// **'Show axis legends'**
+  String get settingsShowAxisLegends;
 }
 
 class _AppLocalizationsDelegate

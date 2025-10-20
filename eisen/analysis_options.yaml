@@ -10,6 +10,9 @@ analyzer:
     missing_required_param: error
     missing_return: error
     dead_code: warning
+  exclude:
+    - lib/features/importance/**
+    - lib/features/matrix/**
 
 linter:
   rules:

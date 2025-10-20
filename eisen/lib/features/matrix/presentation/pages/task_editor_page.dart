@@ -38,6 +38,7 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
 
   @override
   Widget build(BuildContext context) {
+    final detailsLabel = Localizations.localeOf(context).languageCode == 'es' ? 'Detalles' : 'Details';
     final ctrl = ref.read(matrixControllerProvider.notifier);
     return Scaffold(
       appBar: AppBar(
@@ -98,7 +99,7 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
               const SizedBox(height: 16),
               TextField(
                 controller: _notes,
-                decoration: const InputDecoration(labelText: 'Notes'),
+                decoration: InputDecoration(labelText: detailsLabel),
                 minLines: 4,
                 maxLines: 10,
               ),
