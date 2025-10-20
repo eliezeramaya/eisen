@@ -171,6 +171,10 @@ class MatrixController extends Notifier<MatrixState> {
     final tasks = state.tasks.where((t) => t.id != id).toList();
     state = state.copyWith(tasks: tasks, selectedId: state.selectedId == id ? null : state.selectedId, version: state.version + 1);
     _dirtyQuadrants.add(prev.quadrant);
+    // Clean caches to prevent leaks
+    _cache.lastWeight.remove(id);
+    _cache.lastRect.remove(id);
+    _cache.lastRank.remove(id);
     unawaited(persist());
   }
 
@@ -253,6 +257,19 @@ class MatrixController extends Notifier<MatrixState> {
     _lastViewport = viewport;
     _dirtyQuadrants.clear();
     return merged;
+  }
+
+  /// Public API alias for layout, for clarity in call sites.
+  /// If [only] is provided, marks that quadrant dirty and recomputes just it.
+  List<TreemapRect> computeLayout({Quadrant? only, Size? viewport}) => layout(only: only, viewport: viewport);
+
+  /// Manually invalidate layout cache for [q] (or all if null).
+  void invalidateLayout([Quadrant? q]) {
+    if (q == null) {
+      _dirtyQuadrants = {Quadrant.q1, Quadrant.q2, Quadrant.q3, Quadrant.q4};
+    } else {
+      _dirtyQuadrants.add(q);
+    }
   }
 
   List<Task> _demoTasks() {
