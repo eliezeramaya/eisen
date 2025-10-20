@@ -9,6 +9,7 @@ import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/features/eisen_matrix/data/local_repo.dart';
 import 'package:eisen/core/services/storage_prefs.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/core/services/telemetry.dart';
 
 class MatrixState {
   final List<Task> tasks;
@@ -207,7 +208,9 @@ class MatrixController extends Notifier<MatrixState> {
     if (zoom != null) {
       final rect = const Rect.fromLTWH(0, 0, 1, 1);
       final tasksInQ = filtered.where((t) => t.quadrant == zoom).toList();
+      final sw = Stopwatch()..start();
       final part = layoutQuadrantStable(tasksInQ, rect, _cache, _bandit, zoom, minTileArea01: minArea01);
+      sw.stop(); Telemetry.layoutTime(zoom.name, sw.elapsedMicroseconds / 1000.0);
       _lastLayout = part;
       _lastHash = h;
       _lastZoom = zoom;
@@ -220,7 +223,9 @@ class MatrixController extends Notifier<MatrixState> {
       _dirtyQuadrants.add(only);
     }
     if (_lastLayout.isEmpty || viewportChanged || zoomChanged || _dirtyQuadrants.length >= 4) {
-      final out = computeStableLayout(filtered, zoom: null, cache: _cache, bandit: _bandit, minTileArea01: minArea01);
+      final sw = Stopwatch()..start();
+      final out = computeStableLayout(filtered, zoom: null, cache: _cache, bandit: _bandit, minTileArea01: minTileArea01);
+      sw.stop(); Telemetry.layoutTime(null, sw.elapsedMicroseconds / 1000.0);
       _lastLayout = out;
       _lastHash = h;
       _lastZoom = zoom;
@@ -251,7 +256,9 @@ class MatrixController extends Notifier<MatrixState> {
       merged.addAll(kept);
     }
     for (final q in _dirtyQuadrants) {
-      final part = layoutQuadrantStable(tasksByQ[q]!, qRects[q]!, _cache, _bandit, q, minTileArea01: minArea01);
+      final sw = Stopwatch()..start();
+      final part = layoutQuadrantStable(tasksByQ[q]!, qRects[q]!, _cache, _bandit, q, minTileArea01: minTileArea01);
+      sw.stop(); Telemetry.layoutTime(q.name, sw.elapsedMicroseconds / 1000.0);
       merged.addAll(part);
     }
     _lastLayout = merged;
@@ -260,6 +267,7 @@ class MatrixController extends Notifier<MatrixState> {
     _lastViewport = viewport;
     _dirtyQuadrants.clear();
     _computeTopSpots(_lastLayout);
+    _computeTop3ReorderDelta(_lastLayout);
     return merged;
   }
 
@@ -285,6 +293,41 @@ class MatrixController extends Notifier<MatrixState> {
       if (top != null) sug.add(top);
     }
     _suggested = sug;
+    if (sug.isNotEmpty) Telemetry.suggestedExpose(sug);
+  }
+
+  void _computeTop3ReorderDelta(List<TreemapRect> layout) {
+    // Compare previous vs current top-3 ids per quadrant
+    final prevByQ = <Quadrant, List<String>>{for (final q in Quadrant.values) q: []};
+    final currByQ = <Quadrant, List<String>>{for (final q in Quadrant.values) q: []};
+    // previous top3 from _lastLayout is not available here (we just replaced it). So track via cache.lastRank
+    // Build previous ordering list by ascending lastRank
+    final taskById = {for (final t in state.tasks) t.id: t};
+    for (final q in Quadrant.values) {
+      final ids = _cache.lastRank.keys.where((id) {
+        final t = taskById[id];
+        return t != null && t.quadrant == q;
+      }).toList();
+      ids.sort((a,b) => (_cache.lastRank[a] ?? 1<<30).compareTo(_cache.lastRank[b] ?? 1<<30));
+      prevByQ[q] = ids.take(3).toList();
+    }
+    for (final q in Quadrant.values) {
+      final items = layout.where((e) => e.task.quadrant == q && e.stackChildren.isEmpty).toList();
+      if (items.isEmpty) continue;
+      items.sort((a,b) => (b.rect01.width*b.rect01.height).compareTo(a.rect01.width*a.rect01.height));
+      currByQ[q] = items.map((e)=>e.task.id).take(3).toList();
+    }
+    int delta = 0;
+    for (final q in Quadrant.values) {
+      final a = prevByQ[q]!;
+      final b = currByQ[q]!;
+      // count symmetric difference in positions
+      final setA = a.toSet();
+      final setB = b.toSet();
+      final sym = {...setA.difference(setB), ...setB.difference(setA)};
+      delta += sym.length;
+    }
+    if (delta > 0) Telemetry.top3ReorderDelta(delta);
   }
 
   Set<String> get suggestedTopSpots => _suggested;
