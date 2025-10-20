@@ -10,11 +10,11 @@ void main() {
     expect(weight(base) > weight(low), isTrue);
   });
 
-  test('urgent quadrants get boost (q1/q3)', () {
-    final q2 = Task(id: 'a', title: 't', quadrant: Quadrant.q2, priority: 5, minutes: 30);
-    final q1 = q2.copyWith(quadrant: Quadrant.q1);
-    final q3 = q2.copyWith(quadrant: Quadrant.q3);
-    expect(weight(q1) > weight(q2), isTrue);
-    expect(weight(q3) > weight(q2), isTrue);
+  test('urgent quadrants get boost (q1/q2 urgent)', () {
+    final base = Task(id: 'a', title: 't', quadrant: Quadrant.q3, priority: 5, minutes: 30);
+    final q1 = base.copyWith(quadrant: Quadrant.q1);
+    final q2 = base.copyWith(quadrant: Quadrant.q2);
+    expect(weight(q1) > weight(base), isTrue);
+    expect(weight(q2) > weight(base), isTrue);
   });
 }

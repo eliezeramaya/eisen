@@ -107,33 +107,25 @@ class Task {
 double weight(Task t) {
   const alpha = 1.2; // priority exponent
   const beta = 0.8; // minutes exponent
-  final urgBoost = (t.quadrant == Quadrant.q1 || t.quadrant == Quadrant.q3) ? 1.15 : 1.0;
+  final urgBoost = t.isUrgent ? 1.15 : 1.0;
 
   // Clipping to avoid outliers and instability
   final p = t.priority.clamp(1, 10).toDouble();
   final m = t.minutes.clamp(5, 240).toDouble();
 
-  // days to due (negative means overdue -> treat as 0 days left)
-  double daysToDue;
-  if (t.due == null) {
-    daysToDue = double.infinity;
-  } else {
-    final now = DateTime.now();
-    final diff = t.due!.difference(now).inMinutes / (60.0 * 24.0);
-    daysToDue = diff.isFinite ? math.max(0.0, diff) : double.infinity;
-  }
-  final deadlineSoon = (daysToDue.isFinite) ? math.exp(-0.7 * daysToDue) : 0.0; // [0..1]
-  final dueBoost = 1.0 + 0.25 * deadlineSoon; // [1..1.25]
+  // 0..1: a menor distancia a due, mayor
+  final now = DateTime.now();
+  final daysToDue = t.due == null
+      ? double.infinity
+      : t.due!.difference(now).inHours / 24.0;
+  final dl = daysToDue.isFinite ? math.max(0.0, daysToDue) : double.infinity;
+  final deadlineSoon = dl.isFinite ? math.exp(-0.7 * dl) : 0.0; // [0..1]
+  final dueBoost = 1.0 + 0.25 * deadlineSoon; // monotone w.r.t. due proximity
 
-  final lastTouch = t.updatedAt ?? t.createdAt;
-  double lastTouchDays;
-  if (lastTouch == null) {
-    lastTouchDays = 7.0; // default decay
-  } else {
-    final diff = DateTime.now().difference(lastTouch).inMinutes / (60.0 * 24.0);
-    lastTouchDays = diff.isFinite ? math.max(0.0, diff) : 7.0;
-  }
-  final freshness = math.exp(-0.15 * lastTouchDays); // [0..1]
+  // Decaimiento por “frescura” (última edición o creación)
+  final lastTouch = t.updatedAt ?? t.createdAt ?? now;
+  final lastDays = now.difference(lastTouch).inDays.toDouble();
+  final freshness = math.exp(-0.15 * math.max(0.0, lastDays));
 
   final base = (math.pow(p, alpha) as double) * (math.pow(m, beta) as double);
   final raw = base * urgBoost * dueBoost * (0.75 + 0.25 * freshness);
