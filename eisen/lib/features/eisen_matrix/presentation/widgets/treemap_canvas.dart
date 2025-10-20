@@ -105,15 +105,19 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
         final overlay = <Widget>[];
-        // Compute tiny tiles per quadrant (non-clickable), to expose stack overlays
+        // If layout already contains stack tiles, skip overlay fallback
+        final hasStackTiles = widget.layout.any((e) => e.stackChildren.isNotEmpty);
+        // Compute tiny tiles per quadrant only if no integrated stacks present
         final minAreaPx = 44.0 * 44.0;
         final tinyByQ = <Quadrant, List<TreemapRect>>{
           Quadrant.q1: [], Quadrant.q2: [], Quadrant.q3: [], Quadrant.q4: []
         };
-        for (final tr in widget.layout) {
-          final r = _px(tr.rect01, size);
-          if (r.width * r.height < minAreaPx) {
-            tinyByQ[tr.task.quadrant]!.add(tr);
+        if (!hasStackTiles) {
+          for (final tr in widget.layout) {
+            final r = _px(tr.rect01, size);
+            if (r.width * r.height < minAreaPx) {
+              tinyByQ[tr.task.quadrant]!.add(tr);
+            }
           }
         }
         if (widget.onEditTask != null) {
@@ -143,7 +147,16 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
                 behavior: HitTestBehavior.opaque,
                 onTapDown: (d) {
                   final id = _hitTest(d.localPosition, size);
-                  if (id != null) Telemetry.tileTap(id);
+                  if (id != null) {
+                    final tr = widget.layout.firstWhere((e) => e.task.id == id, orElse: () => widget.layout.first);
+                    if (tr.stackChildren.isNotEmpty) {
+                      // Open stack sheet for this quadrant
+                      Telemetry.stackOpen(tr.task.quadrant.name, tr.stackChildren.length);
+                      _openStackSheet(context, tr.task.quadrant, tr.stackChildren);
+                      return;
+                    }
+                    Telemetry.tileTap(id);
+                  }
                   widget.onTap?.call(id);
                 },
                 onDoubleTapDown: (d) {
@@ -203,7 +216,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
               ),
             ),
             // Stack overlays per quadrant
-            ...Quadrant.values.map((q) {
+            if (!hasStackTiles) ...Quadrant.values.map((q) {
               final count = tinyByQ[q]!.length;
               if (count == 0) return const SizedBox.shrink();
               final pos = _stackOverlayPosition(q, size);
@@ -245,10 +258,8 @@ class _TreemapCanvasState extends State<TreemapCanvas> with SingleTickerProvider
   }
 
   String? _hitTest(Offset pos, Size size) {
-    final minAreaPx = 44.0 * 44.0;
     for (final tr in widget.layout) {
       final r = _px(tr.rect01, size);
-      if (r.width * r.height < minAreaPx) continue; // not clickable, stacked
       if (r.contains(pos)) return tr.task.id;
     }
     return null;

@@ -164,13 +164,19 @@ class MatrixController extends Notifier<MatrixState> {
 
   /// Computes a stable layout using cached smoothing and bandit tie-breaks.
   /// Uses a simple hash to memoize within a frame to limit rebuild work.
-  List<TreemapRect> layout({Quadrant? only}) {
+  List<TreemapRect> layout({Quadrant? only, Size? viewport}) {
     final filtered = state.query.isEmpty
         ? state.tasks
         : state.tasks.where((t) => t.title.toLowerCase().contains(state.query.toLowerCase())).toList();
     final h = Object.hashAllUnordered(filtered.map((t) => t.id)) ^ filtered.length ^ (state.zoom?.index ?? -1);
     if (_lastHash == h && only == null) return _lastLayout;
-    final out = computeStableLayout(filtered, zoom: state.zoom, cache: _cache, bandit: _bandit);
+    double? minArea01;
+    if (viewport != null && viewport.width > 0 && viewport.height > 0) {
+      final minPx = 44.0 * 44.0;
+      final totalPx = viewport.width * viewport.height;
+      minArea01 = (minPx / totalPx).clamp(0.0, 1.0);
+    }
+    final out = computeStableLayout(filtered, zoom: state.zoom, cache: _cache, bandit: _bandit, minTileArea01: minArea01);
     if (only == null) {
       _lastHash = h;
       _lastLayout = out;

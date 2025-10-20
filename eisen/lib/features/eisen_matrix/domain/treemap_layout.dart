@@ -6,7 +6,9 @@ import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 class TreemapRect {
   final Rect rect01; // normalized [0..1]
   final Task task;
-  TreemapRect(this.rect01, this.task);
+  final List<Task> stackChildren;
+  TreemapRect(this.rect01, this.task, {this.stackChildren = const []});
+  bool get isStack => stackChildren.isNotEmpty;
 }
 
 double ema(double prev, double cur, {double alpha = 0.5}) => alpha * cur + (1 - alpha) * prev;
@@ -139,7 +141,9 @@ List<TreemapRect> _layoutIntoRect(List<Task> tasks, Rect rect) {
 
 class _Item {
   final double area;
-  _Item({required this.area});
+  final List<Task> stackChildren;
+  _Item({required this.area, this.stackChildren = const []});
+  bool get isStack => stackChildren.isNotEmpty;
 }
 
 // ---- Stable layout with smoothing, root-scale, and bandit tie-breaker ----
@@ -156,6 +160,7 @@ List<TreemapRect> computeStableLayout(
   Quadrant? zoom,
   LayoutCache? cache,
   BanditService? bandit,
+  double? minTileArea01,
 }) {
   final byQuadrant = <Quadrant, List<Task>>{
     Quadrant.q1: [],
@@ -169,7 +174,7 @@ List<TreemapRect> computeStableLayout(
 
   final full = const Rect.fromLTWH(0, 0, 1, 1);
   if (zoom != null) {
-    return _layoutStableIntoRect(byQuadrant[zoom]!, full, cache, bandit, zoom);
+    return _layoutStableIntoRect(byQuadrant[zoom]!, full, cache, bandit, zoom, minTileArea01: minTileArea01);
   }
 
   final qRects = <Quadrant, Rect>{
@@ -181,7 +186,7 @@ List<TreemapRect> computeStableLayout(
 
   final out = <TreemapRect>[];
   for (final q in Quadrant.values) {
-    out.addAll(_layoutStableIntoRect(byQuadrant[q]!, qRects[q]!, cache, bandit, q));
+    out.addAll(_layoutStableIntoRect(byQuadrant[q]!, qRects[q]!, cache, bandit, q, minTileArea01: minTileArea01));
   }
   return out;
 }
@@ -202,6 +207,7 @@ List<TreemapRect> _layoutStableIntoRect(
   LayoutCache? cache,
   BanditService? bandit,
   Quadrant quadrant,
+  {double? minTileArea01}
 ) {
   if (tasks.isEmpty) return const [];
 
@@ -220,10 +226,40 @@ List<TreemapRect> _layoutStableIntoRect(
   if (sum <= 0) return tasks.map((t) => TreemapRect(rect, t)).toList();
   final rawAreas = values.map((v) => (v / sum) * rect.width * rect.height).toList(growable: false);
 
+  // Minimum-area stacking: group all items below threshold into a single stack tile
+  final keep = <int>[];
+  final small = <int>[];
+  if (minTileArea01 != null && minTileArea01 > 0) {
+    for (var i = 0; i < rawAreas.length; i++) {
+      if (rawAreas[i] < minTileArea01) {
+        small.add(i);
+      } else {
+        keep.add(i);
+      }
+    }
+  } else {
+    for (var i = 0; i < rawAreas.length; i++) {
+      keep.add(i);
+    }
+  }
+
   // Build sortable list with stable ordering and tie-breaks
   final tuples = <(_Item, Task)>[];
-  for (var i = 0; i < rawAreas.length; i++) {
+  for (final i in keep) {
     tuples.add((_Item(area: rawAreas[i]), tasks[i]));
+  }
+  if (small.isNotEmpty) {
+    final sumSmall = small.fold<double>(0, (a, i) => a + rawAreas[i]);
+    final children = [for (final i in small) tasks[i]];
+    final stackTask = Task(
+      id: 'stack_${quadrant.name}',
+      title: '+${children.length}',
+      quadrant: quadrant,
+      priority: 1,
+      minutes: 5,
+      category: '__stack__',
+    );
+    tuples.add((_Item(area: sumSmall, stackChildren: children), stackTask));
   }
 
   // Bandit tie ranks for near-equal areas
@@ -278,7 +314,7 @@ List<TreemapRect> _layoutStableIntoRect(
       for (final it in row) {
         final w = it.$1.area / h;
         final r = Rect.fromLTWH(x, rect.top, w, h);
-        result.add(TreemapRect(r, it.$2));
+        result.add(TreemapRect(r, it.$2, stackChildren: it.$1.stackChildren));
         cache?.lastRect[it.$2.id] = r;
         x += w;
       }
@@ -289,7 +325,7 @@ List<TreemapRect> _layoutStableIntoRect(
       for (final it in row) {
         final h = it.$1.area / w;
         final r = Rect.fromLTWH(rect.left, y, w, h);
-        result.add(TreemapRect(r, it.$2));
+        result.add(TreemapRect(r, it.$2, stackChildren: it.$1.stackChildren));
         cache?.lastRect[it.$2.id] = r;
         y += h;
       }

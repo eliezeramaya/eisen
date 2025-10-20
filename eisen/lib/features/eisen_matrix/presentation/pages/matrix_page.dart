@@ -148,54 +148,59 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                           0,      0,      0,      1, 0,
                         ])
                       : const ColorFilter.mode(Colors.transparent, BlendMode.srcOver),
-                  child: TreemapCanvas(
-                  tasks: tasks,
-                  layout: layout,
-                  minimal: minimal,
-                  zoom: zoom,
-                  inlineEditId: _inlineEditId,
-                  onInlineSubmit: (id, title) {
-                    ctrl.updateTask(id, (t) => t.copyWith(title: title));
-                    setState(() => _inlineEditId = null);
-                  },
-                  onInlineCancel: (id) {
-                    // If it's still default title and untouched, we can delete; otherwise, just exit inline
-                    final t = tasks.firstWhere((e) => e.id == id);
-                    if (t.title == 'New Task' && (t.notes == null || t.notes!.isEmpty)) {
-                      ctrl.deleteTask(id);
-                    }
-                    setState(() => _inlineEditId = null);
-                  },
-                  onTap: (id) {
-                    ctrl.select(id);
-                    if (id != null) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
-                    }
-                  },
-                  onDropToQuadrant: (id, q) {
-                    final prev = tasks.firstWhere((t) => t.id == id).quadrant;
-                    if (prev == q) return; // no-op
-                    ctrl.moveTaskToQuadrant(id, q);
-                    final qName = q.name.toUpperCase();
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Tarea movida a $qName'),
-                        action: SnackBarAction(
-                          label: 'Deshacer',
-                          onPressed: () {
-                            ctrl.moveTaskToQuadrant(id, prev);
-                          },
-                        ),
-                        duration: const Duration(seconds: 4),
-                      ),
-                    );
-                  },
-                  onDoubleTapQuadrant: (q) => ctrl.setZoom(zoom == q ? null : q),
-                  onEditTask: (id) {
-                    final task = tasks.firstWhere((t) => t.id == id);
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
-                  },
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final size = Size(constraints.maxWidth, constraints.maxHeight);
+                      final dynamicLayout = ctrl.layout(viewport: size);
+                      return TreemapCanvas(
+                        tasks: tasks,
+                        layout: dynamicLayout,
+                        minimal: minimal,
+                        zoom: zoom,
+                        inlineEditId: _inlineEditId,
+                        onInlineSubmit: (id, title) {
+                          ctrl.updateTask(id, (t) => t.copyWith(title: title));
+                          setState(() => _inlineEditId = null);
+                        },
+                        onInlineCancel: (id) {
+                          final t = tasks.firstWhere((e) => e.id == id);
+                          if (t.title == 'New Task' && (t.notes == null || t.notes!.isEmpty)) {
+                            ctrl.deleteTask(id);
+                          }
+                          setState(() => _inlineEditId = null);
+                        },
+                        onTap: (id) {
+                          ctrl.select(id);
+                          if (id != null) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
+                          }
+                        },
+                        onDropToQuadrant: (id, q) {
+                          final prev = tasks.firstWhere((t) => t.id == id).quadrant;
+                          if (prev == q) return; // no-op
+                          ctrl.moveTaskToQuadrant(id, q);
+                          final qName = q.name.toUpperCase();
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Tarea movida a $qName'),
+                              action: SnackBarAction(
+                                label: 'Deshacer',
+                                onPressed: () {
+                                  ctrl.moveTaskToQuadrant(id, prev);
+                                },
+                              ),
+                              duration: const Duration(seconds: 4),
+                            ),
+                          );
+                        },
+                        onDoubleTapQuadrant: (q) => ctrl.setZoom(zoom == q ? null : q),
+                        onEditTask: (id) {
+                          final task = tasks.firstWhere((t) => t.id == id);
+                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
+                        },
+                      );
+                    },
                   ),
                 ),
                 // Quick add buttons por cuadrante
