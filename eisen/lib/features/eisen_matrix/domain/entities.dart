@@ -21,6 +21,12 @@ class Task {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final DateTime? completedAt;
+  // Volatile counters (not persisted): UX signals
+  final int replanCount; // how many times re-scheduled/replanned recently
+  final int snoozeCount; // how many times snoozed in recent window
+  // Optional user-normalized values in [0..1] (not persisted)
+  final double? normalizedPriority;
+  final double? normalizedMinutes;
 
   const Task({
     required this.id,
@@ -35,6 +41,10 @@ class Task {
     this.createdAt,
     this.updatedAt,
     this.completedAt,
+    this.replanCount = 0,
+    this.snoozeCount = 0,
+    this.normalizedPriority,
+    this.normalizedMinutes,
   });
 
   Task copyWith({
@@ -49,6 +59,10 @@ class Task {
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? completedAt,
+    int? replanCount,
+    int? snoozeCount,
+    double? normalizedPriority,
+    double? normalizedMinutes,
   }) {
     return Task(
       id: id,
@@ -63,8 +77,25 @@ class Task {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       completedAt: completedAt ?? this.completedAt,
+      replanCount: replanCount ?? this.replanCount,
+      snoozeCount: snoozeCount ?? this.snoozeCount,
+      normalizedPriority: normalizedPriority ?? this.normalizedPriority,
+      normalizedMinutes: normalizedMinutes ?? this.normalizedMinutes,
     );
   }
+
+  /// Derived convenience flags (not persisted)
+  bool get isUrgent => quadrant.isUrgent;
+  bool get isImportant => quadrant.isImportant;
+
+  /// Clamped projections used by layout/weighting.
+  double get priorityClamped => priority.clamp(1, 10).toDouble();
+  double get minutesClamped => minutes.clamp(5, 240).toDouble();
+
+  /// Normalized [0..1] values. If user-provided normalized values exist,
+  /// they are used; otherwise deterministic normalization is applied.
+  double get priorityNorm => ((normalizedPriority ?? (priorityClamped - 1.0) / 9.0)).clamp(0.0, 1.0);
+  double get minutesNorm => ((normalizedMinutes ?? (minutesClamped - 5.0) / (240.0 - 5.0))).clamp(0.0, 1.0);
 }
 
 /// Returns the base weight for a task used by the treemap layout.
