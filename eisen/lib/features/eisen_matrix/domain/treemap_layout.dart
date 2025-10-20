@@ -11,7 +11,13 @@ class TreemapRect {
   bool get isStack => stackChildren.isNotEmpty;
 }
 
-double ema(double prev, double cur, {double alpha = 0.5}) => alpha * cur + (1 - alpha) * prev;
+/// Global EMA alpha for weight smoothing. Adjust to tune hysteresis.
+const double kTreemapEmaAlpha = 0.5;
+
+double ema(double prev, double cur, {double? alpha}) {
+  final a = alpha ?? kTreemapEmaAlpha;
+  return a * cur + (1 - a) * prev;
+}
 
 double minTileAreaPx(double devicePixelRatio) => 44.0 * 44.0;
 
@@ -218,7 +224,7 @@ List<TreemapRect> _layoutStableIntoRect(
   for (final t in tasks) {
     final w = weight(t);
     final prev = cache?.lastWeight[t.id] ?? w;
-    final smooth = ema(prev, w, alpha: 0.5);
+    final smooth = ema(prev, w);
     cache?.lastWeight[t.id] = smooth;
     values.add(math.sqrt(math.max(0.0, smooth)));
   }
