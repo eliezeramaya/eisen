@@ -714,15 +714,16 @@ class _TreemapPainter extends CustomPainter {
       drawRect = drawRect.deflate(safeGap);
       // Fill + Border (guarded for debug vs. normal styling)
       final rr = RRect.fromRectAndRadius(drawRect, const Radius.circular(12));
-      final fillAlpha = (debugTreemap && !minimal) ? 0.6 : (minimal ? 0.24 : 0.18);
+      // Use conservative alphas for production; reserve higher alpha for ephemeral debug builds
+      final fillAlpha = (debugTreemap && !minimal) ? 0.28 : (minimal ? 0.22 : 0.14);
       paint
         ..style = PaintingStyle.fill
         ..color = color.withValues(alpha: fillAlpha);
       canvas.drawRRect(rr, paint);
       paint
         ..style = PaintingStyle.stroke
-        ..color = minimal ? Colors.black.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.22)
-        ..strokeWidth = (debugTreemap && !minimal) ? 4.0 : 1.0;
+        ..color = minimal ? Colors.black.withValues(alpha: 0.20) : Colors.white.withValues(alpha: 0.18)
+        ..strokeWidth = (debugTreemap && !minimal) ? 2.0 : 1.0;
       canvas.drawRRect(rr, paint);
 
 
@@ -747,21 +748,12 @@ class _TreemapPainter extends CustomPainter {
       final area = drawRect.width * drawRect.height;
       final availableHeight = drawRect.height - 12; // padding top+bottom
       double currentY = drawRect.top + 6;
-      
-      // Paint title (debug: larger & always; normal: smaller/conditional)
-      final titleSize = debugTreemap ? 16.0 : 13.0;
+
+      // Paint title: keep sizes conservative; only allow multi-line in explicit debug mode
+      final titleSize = debugTreemap ? 15.0 : 13.0;
       final canShowTitle = debugTreemap || availableHeight > 18.0;
       if (canShowTitle) {
-        final tp = _textPainter(tr.task.title, drawRect, titleSize, FontWeight.w800, textColor: minimal ? Colors.black : Colors.white, maxLines: debugTreemap ? 3 : 1);
-        if (!minimal) {
-          final shadowPaint = Paint()
-            ..color = Colors.black
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-          canvas.drawRRect(RRect.fromRectAndRadius(
-            Rect.fromLTWH(drawRect.left + 6, currentY - 2, tp.width + 4, tp.height + 4),
-            const Radius.circular(4)
-          ), shadowPaint);
-        }
+        final tp = _textPainter(tr.task.title, drawRect, titleSize, FontWeight.w700, textColor: minimal ? Colors.black : Colors.white, maxLines: debugTreemap ? 3 : 1);
         tp.paint(canvas, Offset(drawRect.left + 8, currentY));
         currentY += tp.height + 2;
       }
