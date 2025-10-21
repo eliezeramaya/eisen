@@ -16,6 +16,28 @@ class TreemapRect {
   bool get isStack => stackChildren.isNotEmpty;
 }
 
+// --- Debug flags and checks ---
+
+/// Toggle debug overlays / asserts when developing treemap issues.
+/// Set to `false` by default for test and production runs. Enable when
+/// actively debugging layout correctness to exercise internal asserts.
+const bool debugTreemap = false;
+
+void _checkFinite(String where, double v) {
+  assert(v.isFinite, 'Non-finite at $where: $v');
+  assert(!v.isNaN, 'NaN at $where');
+}
+
+void _checkRect(String where, Rect r) {
+  assert(r.width > 0 && r.height > 0, 'Invalid rect at $where: $r');
+}
+
+void _checkAreaSum(String where, List<Rect> rects, Rect quad) {
+  final sum = rects.fold<double>(0, (a, r) => a + r.width * r.height);
+  final total = quad.width * quad.height;
+  assert((sum - total).abs() / total < 0.01, 'Area drift at $where: sum=$sum total=$total');
+}
+
 /// Global EMA alpha for weight smoothing. Adjust to tune hysteresis.
 const double kTreemapEmaAlpha = 0.5;
 
@@ -56,7 +78,14 @@ List<TreemapRect> computeSquarifiedLayout(List<Task> tasks, {Quadrant? zoom}) {
   final full = const Rect.fromLTWH(0, 0, 1, 1);
 
   if (zoom != null) {
-    return _layoutIntoRect(byQuadrant[zoom]!, full);
+    final out = _layoutIntoRect(byQuadrant[zoom]!, full);
+    if (debugTreemap) {
+      _checkAreaSum('computeSquarifiedLayout(zoom)', out.map((e) => e.rect01).toList(), full);
+      for (final r in out) {
+        _checkRect('computeSquarifiedLayout(zoom)', r.rect01);
+      }
+    }
+    return out;
   }
 
   final qRects = <Quadrant, Rect>{
@@ -68,18 +97,29 @@ List<TreemapRect> computeSquarifiedLayout(List<Task> tasks, {Quadrant? zoom}) {
 
   final out = <TreemapRect>[];
   for (final q in Quadrant.values) {
-    out.addAll(_layoutIntoRect(byQuadrant[q]!, qRects[q]!));
+    final part = _layoutIntoRect(byQuadrant[q]!, qRects[q]!);
+    if (debugTreemap) {
+      _checkAreaSum('computeSquarifiedLayout($q)', part.map((e) => e.rect01).toList(), qRects[q]!);
+      for (final r in part) {
+        _checkRect('computeSquarifiedLayout($q)', r.rect01);
+      }
+    }
+    out.addAll(part);
   }
   return out;
 }
 
 List<TreemapRect> _layoutIntoRect(List<Task> tasks, Rect rect) {
   if (tasks.isEmpty) return const [];
-  final values = tasks.map((t) => weight(t)).toList();
+  var values = tasks.map((t) => weight(t)).toList();
   final sum = values.fold<double>(0, (a, b) => a + (b.isFinite ? b : 0));
-  if (sum <= 0) return tasks.map((t) => TreemapRect(rect, t)).toList();
+  if (sum <= 0) {
+    // Uniform epsilon to avoid overlaps when all weights are 0/invalid
+    values = List.filled(tasks.length, 1.0);
+  }
 
-  final areas = values.map((v) => (v / sum) * rect.width * rect.height).toList();
+  final total = values.fold<double>(0, (a, b) => a + b);
+  final areas = values.map((v) => (v / total) * rect.width * rect.height).toList();
   // sort by descending area keeping items paired
   final items = <(_Item, Task)>[];
   for (var i = 0; i < areas.length; i++) {
@@ -104,7 +144,12 @@ List<TreemapRect> _layoutIntoRect(List<Task> tasks, Rect rect) {
   void layoutRow(List<(_Item, Task)> row, Rect rect) {
     if (row.isEmpty) return;
     final sumA = row.fold<double>(0, (a, e) => a + e.$1.area);
-    final horizontal = rect.width >= rect.height;
+    var horizontal = rect.width >= rect.height;
+    // Guardrail: if the row is extremely skewed, try flipping orientation
+    final worstRatio = worst(row.map((e) => e.$1).toList(), math.min(rect.width, rect.height));
+    if (worstRatio > 20.0) {
+      horizontal = !horizontal;
+    }
     if (horizontal) {
       final h = sumA / rect.width;
       var x = rect.left;
@@ -145,8 +190,6 @@ List<TreemapRect> _layoutIntoRect(List<Task> tasks, Rect rect) {
   layoutRow(row, cur);
 
   // Normalize minor floating rounding to keep within rect
-  final dx = rect.left;
-  final dy = rect.top;
   return result
       .map((e) {
         final r = Rect.fromLTWH(
@@ -198,7 +241,14 @@ List<TreemapRect> computeStableLayout(
 
   final full = const Rect.fromLTWH(0, 0, 1, 1);
   if (zoom != null) {
-    return _layoutStableIntoRect(byQuadrant[zoom]!, full, cache, bandit, zoom, minTileArea01: minTileArea01);
+    final out = _layoutStableIntoRect(byQuadrant[zoom]!, full, cache, bandit, zoom, minTileArea01: minTileArea01);
+    if (debugTreemap) {
+      _checkAreaSum('computeStableLayout(zoom)', out.map((e) => e.rect01).toList(), full);
+      for (final r in out) {
+        _checkRect('computeStableLayout(zoom)', r.rect01);
+      }
+    }
+    return out;
   }
 
   final qRects = <Quadrant, Rect>{
@@ -210,7 +260,14 @@ List<TreemapRect> computeStableLayout(
 
   final out = <TreemapRect>[];
   for (final q in Quadrant.values) {
-    out.addAll(_layoutStableIntoRect(byQuadrant[q]!, qRects[q]!, cache, bandit, q, minTileArea01: minTileArea01));
+    final part = _layoutStableIntoRect(byQuadrant[q]!, qRects[q]!, cache, bandit, q, minTileArea01: minTileArea01);
+    if (debugTreemap) {
+      _checkAreaSum('computeStableLayout($q)', part.map((e) => e.rect01).toList(), qRects[q]!);
+      for (final r in part) {
+        _checkRect('computeStableLayout($q)', r.rect01);
+      }
+    }
+    out.addAll(part);
   }
   return out;
 }
@@ -249,14 +306,18 @@ List<TreemapRect> _layoutStableIntoRect(
   final values = <double>[];
   for (final t in tasks) {
     final w = weight(t);
+    _checkFinite('weight(${t.id})', w);
     final prev = cache?.lastWeight[t.id] ?? w;
     final smooth = ema(prev, w);
     cache?.lastWeight[t.id] = smooth;
     values.add(math.sqrt(math.max(0.0, smooth)));
   }
 
-  final sum = values.fold<double>(0, (a, b) => a + b);
-  if (sum <= 0) return tasks.map((t) => TreemapRect(rect, t)).toList();
+  var sum = values.fold<double>(0, (a, b) => a + b);
+  if (sum <= 0) {
+    for (var i = 0; i < values.length; i++) values[i] = 1.0;
+    sum = values.length.toDouble();
+  }
   final rawAreas = values.map((v) => (v / sum) * rect.width * rect.height).toList(growable: false);
 
   // Minimum-area stacking: group all items below threshold into a single stack tile
@@ -270,6 +331,9 @@ List<TreemapRect> _layoutStableIntoRect(
         keep.add(i);
       }
     }
+    try {
+      debugPrint('layoutQuadrant[$quadrant]: tasks=${tasks.length} minArea01=$minTileArea01 keep=${keep.length} small=${small.length}');
+    } catch (_) {}
   } else {
     for (var i = 0; i < rawAreas.length; i++) {
       keep.add(i);
@@ -332,7 +396,12 @@ List<TreemapRect> _layoutStableIntoRect(
   void layoutRow(List<(_Item, Task)> row, Rect rect) {
     if (row.isEmpty) return;
     final sumA = row.fold<double>(0, (a, e) => a + e.$1.area);
-    final horizontal = rect.width >= rect.height;
+    var horizontal = rect.width >= rect.height;
+    // Guardrail: if first shelf gets extreme aspect ratio, try alternative orientation
+    final worstRatio = worst(row.map((e) => e.$1).toList(), math.min(rect.width, rect.height));
+    if (worstRatio > 20.0) {
+      horizontal = !horizontal;
+    }
     if (horizontal) {
       final h = sumA / rect.width;
       var x = rect.left;
@@ -391,6 +460,12 @@ List<TreemapRect> _layoutStableIntoRect(
   if (cache != null) {
     for (var i = 0; i < tuples.length; i++) {
       cache.lastRank[tuples[i].$2.id] = i;
+    }
+  }
+  if (debugTreemap) {
+    _checkAreaSum('_layoutStableIntoRect($quadrant)', clamped.map((e) => e.rect01).toList(), rect);
+    for (final r in clamped) {
+      _checkRect('_layoutStableIntoRect($quadrant)', r.rect01);
     }
   }
   return clamped;

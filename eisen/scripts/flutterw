@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Flutter wrapper that prefers a vendored SDK under the repo.
+# Usage: scripts/flutterw <flutter-args>
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
+
+# Resolve Flutter binary: inside repo tools/, then sibling ../tools/, else PATH
+if [[ -x "$ROOT_DIR/tools/flutter/bin/flutter" ]]; then
+  FLUTTER_BIN="$ROOT_DIR/tools/flutter/bin/flutter"
+elif [[ -x "$ROOT_DIR/../tools/flutter/bin/flutter" ]]; then
+  FLUTTER_BIN="$ROOT_DIR/../tools/flutter/bin/flutter"
+else
+  FLUTTER_BIN="flutter"
+fi
+
+exec "$FLUTTER_BIN" "$@"
+

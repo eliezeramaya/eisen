@@ -1,0 +1,10 @@
+{
+  // Prefer vendored Flutter if present; update path if you move tools/flutter
+  "dart.flutterSdkPath": "tools/flutter",
+  "dart.sdkPath": "tools/flutter/bin/cache/dart-sdk",
+  // Keep analyzer focused on the app, not SDKs or build outputs
+  "dart.analysisExcludedFolders": [
+    "${workspaceFolder}/build",
+    "${workspaceFolder}/tools"
+  ]
+}

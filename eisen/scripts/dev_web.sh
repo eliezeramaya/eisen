@@ -24,8 +24,13 @@ if [[ -n "${CHROME_EXECUTABLE:-}" ]]; then
 fi
 
 # Prefer vendored Flutter if available; fallback to PATH
-FLUTTER_BIN="$ROOT_DIR/../tools/flutter/bin/flutter"
-if [[ ! -x "$FLUTTER_BIN" ]]; then
+# Prefer vendored Flutter inside repo (tools/flutter), then sibling (../tools/flutter),
+# finally fallback to PATH.
+if [[ -x "$ROOT_DIR/tools/flutter/bin/flutter" ]]; then
+  FLUTTER_BIN="$ROOT_DIR/tools/flutter/bin/flutter"
+elif [[ -x "$ROOT_DIR/../tools/flutter/bin/flutter" ]]; then
+  FLUTTER_BIN="$ROOT_DIR/../tools/flutter/bin/flutter"
+else
   FLUTTER_BIN="flutter"
 fi
 

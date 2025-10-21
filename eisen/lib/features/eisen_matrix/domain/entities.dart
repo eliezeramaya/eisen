@@ -146,5 +146,8 @@ double weight(Task t) {
 
   final base = (math.pow(p, alpha) as double) * (math.pow(m, beta) as double);
   final raw = base * urgBoost * dueBoost * (0.75 + 0.25 * freshness);
-  return raw;
+  final safe = raw.isFinite && !raw.isNaN ? raw : 0.0;
+  assert(safe >= 0, 'Negative weight');
+  assert(safe.isFinite && !safe.isNaN, 'Invalid weight result');
+  return safe;
 }

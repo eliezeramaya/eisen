@@ -138,7 +138,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                 ),
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: minimal ? Colors.white : tokens.glassBg,
+                    color: minimal ? Colors.transparent : tokens.glassBg, // TEMP: transparent to see tiles
                     borderRadius: BorderRadius.circular(tokens.radius),
                     border: minimal
                         ? Border.all(color: Colors.transparent, width: 0)
@@ -150,15 +150,9 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                           ],
                   ),
                 ),
+                // TEMP: Disabled grayscale filter to see tile colors
                 ColorFiltered(
-                  colorFilter: minimal
-                      ? const ColorFilter.matrix(<double>[
-                          0.2126, 0.7152, 0.0722, 0, 0,
-                          0.2126, 0.7152, 0.0722, 0, 0,
-                          0.2126, 0.7152, 0.0722, 0, 0,
-                          0,      0,      0,      1, 0,
-                        ])
-                      : const ColorFilter.mode(Colors.transparent, BlendMode.srcOver),
+                  colorFilter: const ColorFilter.mode(Colors.transparent, BlendMode.srcOver),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final size = Size(constraints.maxWidth, constraints.maxHeight);

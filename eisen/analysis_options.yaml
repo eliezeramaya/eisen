@@ -12,6 +12,8 @@ analyzer:
     dead_code: warning
   exclude:
     - lib/features/importance/**
+    - build/**
+    - tools/**
 
 linter:
   rules:

@@ -43,6 +43,10 @@ class ComputeLayoutUseCase {
     Size? viewport,
     Quadrant? only,
   }) {
+    // DEBUG: surface runtime info to logs to help diagnose empty-layout issues
+    try {
+      debugPrint('ComputeLayoutUseCase.execute: tasks=${tasks.length} zoom=${zoom?.name} viewport=${viewport?.width}x${viewport?.height}');
+    } catch (_) {}
     // Compute hash to detect changes
     int hash = Object.hashAllUnordered(tasks.map((t) => t.id)) ^ 
                tasks.length ^ 
@@ -51,7 +55,7 @@ class ComputeLayoutUseCase {
     // Calculate minimum area from viewport
     double? minArea01;
     if (viewport != null && viewport.width > 0 && viewport.height > 0) {
-      const minPx = 44.0 * 44.0;
+      const minPx = 20.0 * 20.0; // Reduced from 44x44 to 20x20 to be less aggressive
       final totalPx = viewport.width * viewport.height;
       minArea01 = (minPx / totalPx).clamp(0.0, 1.0);
       hash ^= viewport.width.round();
@@ -112,6 +116,9 @@ class ComputeLayoutUseCase {
       zoom,
       minTileArea01: minArea01,
     );
+    try {
+      debugPrint('ComputeLayoutUseCase._computeZoomedLayout: quadrant=${zoom.name} tasksInQ=${tasksInQ.length} minArea01=$minArea01 layout=${layout.length}');
+    } catch (_) {}
     sw.stop();
     
     Telemetry.layoutTime(zoom.name, sw.elapsedMicroseconds / 1000.0);
@@ -139,6 +146,9 @@ class ComputeLayoutUseCase {
       bandit: _bandit,
       minTileArea01: minArea01,
     );
+    try {
+      debugPrint('ComputeLayoutUseCase._computeFullLayout: tasks=${tasks.length} minArea01=$minArea01 layout=${layout.length}');
+    } catch (_) {}
     sw.stop();
     
     Telemetry.layoutTime(null, sw.elapsedMicroseconds / 1000.0);

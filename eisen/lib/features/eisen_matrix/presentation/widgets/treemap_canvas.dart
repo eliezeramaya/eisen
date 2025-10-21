@@ -8,6 +8,8 @@ import 'package:eisen/core/theme/animation_tokens.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/core/services/telemetry.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_debug.dart';
+import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart' show debugTreemap;
 
 class TreemapCanvas extends StatefulWidget {
   final List<Task> tasks;
@@ -99,10 +101,15 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
       }
     }
     if (oldWidget.inlineEditId != widget.inlineEditId) {
-      if (widget.inlineEditId != null) {
-        // Prefill with current title
-        final t = widget.tasks.firstWhere((e) => e.id == widget.inlineEditId, orElse: () => widget.tasks.first);
-        _inlineController.text = t.title;
+        if (widget.inlineEditId != null) {
+        // Prefill with current title (defensive)
+        final idx = widget.tasks.indexWhere((e) => e.id == widget.inlineEditId);
+        if (idx != -1) {
+          final t = widget.tasks[idx];
+          _inlineController.text = t.title;
+        } else {
+          _inlineController.text = '';
+        }
         // focus shortly after build
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _inlineFocus.requestFocus();
@@ -195,8 +202,9 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                 onTapDown: (d) {
                   final id = _hitTest(d.localPosition, size);
                   if (id != null) {
-                    final tr = widget.layout.firstWhere((e) => e.task.id == id, orElse: () => widget.layout.first);
-                    if (tr.stackChildren.isNotEmpty) {
+                    final idx = widget.layout.indexWhere((e) => e.task.id == id);
+                    final tr = idx == -1 ? null : widget.layout[idx];
+                    if (tr != null && tr.stackChildren.isNotEmpty) {
                       // Open stack sheet for this quadrant
                       Telemetry.stackOpen(tr.task.quadrant.name, tr.stackChildren.length);
                       _openStackSheet(context, tr.task.quadrant, tr.stackChildren);
@@ -216,8 +224,9 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                 onLongPressStart: (d) {
                   final id = _hitTest(d.localPosition, size);
                   if (id == null) return;
-                  final t = widget.tasks.firstWhere((e) => e.id == id, orElse: () => widget.tasks.first);
-                  final msg = '${t.title} • P${t.priority} • ${t.minutes}m';
+                  final idx = widget.tasks.indexWhere((e) => e.id == id);
+                  final t = idx == -1 ? null : widget.tasks[idx];
+                  final msg = t == null ? 'Tarea' : '${t.title} • P${t.priority} • ${t.minutes}m';
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(msg), duration: const Duration(milliseconds: 1200)),
                   );
@@ -585,6 +594,14 @@ class _TreemapPainter extends CustomPainter {
     // Horizontal center line
     canvas.drawLine(Offset(0, halfH), Offset(size.width, halfH), centerLine);
 
+    // Debug: quadrant bounds in blue (disabled in minimal to keep visuals stable)
+    if (debugTreemap && !minimal) {
+      TreemapDebugOverlay.drawQuadrantBounds(canvas, Rect.fromLTWH(0, 0, halfW, halfH));
+      TreemapDebugOverlay.drawQuadrantBounds(canvas, Rect.fromLTWH(halfW, 0, halfW, halfH));
+      TreemapDebugOverlay.drawQuadrantBounds(canvas, Rect.fromLTWH(0, halfH, halfW, halfH));
+      TreemapDebugOverlay.drawQuadrantBounds(canvas, Rect.fromLTWH(halfW, halfH, halfW, halfH));
+    }
+
     // Present quadrant glow
     if (presentQuadrant != null && hoverQuadrant == null) {
       final qRect = _quadrantRect(presentQuadrant!, size);
@@ -624,13 +641,29 @@ class _TreemapPainter extends CustomPainter {
         ..color = color.withValues(alpha: minimal ? 0.35 * a : 0.45 * a);
       canvas.drawCircle(c, r, ring);
     }
+    // Prepare shelf clusters for debug overlay
+    if (debugTreemap && !minimal && layout.isNotEmpty) {
+      final byQ = <Quadrant, List<Rect>>{for (final q in Quadrant.values) q: []};
+      for (final tr in layout) {
+        final rr = Rect.fromLTWH(tr.rect01.left * size.width, tr.rect01.top * size.height, tr.rect01.width * size.width, tr.rect01.height * size.height);
+        byQ[tr.task.quadrant]!.add(rr);
+      }
+      for (final q in Quadrant.values) {
+        final shelves = _clusterShelves(byQ[q]!);
+        for (final s in shelves) {
+          TreemapDebugOverlay.drawShelf(canvas, s);
+        }
+      }
+    }
+
     for (final tr in layout) {
       final id = tr.task.id;
       final r01From = prevRects01[id] ?? tr.rect01;
       final r01To = nextRects01[id] ?? tr.rect01;
       final r01 = Rect.lerp(r01From, r01To, curveT)!;
-      final r = Rect.fromLTWH(r01.left * size.width, r01.top * size.height, r01.width * size.width, r01.height * size.height);
-  final color = minimal ? Colors.black : _byQuadrant(tr.task.quadrant);
+      final r0 = Rect.fromLTWH(r01.left * size.width, r01.top * size.height, r01.width * size.width, r01.height * size.height);
+      final r = _snapRect(r0);
+      final color = minimal ? Colors.black : _byQuadrant(tr.task.quadrant);
 
       // If dragging this tile, render it "lifted"
       final bool isDragging = tr.task.id == draggingId;
@@ -676,22 +709,20 @@ class _TreemapPainter extends CustomPainter {
         }
       }
       // Deflate to create a gutter around each tile so rounded borders are visible
-      drawRect = drawRect.deflate(gap);
-      // Fill
+      // Clamp gutter so we don't invert tiny rects
+      final safeGap = math.min(gap, math.max(0.0, math.min(drawRect.width, drawRect.height) * 0.5 - 0.5));
+      drawRect = drawRect.deflate(safeGap);
+      // Fill + Border (guarded for debug vs. normal styling)
       final rr = RRect.fromRectAndRadius(drawRect, const Radius.circular(12));
-      if (!minimal) {
-        paint
-          ..style = PaintingStyle.fill
-          ..color = Colors.white.withValues(alpha: 0.06);
-        canvas.drawRRect(rr, paint);
-      } else {
-        // Flat white background already applied behind; skip inner fill
-      }
-      // Border
+      final fillAlpha = (debugTreemap && !minimal) ? 0.6 : (minimal ? 0.24 : 0.18);
+      paint
+        ..style = PaintingStyle.fill
+        ..color = color.withValues(alpha: fillAlpha);
+      canvas.drawRRect(rr, paint);
       paint
         ..style = PaintingStyle.stroke
-        ..color = minimal ? Colors.black.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.12)
-        ..strokeWidth = 1;
+        ..color = minimal ? Colors.black.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.22)
+        ..strokeWidth = (debugTreemap && !minimal) ? 4.0 : 1.0;
       canvas.drawRRect(rr, paint);
 
 
@@ -712,26 +743,31 @@ class _TreemapPainter extends CustomPainter {
         continue;
       }
 
-      // Adaptive text rendering based on tile size
+      // Title + metadata
       final area = drawRect.width * drawRect.height;
       final availableHeight = drawRect.height - 12; // padding top+bottom
       double currentY = drawRect.top + 6;
       
-      // Title (max 2 lines when space). If not enough space, fallback to icon-only.
-      if (availableHeight > 16) {
-        final titleSize = area > 30000 ? 14.0 : (area > 16000 ? 13.0 : 12.0);
-        final maxLines = area > 18000 ? 2 : 1;
-        final tp = _textPainter(tr.task.title, drawRect, titleSize, FontWeight.w700, textColor: minimal ? Colors.black : Colors.white, maxLines: maxLines);
+      // Paint title (debug: larger & always; normal: smaller/conditional)
+      final titleSize = debugTreemap ? 16.0 : 13.0;
+      final canShowTitle = debugTreemap || availableHeight > 18.0;
+      if (canShowTitle) {
+        final tp = _textPainter(tr.task.title, drawRect, titleSize, FontWeight.w800, textColor: minimal ? Colors.black : Colors.white, maxLines: debugTreemap ? 3 : 1);
+        if (!minimal) {
+          final shadowPaint = Paint()
+            ..color = Colors.black
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+          canvas.drawRRect(RRect.fromRectAndRadius(
+            Rect.fromLTWH(drawRect.left + 6, currentY - 2, tp.width + 4, tp.height + 4),
+            const Radius.circular(4)
+          ), shadowPaint);
+        }
         tp.paint(canvas, Offset(drawRect.left + 8, currentY));
         currentY += tp.height + 2;
-      } else {
-        // Icon-only fallback (glyph)
-        final tp = _textPainter('•', drawRect, 14, FontWeight.w700, textColor: minimal ? Colors.black : Colors.white);
-        tp.paint(canvas, Offset(drawRect.left + 8, drawRect.top + 6));
       }
       
       // Priority and time (if medium+ size)
-      if (area > 12000 && currentY + 14 < drawRect.bottom - 6) {
+      if (area > 12000 && currentY + 14 < drawRect.bottom - 6 && !debugTreemap) {
         final meta = 'P${tr.task.priority} • ${tr.task.minutes}m';
         final tp2 = _textPainter(meta, drawRect, 12, FontWeight.w500, alpha: minimal ? 0.95 : 0.9, textColor: minimal ? Colors.black : Colors.white);
         tp2.paint(canvas, Offset(drawRect.left + 8, currentY));
@@ -739,7 +775,7 @@ class _TreemapPainter extends CustomPainter {
       }
       
       // Notes preview (if large size and has notes)
-      if (area > 26000 && tr.task.notes != null && tr.task.notes!.isNotEmpty && currentY + 14 < drawRect.bottom - 6) {
+      if (area > 26000 && tr.task.notes != null && tr.task.notes!.isNotEmpty && currentY + 14 < drawRect.bottom - 6 && !debugTreemap) {
         final notesPreview = tr.task.notes!.length > 50 
             ? '${tr.task.notes!.substring(0, 50)}...' 
             : tr.task.notes!;
@@ -758,6 +794,16 @@ class _TreemapPainter extends CustomPainter {
       if (suggested?.contains(tr.task.id) == true) {
         final star = _textPainter('★', drawRect, 12, FontWeight.w700, alpha: minimal ? 0.95 : 0.9, textColor: minimal ? Colors.black : Colors.white);
         star.paint(canvas, Offset(drawRect.left + 6, drawRect.top + 4));
+      }
+
+      // Debug labels for each tile
+      if (debugTreemap && !minimal) {
+        final area = (drawRect.width * drawRect.height) / (size.width * size.height);
+        final ratio = drawRect.width == 0 || drawRect.height == 0
+            ? 0.0
+            : (drawRect.width / drawRect.height).abs();
+        final rr = ratio < 1 ? 1 / (ratio == 0.0 ? 1.0 : ratio) : ratio;
+        TreemapDebugOverlay.labelTile(canvas, drawRect, tr.task.id, area, rr);
       }
     }
   }
@@ -834,6 +880,18 @@ class _TreemapPainter extends CustomPainter {
     return Rect.fromCenter(center: c, width: w, height: h);
   }
 
+  // Snap rect coordinates to pixel grid to reduce hairline gaps.
+  Rect _snapRect(Rect r) {
+    double snap(double v) => (v + 0.5).floorToDouble() + 0.0; // prefer whole-pixel alignment
+    final l = snap(r.left);
+    final t = snap(r.top);
+    final rr = snap(r.right);
+    final bb = snap(r.bottom);
+    final w = (rr - l).clamp(0.0, double.infinity);
+    final h = (bb - t).clamp(0.0, double.infinity);
+    return Rect.fromLTWH(l, t, w, h);
+  }
+
   TextPainter _textPainter(String text, Rect r, double size, FontWeight fw, {double alpha = 0.92, int maxLines = 1, Color? textColor}) {
     final maxW = math.max(0.0, r.width - 16);
     final tp = TextPainter(
@@ -859,10 +917,10 @@ List<TreemapRect> reorderForTieBreak(List<TreemapRect> items, Set<String>? sugge
     final list = byQ[q]!;
     if (list.isEmpty) continue;
     final areas = list.map((e) => e.rect01.width * e.rect01.height).toList();
-    final sid = suggested.firstWhere(
-      (id) => list.any((e) => e.task.id == id),
-      orElse: () => '',
-    );
+    String sid = '';
+    for (final s in suggested) {
+      if (list.any((e) => e.task.id == s)) { sid = s; break; }
+    }
     if (sid.isEmpty) {
       out.addAll(list);
       continue;
@@ -885,3 +943,35 @@ List<TreemapRect> reorderForTieBreak(List<TreemapRect> items, Set<String>? sugge
   return out;
 }
 
+// Group tiles into horizontal/vertical shelves by clustering similar edges.
+List<Rect> _clusterShelves(List<Rect> rects) {
+  if (rects.isEmpty) return const [];
+  const eps = 0.75; // pixels tolerance
+  final used = List<bool>.filled(rects.length, false);
+  final shelves = <Rect>[];
+  for (var i = 0; i < rects.length; i++) {
+    if (used[i]) continue;
+    final base = rects[i];
+    // Try horizontal grouping by similar top/bottom
+    final group = <Rect>[base];
+    used[i] = true;
+    for (var j = i + 1; j < rects.length; j++) {
+      if (used[j]) continue;
+      final rj = rects[j];
+      final sameRow = ( (rj.top - base.top).abs() < eps && (rj.height - base.height).abs() < eps ) ||
+                      ( (rj.bottom - base.bottom).abs() < eps && (rj.height - base.height).abs() < eps );
+      final sameCol = ( (rj.left - base.left).abs() < eps && (rj.width - base.width).abs() < eps ) ||
+                      ( (rj.right - base.right).abs() < eps && (rj.width - base.width).abs() < eps );
+      if (sameRow || sameCol) {
+        group.add(rj);
+        used[j] = true;
+      }
+    }
+    Rect union = group.first;
+    for (final g in group.skip(1)) {
+      union = union.expandToInclude(g);
+    }
+    shelves.add(union);
+  }
+  return shelves;
+}

@@ -142,6 +142,8 @@ class MatrixController extends Notifier<MatrixState> {
       showAxisLegends: ui.showAxisLegends,
       minimal: ui.minimal,
     );
+    // Force full layout recomputation on load
+    invalidateLayout();
   }
 
   /// Reset to demo tasks (useful for testing and demos)
@@ -208,7 +210,9 @@ class MatrixController extends Notifier<MatrixState> {
   }
 
   void updateTask(String id, Task Function(Task) updater) {
-    final prev = state.tasks.firstWhere((t) => t.id == id);
+    final idx = state.tasks.indexWhere((t) => t.id == id);
+    if (idx == -1) return; // nothing to update
+    final prev = state.tasks[idx];
     final next = _updateTaskUseCase.execute(prev, updater);
     final tasks = state.tasks.map((t) => t.id == id ? next : t).toList();
     
@@ -227,7 +231,8 @@ class MatrixController extends Notifier<MatrixState> {
   }
 
   void deleteTask(String id) {
-    final prev = state.tasks.firstWhere((t) => t.id == id, orElse: () => state.tasks.first);
+    final idx = state.tasks.indexWhere((t) => t.id == id);
+    final prev = idx == -1 ? null : state.tasks[idx];
     final tasks = state.tasks.where((t) => t.id != id).toList();
     
     state = state.copyWith(
@@ -236,8 +241,13 @@ class MatrixController extends Notifier<MatrixState> {
       version: state.version + 1,
     );
     
-    _computeLayoutUseCase.markDirty({prev.quadrant});
-    _deleteTaskUseCase.cleanupCache(id, _cache);
+    if (prev != null) {
+      _computeLayoutUseCase.markDirty({prev.quadrant});
+      _deleteTaskUseCase.cleanupCache(id, _cache);
+    } else {
+      // If prev missing, conservatively invalidate all
+      _computeLayoutUseCase.invalidate();
+    }
     
     unawaited(persist());
   }
