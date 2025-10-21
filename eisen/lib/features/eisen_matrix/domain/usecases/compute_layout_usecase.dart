@@ -3,6 +3,7 @@ import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/core/services/telemetry.dart';
+import 'package:eisen/core/constants/layout_constants.dart';
 
 /// Use case for computing the treemap layout with incremental updates.
 ///
@@ -55,7 +56,7 @@ class ComputeLayoutUseCase {
     // Calculate minimum area from viewport
     double? minArea01;
     if (viewport != null && viewport.width > 0 && viewport.height > 0) {
-      const minPx = 20.0 * 20.0; // Reduced from 44x44 to 20x20 to be less aggressive
+      final minPx = LayoutConstants.minTileAreaPx; // centralized constant
       final totalPx = viewport.width * viewport.height;
       minArea01 = (minPx / totalPx).clamp(0.0, 1.0);
       hash ^= viewport.width.round();

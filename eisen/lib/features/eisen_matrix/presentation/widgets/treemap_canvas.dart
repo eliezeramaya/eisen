@@ -10,6 +10,7 @@ import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/core/services/telemetry.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_debug.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart' show debugTreemap;
+import 'package:eisen/core/constants/layout_constants.dart';
 
 class TreemapCanvas extends StatefulWidget {
   final List<Task> tasks;
@@ -150,7 +151,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
         // If layout already contains stack tiles, skip overlay fallback
         final hasStackTiles = widget.layout.any((e) => e.stackChildren.isNotEmpty);
         // Compute tiny tiles per quadrant only if no integrated stacks present
-        final minAreaPx = 44.0 * 44.0;
+  final minAreaPx = LayoutConstants.minTileAreaPx;
         final tinyByQ = <Quadrant, List<TreemapRect>>{
           Quadrant.q1: [], Quadrant.q2: [], Quadrant.q3: [], Quadrant.q4: []
         };
@@ -166,7 +167,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
           for (final tr in widget.layout) {
             final r = _px(tr.rect01, size);
             // Show edit button only for reasonably large tiles
-            if (r.width * r.height < 12000) continue;
+            if (r.width * r.height < LayoutConstants.minAreaForButtons) continue;
             const btn = 28.0;
             if (widget.onMarkDone != null) {
               overlay.add(Positioned(
@@ -330,7 +331,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
   }
 
   String? _hitTest(Offset pos, Size size) {
-    const minAreaPx = 44.0 * 44.0;
+  const minAreaPx = LayoutConstants.minTileAreaPx;
     for (final tr in widget.layout) {
       final r = _px(tr.rect01, size);
       if (r.width * r.height < minAreaPx) continue; // not interactive; represented by stack tile

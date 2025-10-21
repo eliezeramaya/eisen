@@ -45,7 +45,11 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
     final minimal = ref.watch(matrixControllerProvider.select((s) => s.minimal));
     final tasks = ref.watch(matrixTasksProvider);
     final selectedId = ref.watch(matrixControllerProvider.select((s) => s.selectedId));
-    final layout = ctrl.layout();
+
+    // Safe lookup for selected task (may be deleted externally)
+  final _selectedTask = selectedId == null
+    ? null
+    : (tasks.indexWhere((t) => t.id == selectedId) == -1 ? null : tasks.firstWhere((t) => t.id == selectedId));
 
     return Scaffold(
       key: _scaffoldKey,
@@ -85,7 +89,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('✨ Tareas demo restauradas (20 tareas)'),
+                      content: Text('\u2728 Tareas demo restauradas (20 tareas)'),
                       duration: Duration(seconds: 2),
                     ),
                   );
@@ -101,183 +105,171 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (showAxisLegends && zoom == null)
-                _LeftAxisLegends(minimal: minimal),
+              if (showAxisLegends && zoom == null) _LeftAxisLegends(minimal: minimal),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (showAxisLegends && zoom == null)
-                      _TopAxisLegends(minimal: minimal),
+                    if (showAxisLegends && zoom == null) _TopAxisLegends(minimal: minimal),
                     Expanded(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(tokens.radius),
                         child: Stack(
                           children: [
-                Positioned(
-                  left: 8,
-                  top: 8,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: minimal ? Colors.white.withValues(alpha: 0.7) : Colors.black.withValues(alpha: 0.28),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      child: _ProgressBanner(minimal: minimal),
-                    ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: minimal
-                      ? const SizedBox.expand()
-                      : BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: tokens.blur, sigmaY: tokens.blur),
-                          child: const SizedBox.expand(),
-                        ),
-                ),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: minimal ? Colors.transparent : tokens.glassBg, // TEMP: transparent to see tiles
-                    borderRadius: BorderRadius.circular(tokens.radius),
-                    border: minimal
-                        ? Border.all(color: Colors.transparent, width: 0)
-                        : Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1),
-                    boxShadow: minimal
-                        ? const []
-                        : [
-                            BoxShadow(color: tokens.halo.withValues(alpha: 0.15), blurRadius: 24, spreadRadius: 2),
-                          ],
-                  ),
-                ),
-                // TEMP: Disabled grayscale filter to see tile colors
-                ColorFiltered(
-                  colorFilter: const ColorFilter.mode(Colors.transparent, BlendMode.srcOver),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final size = Size(constraints.maxWidth, constraints.maxHeight);
-                      // Recompute incrementally based on current viewport
-                      final dynamicLayout = ctrl.computeLayout(viewport: size);
-                      final suggested = ctrl.suggestedTopSpots;
-                      final l10n = AppLocalizations.of(context);
-                      return Stack(
-                        children: [
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 240),
-                            switchInCurve: Curves.easeOutCubic,
-                            switchOutCurve: Curves.easeOutCubic,
-                            child: TreemapCanvas(
-                              key: ValueKey('${zoom}_${dynamicLayout.length}_${suggested.length}'),
-                              tasks: tasks,
-                              layout: dynamicLayout,
-                              suggestedIds: suggested,
-                              minimal: minimal,
-                              zoom: zoom,
-                              presentQuadrant: zoom ?? ref.read(matrixControllerProvider).presentQuadrant,
-                              inlineEditId: _inlineEditId,
-                              onInlineSubmit: (id, title) {
-                                ctrl.updateTask(id, (t) => t.copyWith(title: title));
-                                setState(() => _inlineEditId = null);
-                              },
-                              onInlineCancel: (id) {
-                                final t = tasks.firstWhere((e) => e.id == id);
-                                if (t.title == 'New Task' && (t.notes == null || t.notes!.isEmpty)) {
-                                  ctrl.deleteTask(id);
-                                }
-                                setState(() => _inlineEditId = null);
-                              },
-                              onTap: (id) {
-                                ctrl.select(id);
-                                if (id != null) {
-                                  WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
-                                }
-                              },
-                              onDropToQuadrant: (id, q) {
-                                final prev = tasks.firstWhere((t) => t.id == id).quadrant;
-                                if (prev == q) return; // no-op
-                                ctrl.moveTaskToQuadrant(id, q);
-                                final qName = q.name.toUpperCase();
-                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Tarea movida a $qName'),
-                                    action: SnackBarAction(
-                                      label: 'Deshacer',
-                                      onPressed: () {
-                                        ctrl.moveTaskToQuadrant(id, prev);
-                                      },
-                                    ),
-                                    duration: const Duration(seconds: 4),
-                                  ),
-                                );
-                              },
-                              onDoubleTapQuadrant: (q) { ctrl.setZoom(zoom == q ? null : q); ctrl.setPresentQuadrant(q); },
-                              onEditTask: (id) {
-                                final task = tasks.firstWhere((t) => t.id == id);
-                                Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
-                              },
-                              onMarkDone: (id) {
-                                ctrl.markTaskDone(id);
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('¡Tarea completada!'), duration: Duration(milliseconds: 900)));
-                              },
-                            ),
-                          ),
-                          if (dynamicLayout.isEmpty)
-                            Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.grid_view_rounded, size: 40, color: minimal ? Colors.black54 : Colors.white70),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    query.isEmpty ? 'No hay tareas para mostrar' : 'Sin resultados para "${query}"',
-                                    style: TextStyle(
-                                      color: minimal ? Colors.black87 : Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  FilledButton.icon(
-                                    onPressed: () {
-                                      final q = zoom ?? Quadrant.q2;
-                                      final id = ctrl.createTask(quadrant: q);
-                                      ctrl.select(id);
-                                      setState(() => _inlineEditId = id);
-                                    },
-                                    icon: const Icon(Icons.add),
-                                    label: Text(l10n.newTask),
-                                  ),
-                                ],
+                            Positioned(
+                              left: 8,
+                              top: 8,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: minimal ? Colors.white.withValues(alpha: 0.7) : Colors.black.withValues(alpha: 0.28),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  child: _ProgressBanner(minimal: minimal),
+                                ),
                               ),
                             ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-                // Quick add buttons por cuadrante
-                Positioned(
-                  left: 12,
-                  top: 56,
-                  child: _QuickAddButton(label: 'Q1', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q1, ctrl)),
-                ),
-                Positioned(
-                  right: 12,
-                  top: 56,
-                  child: _QuickAddButton(label: 'Q2', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q2, ctrl)),
-                ),
-                Positioned(
-                  left: 12,
-                  bottom: 56,
-                  child: _QuickAddButton(label: 'Q3', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q3, ctrl)),
-                ),
-                Positioned(
-                  right: 12,
-                  bottom: 56,
-                  child: _QuickAddButton(label: 'Q4', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q4, ctrl)),
-                ),
-                
-                
+                            Positioned.fill(
+                              child: minimal
+                                  ? const SizedBox.expand()
+                                  : BackdropFilter(
+                                      filter: ImageFilter.blur(sigmaX: tokens.blur, sigmaY: tokens.blur),
+                                      child: const SizedBox.expand(),
+                                    ),
+                            ),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: minimal ? Colors.transparent : tokens.glassBg, // TEMP: transparent to see tiles
+                                borderRadius: BorderRadius.circular(tokens.radius),
+                                border: minimal
+                                    ? Border.all(color: Colors.transparent, width: 0)
+                                    : Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1),
+                                boxShadow: minimal
+                                    ? const []
+                                    : [BoxShadow(color: tokens.halo.withValues(alpha: 0.15), blurRadius: 24, spreadRadius: 2)],
+                              ),
+                            ),
+                            // TEMP: Disabled grayscale filter to see tile colors
+                            ColorFiltered(
+                              colorFilter: const ColorFilter.mode(Colors.transparent, BlendMode.srcOver),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final size = Size(constraints.maxWidth, constraints.maxHeight);
+                                  // Recompute incrementally based on current viewport
+                                  final dynamicLayout = ctrl.computeLayout(viewport: size);
+                                  final suggested = ctrl.suggestedTopSpots;
+                                  final l10n = AppLocalizations.of(context);
+                                  return Stack(
+                                    children: [
+                                      AnimatedSwitcher(
+                                        duration: const Duration(milliseconds: 240),
+                                        switchInCurve: Curves.easeOutCubic,
+                                        switchOutCurve: Curves.easeOutCubic,
+                                        child: TreemapCanvas(
+                                          key: ValueKey('${zoom}_${dynamicLayout.length}_${suggested.length}'),
+                                          tasks: tasks,
+                                          layout: dynamicLayout,
+                                          suggestedIds: suggested,
+                                          minimal: minimal,
+                                          zoom: zoom,
+                                          presentQuadrant: zoom ?? ref.read(matrixControllerProvider).presentQuadrant,
+                                          inlineEditId: _inlineEditId,
+                                          onInlineSubmit: (id, title) {
+                                            ctrl.updateTask(id, (t) => t.copyWith(title: title));
+                                            setState(() => _inlineEditId = null);
+                                          },
+                                          onInlineCancel: (id) {
+                                            final idx = tasks.indexWhere((e) => e.id == id);
+                                            if (idx != -1) {
+                                              final t = tasks[idx];
+                                              if (t.title == 'New Task' && (t.notes == null || t.notes!.isEmpty)) {
+                                                ctrl.deleteTask(id);
+                                              }
+                                            }
+                                            setState(() => _inlineEditId = null);
+                                          },
+                                          onTap: (id) {
+                                            ctrl.select(id);
+                                            if (id != null) {
+                                              WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
+                                            }
+                                          },
+                                          onDropToQuadrant: (id, q) {
+                                            final idx = tasks.indexWhere((t) => t.id == id);
+                                            if (idx == -1) return;
+                                            final prev = tasks[idx].quadrant;
+                                            if (prev == q) return; // no-op
+                                            ctrl.moveTaskToQuadrant(id, q);
+                                            final qName = q.name.toUpperCase();
+                                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text('Tarea movida a $qName'),
+                                                action: SnackBarAction(
+                                                  label: 'Deshacer',
+                                                  onPressed: () {
+                                                    ctrl.moveTaskToQuadrant(id, prev);
+                                                  },
+                                                ),
+                                                duration: const Duration(seconds: 4),
+                                              ),
+                                            );
+                                          },
+                                          onDoubleTapQuadrant: (q) {
+                                            ctrl.setZoom(zoom == q ? null : q);
+                                            ctrl.setPresentQuadrant(q);
+                                          },
+                                          onEditTask: (id) {
+                                            final idx = tasks.indexWhere((t) => t.id == id);
+                                            if (idx == -1) return;
+                                            final task = tasks[idx];
+                                            Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
+                                          },
+                                          onMarkDone: (id) {
+                                            ctrl.markTaskDone(id);
+                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('\u00a1Tarea completada!'), duration: Duration(milliseconds: 900)));
+                                          },
+                                        ),
+                                      ),
+                                      if (dynamicLayout.isEmpty)
+                                        Center(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.grid_view_rounded, size: 40, color: minimal ? Colors.black54 : Colors.white70),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                query.isEmpty ? 'No hay tareas para mostrar' : 'Sin resultados para "${query}"',
+                                                style: TextStyle(
+                                                  color: minimal ? Colors.black87 : Colors.white,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 12),
+                                              FilledButton.icon(
+                                                onPressed: () {
+                                                  final q = zoom ?? Quadrant.q2;
+                                                  final id = ctrl.createTask(quadrant: q);
+                                                  ctrl.select(id);
+                                                  setState(() => _inlineEditId = id);
+                                                },
+                                                icon: const Icon(Icons.add),
+                                                label: Text(l10n.newTask),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                            // Quick add buttons por cuadrante
+                            Positioned(left: 12, top: 56, child: _QuickAddButton(label: 'Q1', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q1, ctrl))),
+                            Positioned(right: 12, top: 56, child: _QuickAddButton(label: 'Q2', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q2, ctrl))),
+                            Positioned(left: 12, bottom: 56, child: _QuickAddButton(label: 'Q3', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q3, ctrl))),
+                            Positioned(right: 12, bottom: 56, child: _QuickAddButton(label: 'Q4', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q4, ctrl))),
                           ],
                         ),
                       ),
@@ -289,14 +281,12 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           ),
         ),
       ),
-      endDrawer: selectedId == null
-          ? null
-          : InspectorDrawer(
-              key: ValueKey(selectedId),
-              task: tasks.firstWhere((t) => t.id == selectedId),
-              onChanged: (t) => ctrl.updateTask(t.id, (_) => t),
-              onDelete: () => ctrl.deleteTask(selectedId!),
-            ),
+      endDrawer: _selectedTask == null ? null : InspectorDrawer(
+        key: ValueKey(_selectedTask.id),
+        task: _selectedTask,
+        onChanged: (t) => ctrl.updateTask(t.id, (_) => t),
+        onDelete: () => ctrl.deleteTask(_selectedTask.id),
+      ),
       bottomNavigationBar: _BottomActionBar(
         onNew: () {
           final q = zoom ?? Quadrant.q2;
