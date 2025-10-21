@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
+import 'package:flutter/foundation.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/core/services/telemetry.dart';
 import 'package:eisen/core/constants/layout_constants.dart';
@@ -45,9 +46,11 @@ class ComputeLayoutUseCase {
     Quadrant? only,
   }) {
     // DEBUG: surface runtime info to logs to help diagnose empty-layout issues
-    try {
-      debugPrint('ComputeLayoutUseCase.execute: tasks=${tasks.length} zoom=${zoom?.name} viewport=${viewport?.width}x${viewport?.height}');
-    } catch (_) {}
+    if (kDebugMode) {
+      try {
+        debugPrint('ComputeLayoutUseCase.execute: tasks=${tasks.length} zoom=${zoom?.name} viewport=${viewport?.width}x${viewport?.height}');
+      } catch (_) {}
+    }
     // Compute hash to detect changes
     int hash = Object.hashAllUnordered(tasks.map((t) => t.id)) ^ 
                tasks.length ^ 
@@ -117,9 +120,11 @@ class ComputeLayoutUseCase {
       zoom,
       minTileArea01: minArea01,
     );
-    try {
-      debugPrint('ComputeLayoutUseCase._computeZoomedLayout: quadrant=${zoom.name} tasksInQ=${tasksInQ.length} minArea01=$minArea01 layout=${layout.length}');
-    } catch (_) {}
+    if (kDebugMode) {
+      try {
+        debugPrint('ComputeLayoutUseCase._computeZoomedLayout: quadrant=${zoom.name} tasksInQ=${tasksInQ.length} minArea01=$minArea01 layout=${layout.length}');
+      } catch (_) {}
+    }
     sw.stop();
     
     Telemetry.layoutTime(zoom.name, sw.elapsedMicroseconds / 1000.0);
@@ -147,9 +152,11 @@ class ComputeLayoutUseCase {
       bandit: _bandit,
       minTileArea01: minArea01,
     );
-    try {
-      debugPrint('ComputeLayoutUseCase._computeFullLayout: tasks=${tasks.length} minArea01=$minArea01 layout=${layout.length}');
-    } catch (_) {}
+    if (kDebugMode) {
+      try {
+        debugPrint('ComputeLayoutUseCase._computeFullLayout: tasks=${tasks.length} minArea01=$minArea01 layout=${layout.length}');
+      } catch (_) {}
+    }
     sw.stop();
     
     Telemetry.layoutTime(null, sw.elapsedMicroseconds / 1000.0);

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
@@ -331,9 +332,11 @@ List<TreemapRect> _layoutStableIntoRect(
         keep.add(i);
       }
     }
-    try {
-      debugPrint('layoutQuadrant[$quadrant]: tasks=${tasks.length} minArea01=$minTileArea01 keep=${keep.length} small=${small.length}');
-    } catch (_) {}
+    if (kDebugMode) {
+      try {
+        debugPrint('layoutQuadrant[$quadrant]: tasks=${tasks.length} minArea01=$minTileArea01 keep=${keep.length} small=${small.length}');
+      } catch (_) {}
+    }
   } else {
     for (var i = 0; i < rawAreas.length; i++) {
       keep.add(i);
