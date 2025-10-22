@@ -158,7 +158,8 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
         if (!hasStackTiles) {
           for (final tr in widget.layout) {
             final r = _px(tr.rect01, size);
-            if (r.width * r.height < minAreaPx) {
+            // Represent as tiny if smaller than min interactive area (squared)
+            if (r.width < LayoutConstants.minTileSize || r.height < LayoutConstants.minTileSize || r.width * r.height < minAreaPx) {
               tinyByQ[tr.task.quadrant]!.add(tr);
             }
           }
@@ -331,10 +332,11 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
   }
 
   String? _hitTest(Offset pos, Size size) {
-  const minAreaPx = LayoutConstants.minTileAreaPx;
+    // Ensure hit-testing uses same transform as painting: use layout rects scaled to pixels
     for (final tr in widget.layout) {
       final r = _px(tr.rect01, size);
-      if (r.width * r.height < minAreaPx) continue; // not interactive; represented by stack tile
+      // enforce minimum interactive size
+      if (r.width < LayoutConstants.minTileSize || r.height < LayoutConstants.minTileSize) continue;
       if (r.contains(pos)) return tr.task.id;
     }
     return null;
@@ -365,17 +367,17 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
   }
 
   Offset _stackOverlayPosition(Quadrant q, Size size) {
-    // Position near top-left of each quadrant, with margin
+    // Position near top-left of each quadrant, with margin to avoid banner
     final halfW = size.width / 2;
     final halfH = size.height / 2;
-    const m = 8.0;
+    const m = 16.0; // increased margin
     switch (q) {
       case Quadrant.q1:
-        return const Offset(8, 8);
+        return const Offset(16, 16); // avoid banner at 8,8
       case Quadrant.q2:
-        return Offset(halfW + m, 8);
+        return Offset(halfW + m, 16);
       case Quadrant.q3:
-        return Offset(8, halfH + m);
+        return Offset(16, halfH + m);
       case Quadrant.q4:
         return Offset(halfW + m, halfH + m);
     }
@@ -595,12 +597,44 @@ class _TreemapPainter extends CustomPainter {
     // Horizontal center line
     canvas.drawLine(Offset(0, halfH), Offset(size.width, halfH), centerLine);
 
+    // Quadrant labels when no tiles or demo mode
+    if (layout.isEmpty) {
+      const labels = ['Q1\nUrgente\nImportante', 'Q2\nNo Urgente\nImportante', 'Q3\nUrgente\nNo Importante', 'Q4\nNo Urgente\nNo Importante'];
+      final centers = [
+        Offset(halfW / 2, halfH / 2),
+        Offset(halfW + halfW / 2, halfH / 2),
+        Offset(halfW / 2, halfH + halfH / 2),
+        Offset(halfW + halfW / 2, halfH + halfH / 2),
+      ];
+      for (int i = 0; i < 4; i++) {
+        final tp = _textPainter(labels[i], Rect.fromCenter(center: centers[i], width: halfW, height: halfH), 16, FontWeight.w600, textColor: minimal ? Colors.black : Colors.white, maxLines: 3);
+        tp.paint(canvas, Offset(centers[i].dx - tp.width / 2, centers[i].dy - tp.height / 2));
+      }
+    }
+
     // Debug: quadrant bounds in blue (disabled in minimal to keep visuals stable)
     if (debugTreemap && !minimal) {
       TreemapDebugOverlay.drawQuadrantBounds(canvas, Rect.fromLTWH(0, 0, halfW, halfH));
       TreemapDebugOverlay.drawQuadrantBounds(canvas, Rect.fromLTWH(halfW, 0, halfW, halfH));
       TreemapDebugOverlay.drawQuadrantBounds(canvas, Rect.fromLTWH(0, halfH, halfW, halfH));
       TreemapDebugOverlay.drawQuadrantBounds(canvas, Rect.fromLTWH(halfW, halfH, halfW, halfH));
+      // HUD: area sums per quadrant
+      final quadRects = [
+        Rect.fromLTWH(0, 0, halfW, halfH),
+        Rect.fromLTWH(halfW, 0, halfW, halfH),
+        Rect.fromLTWH(0, halfH, halfW, halfH),
+        Rect.fromLTWH(halfW, halfH, halfW, halfH),
+      ];
+      for (int i = 0; i < 4; i++) {
+        final q = Quadrant.values[i];
+        final areaSum = layout.where((e) => e.task.quadrant == q).fold<double>(0, (a, e) => a + (e.rect01.width * e.rect01.height));
+        final quadArea = 0.5 * 0.5; // normalized
+        final pct = (areaSum / quadArea * 100).clamp(0.0, 999.0);
+        final label = '${q.name}: ${pct.toStringAsFixed(1)}%';
+        final tp = TextPainter(text: TextSpan(text: label, style: TextStyle(fontSize: 10, color: Colors.blueAccent)), textDirection: TextDirection.ltr)..layout();
+        final pos = Offset(quadRects[i].left + 6, quadRects[i].top + 6);
+        tp.paint(canvas, pos);
+      }
     }
 
     // Present quadrant glow
@@ -710,13 +744,13 @@ class _TreemapPainter extends CustomPainter {
         }
       }
       // Deflate to create a gutter around each tile so rounded borders are visible
-      // Clamp gutter so we don't invert tiny rects
+      // Clamp gutter so we don't invert tiny rects, then snap to pixel grid to avoid gaps
       final safeGap = math.min(gap, math.max(0.0, math.min(drawRect.width, drawRect.height) * 0.5 - 0.5));
-      drawRect = drawRect.deflate(safeGap);
+      drawRect = _snapRect(drawRect.deflate(safeGap));
       // Fill + Border (guarded for debug vs. normal styling)
       final rr = RRect.fromRectAndRadius(drawRect, const Radius.circular(12));
       // Use conservative alphas for production; reserve higher alpha for ephemeral debug builds
-      final fillAlpha = (debugTreemap && !minimal) ? 0.28 : (minimal ? 0.22 : 0.14);
+      final fillAlpha = (debugTreemap && !minimal) ? 0.28 : (minimal ? 0.25 : 0.18);
       paint
         ..style = PaintingStyle.fill
         ..color = color.withValues(alpha: fillAlpha);
@@ -751,7 +785,7 @@ class _TreemapPainter extends CustomPainter {
       double currentY = drawRect.top + 6;
 
       // Paint title: keep sizes conservative; only allow multi-line in explicit debug mode
-      final titleSize = debugTreemap ? 15.0 : 13.0;
+      final titleSize = debugTreemap ? 16.0 : 14.0;
       final canShowTitle = debugTreemap || availableHeight > 18.0;
       if (canShowTitle) {
         final tp = _textPainter(tr.task.title, drawRect, titleSize, FontWeight.w700, textColor: minimal ? Colors.black : Colors.white, maxLines: debugTreemap ? 3 : 1);
@@ -762,7 +796,7 @@ class _TreemapPainter extends CustomPainter {
       // Priority and time (if medium+ size)
       if (area > 12000 && currentY + 14 < drawRect.bottom - 6 && !debugTreemap) {
         final meta = 'P${tr.task.priority} • ${tr.task.minutes}m';
-        final tp2 = _textPainter(meta, drawRect, 12, FontWeight.w500, alpha: minimal ? 0.95 : 0.9, textColor: minimal ? Colors.black : Colors.white);
+        final tp2 = _textPainter(meta, drawRect, 13, FontWeight.w500, alpha: minimal ? 0.95 : 0.9, textColor: minimal ? Colors.black : Colors.white);
         tp2.paint(canvas, Offset(drawRect.left + 8, currentY));
         currentY += tp2.height + 2;
       }
@@ -789,14 +823,31 @@ class _TreemapPainter extends CustomPainter {
         star.paint(canvas, Offset(drawRect.left + 6, drawRect.top + 4));
       }
 
-      // Debug labels for each tile
-      if (debugTreemap && !minimal) {
-        final area = (drawRect.width * drawRect.height) / (size.width * size.height);
-        final ratio = drawRect.width == 0 || drawRect.height == 0
-            ? 0.0
-            : (drawRect.width / drawRect.height).abs();
-        final rr = ratio < 1 ? 1 / (ratio == 0.0 ? 1.0 : ratio) : ratio;
-        TreemapDebugOverlay.labelTile(canvas, drawRect, tr.task.id, area, rr);
+    // Debug labels for each tile
+    if (debugTreemap && !minimal) {
+      final area = (drawRect.width * drawRect.height) / (size.width * size.height);
+      final ratio = drawRect.width == 0 || drawRect.height == 0
+          ? 0.0
+          : (drawRect.width / drawRect.height).abs();
+      final rr = ratio < 1 ? 1 / (ratio == 0.0 ? 1.0 : ratio) : ratio;
+      TreemapDebugOverlay.labelTile(canvas, drawRect, tr.task.id, area, rr);
+    }
+    }
+
+    // Debug: visualize inferred shelves after tiles are drawn
+    if (debugTreemap && !minimal) {
+      final rects = <Rect>[];
+      for (final tr in layout) {
+        final r = Rect.fromLTWH(
+          tr.rect01.left * size.width,
+          tr.rect01.top * size.height,
+          tr.rect01.width * size.width,
+          tr.rect01.height * size.height,
+        ).deflate(gap);
+        rects.add(_snapRect(r));
+      }
+      for (final shelf in _clusterShelves(rects)) {
+        TreemapDebugOverlay.drawShelf(canvas, shelf);
       }
     }
   }
@@ -885,7 +936,7 @@ class _TreemapPainter extends CustomPainter {
     return Rect.fromLTWH(l, t, w, h);
   }
 
-  TextPainter _textPainter(String text, Rect r, double size, FontWeight fw, {double alpha = 0.92, int maxLines = 1, Color? textColor}) {
+  TextPainter _textPainter(String text, Rect r, double size, FontWeight fw, {double alpha = 0.92, int maxLines = 2, Color? textColor}) {
     final maxW = math.max(0.0, r.width - 16);
     final tp = TextPainter(
       text: TextSpan(text: text, style: TextStyle(fontSize: size, fontWeight: fw, color: (textColor ?? Colors.white).withValues(alpha: alpha))),
