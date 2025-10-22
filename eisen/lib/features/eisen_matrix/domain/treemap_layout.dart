@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
@@ -21,7 +22,7 @@ class TreemapRect {
 /// Toggle debug overlays / asserts when developing treemap issues.
 /// Set to `false` by default for test and production runs. Enable when
 /// actively debugging layout correctness to exercise internal asserts.
-const bool debugTreemap = false;
+const bool debugTreemap = bool.fromEnvironment('EISEN_DEBUG_TREEMAP', defaultValue: false);
 
 void _checkFinite(String where, double v) {
   assert(v.isFinite, 'Non-finite at $where: $v');
@@ -47,6 +48,16 @@ double ema(double prev, double cur, {double? alpha}) {
 }
 
 double minTileAreaPx(double devicePixelRatio) => 44.0 * 44.0;
+
+// Normalize/quantize rects to half-pixel grid to avoid hairline gaps
+Rect _snapToPixel(Rect r) {
+  double snap(double v) => (v * 2.0).roundToDouble() / 2.0; // 0.5 steps
+  final l = snap(r.left);
+  final t = snap(r.top);
+  final rgt = snap(r.right);
+  final b = snap(r.bottom);
+  return Rect.fromLTWH(l, t, math.max(0.0, rgt - l), math.max(0.0, b - t));
+}
 
 /// Persistent cache for stable treemap layouts.
 ///
@@ -111,15 +122,19 @@ List<TreemapRect> computeSquarifiedLayout(List<Task> tasks, {Quadrant? zoom}) {
 
 List<TreemapRect> _layoutIntoRect(List<Task> tasks, Rect rect) {
   if (tasks.isEmpty) return const [];
-  var values = tasks.map((t) => weight(t)).toList();
-  final sum = values.fold<double>(0, (a, b) => a + (b.isFinite ? b : 0));
+  // Defensive: clamp weights to finite positive range
+  var values = tasks.map((t) {
+    final w = weight(t);
+    if (!w.isFinite || w <= 0) return 1.0; // fallback
+    return w.clamp(0.0001, 1e9);
+  }).toList();
+  var sum = values.fold<double>(0, (a, b) => a + b);
   if (sum <= 0) {
-    // Uniform epsilon to avoid overlaps when all weights are 0/invalid
     values = List.filled(tasks.length, 1.0);
+    sum = values.length.toDouble();
   }
 
-  final total = values.fold<double>(0, (a, b) => a + b);
-  final areas = values.map((v) => (v / total) * rect.width * rect.height).toList();
+  final areas = values.map((v) => (v / sum) * rect.width * rect.height).toList();
   // sort by descending area keeping items paired
   final items = <(_Item, Task)>[];
   for (var i = 0; i < areas.length; i++) {
@@ -131,32 +146,34 @@ List<TreemapRect> _layoutIntoRect(List<Task> tasks, Rect rect) {
   final result = <TreemapRect>[];
   var row = <(_Item, Task)>[];
 
-  double worst(List<_Item> row, double w) {
+  // worst aspect ratio metric using short-side of the candidate shelf
+  double worst(List<_Item> row, double shortSide) {
     final s = row.fold<double>(0, (a, e) => a + e.area);
     final maxA = row.fold<double>(0, (a, e) => math.max(a, e.area));
     final minA = row.fold<double>(double.infinity, (a, e) => math.min(a, e.area));
     if (s == 0 || minA == 0) return double.infinity;
-    final w2 = w * w;
     final s2 = s * s;
-    return math.max((w2 * maxA) / s2, s2 / (w2 * minA));
+    final short2 = shortSide * shortSide;
+    return math.max((short2 * maxA) / s2, s2 / (short2 * minA));
   }
 
   void layoutRow(List<(_Item, Task)> row, Rect rect) {
     if (row.isEmpty) return;
     final sumA = row.fold<double>(0, (a, e) => a + e.$1.area);
-    var horizontal = rect.width >= rect.height;
-    // Guardrail: if the row is extremely skewed, try flipping orientation
-    final worstRatio = worst(row.map((e) => e.$1).toList(), math.min(rect.width, rect.height));
-    if (worstRatio > 20.0) {
-      horizontal = !horizontal;
-    }
+    // Use short-side shelf logic: decide orientation based on rect short side
+    final shortSide = math.min(rect.width, rect.height);
+    var horizontal = rect.width >= rect.height; // default
+    // prefer laying out along the long side but measure worst using short side
+    final worstRatio = worst(row.map((e) => e.$1).toList(), shortSide);
+    if (worstRatio > 20.0) horizontal = !horizontal;
     if (horizontal) {
+      // horizontal shelves: height determined by sumA / width
       final h = sumA / rect.width;
       var x = rect.left;
       for (final it in row) {
         final w = it.$1.area / h;
         final r = Rect.fromLTWH(x, rect.top, w, h);
-        result.add(TreemapRect(r, it.$2));
+        result.add(TreemapRect(_snapToPixel(r), it.$2));
         x += w;
       }
       cur = Rect.fromLTWH(rect.left, rect.top + h, rect.width, math.max(0, rect.height - h));
@@ -166,7 +183,7 @@ List<TreemapRect> _layoutIntoRect(List<Task> tasks, Rect rect) {
       for (final it in row) {
         final h = it.$1.area / w;
         final r = Rect.fromLTWH(rect.left, y, w, h);
-        result.add(TreemapRect(r, it.$2));
+        result.add(TreemapRect(_snapToPixel(r), it.$2));
         y += h;
       }
       cur = Rect.fromLTWH(rect.left + w, rect.top, math.max(0, rect.width - w), rect.height);
@@ -178,9 +195,9 @@ List<TreemapRect> _layoutIntoRect(List<Task> tasks, Rect rect) {
       row = [it];
       continue;
     }
-    final w = math.min(cur.width, cur.height);
+    final shortSide = math.min(cur.width, cur.height);
     final candidate = [...row.map((e) => e.$1), it.$1];
-    if (worst(candidate, w) <= worst(row.map((e) => e.$1).toList(), w)) {
+    if (worst(candidate, shortSide) <= worst(row.map((e) => e.$1).toList(), shortSide)) {
       row.add(it);
     } else {
       layoutRow(row, cur);
@@ -189,16 +206,16 @@ List<TreemapRect> _layoutIntoRect(List<Task> tasks, Rect rect) {
   }
   layoutRow(row, cur);
 
-  // Normalize minor floating rounding to keep within rect
+  // Normalize minor floating rounding to keep within rect and snap to pixel grid
   return result
       .map((e) {
-        final r = Rect.fromLTWH(
+        final clamped = Rect.fromLTWH(
           (e.rect01.left).clamp(rect.left, rect.right),
           (e.rect01.top).clamp(rect.top, rect.bottom),
           math.min(e.rect01.width, rect.right - e.rect01.left),
           math.min(e.rect01.height, rect.bottom - e.rect01.top),
         );
-        return TreemapRect(r, e.task);
+        return TreemapRect(_snapToPixel(clamped), e.task);
       })
       .toList();
 }
@@ -310,7 +327,9 @@ List<TreemapRect> _layoutStableIntoRect(
     final prev = cache?.lastWeight[t.id] ?? w;
     final smooth = ema(prev, w);
     cache?.lastWeight[t.id] = smooth;
-    values.add(math.sqrt(math.max(0.0, smooth)));
+    // clamp and root-scale
+    final v = math.sqrt(math.max(0.0, smooth.clamp(0.0001, 1e12)));
+    values.add(v);
   }
 
   var sum = values.fold<double>(0, (a, b) => a + b);
@@ -325,15 +344,20 @@ List<TreemapRect> _layoutStableIntoRect(
   final small = <int>[];
   if (minTileArea01 != null && minTileArea01 > 0) {
     for (var i = 0; i < rawAreas.length; i++) {
+      // rawAreas are already normalized to the full [0..1] canvas (include rect size).
+      // Compare directly against minTileArea01 (minPx / totalPx). If the tile's normalized
+      // area is below that threshold, it would render under 44x44 px on the given viewport.
       if (rawAreas[i] < minTileArea01) {
         small.add(i);
       } else {
         keep.add(i);
       }
     }
-    try {
-      debugPrint('layoutQuadrant[$quadrant]: tasks=${tasks.length} minArea01=$minTileArea01 keep=${keep.length} small=${small.length}');
-    } catch (_) {}
+    if (kDebugMode) {
+      try {
+        debugPrint('layoutQuadrant[$quadrant]: tasks=${tasks.length} minArea01=$minTileArea01 keep=${keep.length} small=${small.length}');
+      } catch (_) {}
+    }
   } else {
     for (var i = 0; i < rawAreas.length; i++) {
       keep.add(i);
@@ -383,32 +407,30 @@ List<TreemapRect> _layoutStableIntoRect(
   final result = <TreemapRect>[];
   var row = <(_Item, Task)>[];
 
-  double worst(List<_Item> row, double w) {
+  double worst(List<_Item> row, double shortSide) {
     final s = row.fold<double>(0, (a, e) => a + e.area);
     final maxA = row.fold<double>(0, (a, e) => math.max(a, e.area));
     final minA = row.fold<double>(double.infinity, (a, e) => math.min(a, e.area));
     if (s == 0 || minA == 0) return double.infinity;
-    final w2 = w * w;
     final s2 = s * s;
-    return math.max((w2 * maxA) / s2, s2 / (w2 * minA));
+    final short2 = shortSide * shortSide;
+    return math.max((short2 * maxA) / s2, s2 / (short2 * minA));
   }
 
   void layoutRow(List<(_Item, Task)> row, Rect rect) {
     if (row.isEmpty) return;
     final sumA = row.fold<double>(0, (a, e) => a + e.$1.area);
+    final shortSide = math.min(rect.width, rect.height);
     var horizontal = rect.width >= rect.height;
-    // Guardrail: if first shelf gets extreme aspect ratio, try alternative orientation
-    final worstRatio = worst(row.map((e) => e.$1).toList(), math.min(rect.width, rect.height));
-    if (worstRatio > 20.0) {
-      horizontal = !horizontal;
-    }
+    final worstRatio = worst(row.map((e) => e.$1).toList(), shortSide);
+    if (worstRatio > 20.0) horizontal = !horizontal;
     if (horizontal) {
       final h = sumA / rect.width;
       var x = rect.left;
       for (final it in row) {
         final w = it.$1.area / h;
         final r = Rect.fromLTWH(x, rect.top, w, h);
-        result.add(TreemapRect(r, it.$2, stackChildren: it.$1.stackChildren));
+        result.add(TreemapRect(_snapToPixel(r), it.$2, stackChildren: it.$1.stackChildren));
         cache?.lastRect[it.$2.id] = r;
         x += w;
       }
@@ -419,7 +441,7 @@ List<TreemapRect> _layoutStableIntoRect(
       for (final it in row) {
         final h = it.$1.area / w;
         final r = Rect.fromLTWH(rect.left, y, w, h);
-        result.add(TreemapRect(r, it.$2, stackChildren: it.$1.stackChildren));
+        result.add(TreemapRect(_snapToPixel(r), it.$2, stackChildren: it.$1.stackChildren));
         cache?.lastRect[it.$2.id] = r;
         y += h;
       }
@@ -443,7 +465,7 @@ List<TreemapRect> _layoutStableIntoRect(
   }
   layoutRow(row, cur);
 
-  // Clamp to rect bounds
+  // Clamp to rect bounds and snap
   final clamped = result
       .map((e) {
         final r = Rect.fromLTWH(
@@ -452,7 +474,7 @@ List<TreemapRect> _layoutStableIntoRect(
           math.min(e.rect01.width, rect.right - e.rect01.left),
           math.min(e.rect01.height, rect.bottom - e.rect01.top),
         );
-        return TreemapRect(r, e.task);
+        return TreemapRect(_snapToPixel(r), e.task, stackChildren: e.stackChildren);
       })
       .toList();
 

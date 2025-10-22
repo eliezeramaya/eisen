@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
+import 'package:flutter/foundation.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/core/services/telemetry.dart';
+import 'package:eisen/core/constants/layout_constants.dart';
 
 /// Use case for computing the treemap layout with incremental updates.
 ///
@@ -44,9 +46,11 @@ class ComputeLayoutUseCase {
     Quadrant? only,
   }) {
     // DEBUG: surface runtime info to logs to help diagnose empty-layout issues
-    try {
-      debugPrint('ComputeLayoutUseCase.execute: tasks=${tasks.length} zoom=${zoom?.name} viewport=${viewport?.width}x${viewport?.height}');
-    } catch (_) {}
+    if (kDebugMode) {
+      try {
+        debugPrint('ComputeLayoutUseCase.execute: tasks=${tasks.length} zoom=${zoom?.name} viewport=${viewport?.width}x${viewport?.height}');
+      } catch (_) {}
+    }
     // Compute hash to detect changes
     int hash = Object.hashAllUnordered(tasks.map((t) => t.id)) ^ 
                tasks.length ^ 
@@ -55,7 +59,7 @@ class ComputeLayoutUseCase {
     // Calculate minimum area from viewport
     double? minArea01;
     if (viewport != null && viewport.width > 0 && viewport.height > 0) {
-      const minPx = 20.0 * 20.0; // Reduced from 44x44 to 20x20 to be less aggressive
+      final minPx = LayoutConstants.minTileAreaPx; // centralized constant
       final totalPx = viewport.width * viewport.height;
       minArea01 = (minPx / totalPx).clamp(0.0, 1.0);
       hash ^= viewport.width.round();
@@ -116,9 +120,11 @@ class ComputeLayoutUseCase {
       zoom,
       minTileArea01: minArea01,
     );
-    try {
-      debugPrint('ComputeLayoutUseCase._computeZoomedLayout: quadrant=${zoom.name} tasksInQ=${tasksInQ.length} minArea01=$minArea01 layout=${layout.length}');
-    } catch (_) {}
+    if (kDebugMode) {
+      try {
+        debugPrint('ComputeLayoutUseCase._computeZoomedLayout: quadrant=${zoom.name} tasksInQ=${tasksInQ.length} minArea01=$minArea01 layout=${layout.length}');
+      } catch (_) {}
+    }
     sw.stop();
     
     Telemetry.layoutTime(zoom.name, sw.elapsedMicroseconds / 1000.0);
@@ -146,9 +152,11 @@ class ComputeLayoutUseCase {
       bandit: _bandit,
       minTileArea01: minArea01,
     );
-    try {
-      debugPrint('ComputeLayoutUseCase._computeFullLayout: tasks=${tasks.length} minArea01=$minArea01 layout=${layout.length}');
-    } catch (_) {}
+    if (kDebugMode) {
+      try {
+        debugPrint('ComputeLayoutUseCase._computeFullLayout: tasks=${tasks.length} minArea01=$minArea01 layout=${layout.length}');
+      } catch (_) {}
+    }
     sw.stop();
     
     Telemetry.layoutTime(null, sw.elapsedMicroseconds / 1000.0);

@@ -1,29 +1,44 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
+import 'package:eisen/features/eisen_matrix/domain/usecases/compute_layout_usecase.dart';
+import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 
 void main() {
-  test('tiles smaller than 44x44 become stack tiles', () {
+  test('tiles smaller than 44x44 are stacked into +N', () {
+    // Create many small-equal tasks in Q1 so each individual tile would be < 44x44 px
     final tasks = <Task>[];
-    // One big + many tiny tasks in Q1
-    tasks.add(Task(id: 'big', title: 'Big', quadrant: Quadrant.q1, priority: 10, minutes: 240));
-    for (var i = 0; i < 20; i++) {
-      tasks.add(Task(id: 't$i', title: 't$i', quadrant: Quadrant.q1, priority: 1, minutes: 5));
+    for (int i = 0; i < 80; i++) {
+      tasks.add(Task(id: 's$i', title: 's$i', quadrant: Quadrant.q1, priority: 1, minutes: 5));
     }
-    // Assume a medium viewport so that 44x44 threshold matters
-    // Translate 44x44 px to normalized area with a 600x600 viewport
-    final viewportW = 600.0, viewportH = 600.0;
-    final minPx = 44.0 * 44.0;
-    final minArea01 = minPx / (viewportW * viewportH);
+    // Add a couple tasks in other quadrants to avoid empty edges
+    tasks.addAll([
+      Task(id: 'b1', title: 'b1', quadrant: Quadrant.q2, priority: 8, minutes: 60),
+      Task(id: 'b2', title: 'b2', quadrant: Quadrant.q3, priority: 6, minutes: 45),
+    ]);
 
-    final layout = computeStableLayout(tasks, zoom: Quadrant.q1, minTileArea01: minArea01);
-    // Expect exactly one stack tile in Q1
-    final stacks = layout.where((e) => e.task.quadrant == Quadrant.q1 && e.stackChildren.isNotEmpty).toList();
-    expect(stacks.length, 1);
-    expect(stacks.first.stackChildren.length, greaterThanOrEqualTo(1));
-    // Non-stack tiles should be interactive-size or larger
-    final nonStacks = layout.where((e) => e.stackChildren.isEmpty).toList();
-    expect(nonStacks.any((e) => e.rect01.width * e.rect01.height < minArea01), isFalse);
+    final cache = LayoutCache();
+    final bandit = BanditService();
+    final usecase = ComputeLayoutUseCase(cache: cache, bandit: bandit);
+
+    // Use a fixed viewport so min area threshold is deterministic
+    const viewport = Size(800, 600); // total px = 480k; min area = 1936 px
+    final layout = usecase.execute(tasks: tasks, zoom: null, viewport: viewport);
+
+    // Find stack tile in Q1 and ensure it groups the tiny tasks
+    final stack = layout.where((e) => e.task.quadrant == Quadrant.q1 && e.stackChildren.isNotEmpty).toList();
+    expect(stack.length, 1, reason: 'Expected a single +N tile for small tasks');
+    expect(stack.first.stackChildren.length, 80);
+
+    // Ensure no other tile in Q1 is smaller than 44x44 in pixels
+    final others = layout.where((e) => e.task.quadrant == Quadrant.q1 && e.stackChildren.isEmpty).toList();
+    for (final tr in others) {
+      final w = tr.rect01.width * viewport.width;
+      final h = tr.rect01.height * viewport.height;
+      expect(w >= 44 || h >= 44, isTrue, reason: 'Non-stacked tile too small in one dimension');
+      expect(w * h >= 44 * 44, isTrue, reason: 'Non-stacked tile area too small');
+    }
   });
 }
 
