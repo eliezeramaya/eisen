@@ -8,6 +8,5 @@ export 'theme/animation_tokens.dart';
 export 'theme/app_theme.dart';
 export 'theme/typography.dart';
 export 'a11y/semantics.dart';
-export 'utils/date_utils.dart';
 export 'utils/result.dart';
 

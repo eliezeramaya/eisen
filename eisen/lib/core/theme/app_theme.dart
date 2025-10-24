@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'typography.dart';
+import 'colors.dart';
 
 @immutable
 class GlassTokens extends ThemeExtension<GlassTokens> {
@@ -70,42 +71,42 @@ ThemeData buildAppTheme(Brightness brightness) {
     brightness: brightness,
     colorScheme: isDark
         ? const ColorScheme.dark(
-            primary: Color(0xFF9CC6FF),
-            secondary: Color(0xFFB3E5C5),
-            surface: Color(0xFF111318),
-            background: Color(0xFF0D0F13),
+            primary: EisenColors.q2Dark,
+            secondary: EisenColors.q3Dark,
+            surface: Color(0xFF1E293B), // card
+            background: Color(0xFF0F172A), // canvas
           )
         : const ColorScheme.light(
-            // Higher-contrast light palette
-            primary: Color(0xFF0B57D0), // deep blue
-            secondary: Color(0xFF006C47), // deep green
+            // Emotional palette tuned for light mode
+            primary: EisenColors.q2,
+            secondary: EisenColors.q3,
             surface: Color(0xFFFFFFFF),
-            background: Color(0xFFF5F7FB),
+            background: Color(0xFFF9FAFB),
           ),
     useMaterial3: true,
   );
 
   final tokens = isDark
       ? const GlassTokens(
-          glassBg: Color(0xAA141821),
+          glassBg: Color(0x66151A23),
           blur: 12,
           radius: 20,
-          q1: Color(0xFFFF6B6B),
-          q2: Color(0xFF6BCB77),
-          q3: Color(0xFFFFC15E),
-          q4: Color(0xFF6BA8FF),
-          halo: Color(0x662B63FF),
+          q1: EisenColors.q1Dark,
+          q2: EisenColors.q2Dark,
+          q3: EisenColors.q3Dark,
+          q4: EisenColors.q4Dark,
+          halo: Color(0x662E90FA),
         )
       : const GlassTokens(
           // More opaque glass for contrast on light backgrounds
           glassBg: Color(0xCCFFFFFF),
           blur: 12,
           radius: 20,
-          // Higher-contrast quadrant colors (paired for light bg)
-          q1: Color(0xFFD92D20), // red-600
-          q2: Color(0xFF12B76A), // green-600
-          q3: Color(0xFFF79009), // amber-600
-          q4: Color(0xFF2E90FA), // blue-600
+          // Emotional palette mapped to quadrants
+          q1: EisenColors.q1,
+          q2: EisenColors.q2,
+          q3: EisenColors.q3,
+          q4: EisenColors.q4,
           halo: Color(0x332E90FA),
         );
 
@@ -125,10 +126,10 @@ ThemeData buildAppTheme(Brightness brightness) {
         ),
       ),
     ),
-    scaffoldBackgroundColor: base.colorScheme.surface,
+    scaffoldBackgroundColor: base.colorScheme.background,
     appBarTheme: AppBarTheme(
       elevation: 0,
-  backgroundColor: base.colorScheme.surface.withValues(alpha: isDark ? 0.4 : 0.9),
+      backgroundColor: base.colorScheme.surface.withValues(alpha: isDark ? 0.35 : 0.85),
       foregroundColor: base.colorScheme.onSurface,
     ),
   );

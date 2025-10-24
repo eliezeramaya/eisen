@@ -84,6 +84,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
               compact: compact,
               showAxisLegends: showAxisLegends,
               onToggleAxisLegends: ctrl.toggleAxisLegends,
+              minimal: minimal,
+              onToggleMinimal: ctrl.toggleMinimal,
               onResetToDemo: () async {
                 await ctrl.resetToDemo();
                 if (context.mounted) {
@@ -101,7 +103,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: const EdgeInsets.all(16.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -413,12 +415,16 @@ class _LeftAxisLegends extends StatelessWidget {
       width: 64,
       child: Padding(
         padding: const EdgeInsets.only(right: 8, top: 20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            RotatedBox(quarterTurns: 3, child: Text(l10n.axisImportant, style: style)),
-            RotatedBox(quarterTurns: 3, child: Text(l10n.axisNotImportant, style: style)),
-          ],
+        // Scale down the legends if vertical space is tight to avoid overflows on small screens
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              RotatedBox(quarterTurns: 3, child: Text(l10n.axisImportant, style: style)),
+              RotatedBox(quarterTurns: 3, child: Text(l10n.axisNotImportant, style: style)),
+            ],
+          ),
         ),
       ),
     );
@@ -460,26 +466,39 @@ class _BottomActionBar extends StatelessWidget {
             ),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Density toggle button
-            TextButton.icon(
-              onPressed: onToggleDensity,
-              icon: Icon(densityIcon),
-              label: Text(densityLabel),
-            ),
-            // New task with quadrant menu
-            MenuAnchor(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final tight = constraints.maxWidth < 400;
+            final hideMinimap = constraints.maxWidth < 560;
+
+            final densityWidget = tight
+                ? IconButton(
+                    onPressed: onToggleDensity,
+                    tooltip: densityLabel,
+                    icon: Icon(densityIcon),
+                  )
+                : TextButton.icon(
+                    onPressed: onToggleDensity,
+                    icon: Icon(densityIcon),
+                    label: Text(densityLabel),
+                  );
+
+            final newTaskCluster = MenuAnchor(
               builder: (context, controller, child) {
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    FilledButton.icon(
-                      onPressed: onNew,
-                      icon: const Icon(Icons.add),
-                      label: Text(AppLocalizations.of(context).newTask),
-                    ),
+                    tight
+                        ? IconButton(
+                            onPressed: onNew,
+                            tooltip: AppLocalizations.of(context).newTask,
+                            icon: const Icon(Icons.add),
+                          )
+                        : FilledButton.icon(
+                            onPressed: onNew,
+                            icon: const Icon(Icons.add),
+                            label: Text(AppLocalizations.of(context).newTask),
+                          ),
                     IconButton(
                       onPressed: () => controller.isOpen ? controller.close() : controller.open(),
                       tooltip: isEs ? 'Elegir cuadrante' : 'Choose quadrant',
@@ -515,12 +534,32 @@ class _BottomActionBar extends StatelessWidget {
                   child: const Text('Q4'),
                 ),
               ],
-            ),
-            if (minimap != null) ...[
-              const SizedBox(width: 12),
-              minimap!,
-            ],
-          ],
+            );
+
+            final children = <Widget>[
+              densityWidget,
+              newTaskCluster,
+              if (!hideMinimap && minimap != null) ...[
+                const SizedBox(width: 12),
+                minimap!,
+              ],
+            ];
+
+            if (tight) {
+              return Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: children,
+              );
+            }
+
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: children,
+            );
+          },
         ),
       ),
     );

@@ -7,6 +7,8 @@ class SettingsSheet extends StatelessWidget {
   final bool showAxisLegends;
   final VoidCallback onToggleAxisLegends;
   final VoidCallback? onResetToDemo;
+  final bool? minimal;
+  final VoidCallback? onToggleMinimal;
   
   const SettingsSheet({
     super.key,
@@ -16,6 +18,8 @@ class SettingsSheet extends StatelessWidget {
     required this.showAxisLegends,
     required this.onToggleAxisLegends,
     this.onResetToDemo,
+    this.minimal,
+    this.onToggleMinimal,
   });
 
   @override
@@ -61,6 +65,16 @@ class SettingsSheet extends StatelessWidget {
               secondary: const Icon(Icons.label_outline),
               title: const Text('Mostrar leyendas de ejes'),
             ),
+            if (minimal != null && onToggleMinimal != null)
+              SwitchListTile(
+                value: minimal!,
+                onChanged: (_) {
+                  onToggleMinimal!();
+                  Navigator.of(context).pop();
+                },
+                secondary: const Icon(Icons.filter_b_and_w),
+                title: const Text('Modo minimalista'),
+              ),
             if (onResetToDemo != null) ...[
               const Divider(),
               ListTile(
