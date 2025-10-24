@@ -9,11 +9,22 @@ import 'entities.dart';
 /// Features:
 /// - Q2 guardrail: Tasks in Q2 with due < 48h get priority in tie-breaks
 /// - Scoring: Combines priority (scaled 1-10) + recency boost + small noise
-/// - Deterministic seeding (default seed=42) for reproducible layouts
+/// - Deterministic seeding for reproducible layouts (configurable via [seed])
+/// - Same seed + same task set = same ordering (stability guarantee)
 class BanditService {
   final math.Random _rng;
   
-  BanditService({math.Random? rng}) : _rng = rng ?? math.Random(42);
+  /// Random seed used for deterministic tie-breaking.
+  /// 
+  /// Using the same seed with the same task set guarantees identical ordering
+  /// across sessions, enabling reproducible layouts and stable tests.
+  final int seed;
+  
+  /// Creates a [BanditService] with optional custom [seed].
+  /// 
+  /// If [seed] is not provided, defaults to 42 for deterministic behavior.
+  /// Pass a time-based seed for non-deterministic ordering if desired.
+  BanditService({this.seed = 42}) : _rng = math.Random(seed);
 
   /// Returns rank map (lower rank = higher priority) for [tasks] within [quadrant].
   ///
