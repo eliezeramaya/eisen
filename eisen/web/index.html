@@ -31,6 +31,54 @@
 
   <title>eisen</title>
   <link rel="manifest" href="manifest.json">
+  
+  <!-- Performance measurement: Largest Contentful Paint (LCP) -->
+  <!-- Only active in debug/profile builds for development monitoring -->
+  <script>
+    (function() {
+      // Check if we should enable LCP tracking (disable in production for privacy)
+      // This can be controlled via URL parameter: ?measure_lcp=true
+      const urlParams = new URLSearchParams(window.location.search);
+      const shouldMeasureLCP = urlParams.get('measure_lcp') === 'true' || 
+                               window.location.hostname === 'localhost' ||
+                               window.location.hostname === '127.0.0.1';
+      
+      if (!shouldMeasureLCP) return;
+      
+      // Measure LCP using PerformanceObserver
+      if ('PerformanceObserver' in window) {
+        try {
+          const observer = new PerformanceObserver((list) => {
+            const entries = list.getEntries();
+            const lastEntry = entries[entries.length - 1];
+            
+            if (lastEntry && lastEntry.renderTime) {
+              const lcpMs = lastEntry.renderTime;
+              console.log('[Performance] LCP:', lcpMs.toFixed(2), 'ms');
+              
+              // Send to Flutter via window message when app is ready
+              window.addEventListener('flutter-initialized', () => {
+                if (window.flutterMetrics && typeof window.flutterMetrics.recordLCP === 'function') {
+                  window.flutterMetrics.recordLCP(lcpMs);
+                }
+              });
+              
+              // Also store globally for manual inspection
+              window.__lcp_ms = lcpMs;
+            }
+          });
+          
+          observer.observe({ type: 'largest-contentful-paint', buffered: true });
+          
+          console.log('[Performance] LCP tracking enabled');
+        } catch (e) {
+          console.warn('[Performance] Failed to observe LCP:', e);
+        }
+      } else {
+        console.warn('[Performance] PerformanceObserver not supported');
+      }
+    })();
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

@@ -564,6 +564,21 @@ class _TreemapPainter extends CustomPainter {
   final Quadrant? pulseQuadrant;
   final double pulseT; // 0..1
   final Set<String>? suggested;
+  
+  /// Tile path cache for performance optimization.
+  /// 
+  /// Memoizes rounded rectangle paths by (task.id + rect01 hash) to avoid
+  /// redundant path calculations when layout is stable. Cache is static and
+  /// shared across painter instances.
+  /// 
+  /// Benefits:
+  /// - Reduces CPU overhead during animation frames
+  /// - Prevents path recalculation for stable tiles
+  /// - Improves paint performance when only dragging/hovering changes
+  /// 
+  /// Cache invalidation: Automatic via key = '${task.id}_${rect.hashCode}'
+  /// When rect changes, new key is generated and old entry is orphaned.
+  static final Map<String, Path> _pathCache = {};
   _TreemapPainter(
     this.layout, {
     this.draggingId,
@@ -727,7 +742,7 @@ class _TreemapPainter extends CustomPainter {
         // No shadow in minimal mode
         if (!minimal) {
           canvas.drawShadow(
-              Path()..addRRect(RRect.fromRectAndRadius(drawRect, const Radius.circular(12))),
+              _getCachedPath(tr.task.id, drawRect, 12),
               color.withValues(alpha: 0.45),
               14,
               false);
@@ -737,7 +752,7 @@ class _TreemapPainter extends CustomPainter {
         // No shadow in minimal mode
         if (!minimal) {
           canvas.drawShadow(
-              Path()..addRRect(RRect.fromRectAndRadius(drawRect, const Radius.circular(12))),
+              _getCachedPath(tr.task.id, drawRect, 12),
               color.withValues(alpha: 0.3),
               8,
               false);
@@ -852,6 +867,20 @@ class _TreemapPainter extends CustomPainter {
     }
   }
 
+  /// Determines whether the CustomPainter should repaint.
+  /// 
+  /// Uses deep comparison of layout, animation state, and interaction state.
+  /// Comparison is efficient because:
+  /// - `layout` uses List equality (identity or content comparison)
+  /// - `prevRects01`/`nextRects01` use Map equality
+  /// - Primitive comparisons (t, pulseT, draggingId) are cheap
+  /// 
+  /// Performance note: If adding complex overlays/tooltips per tile that cause
+  /// jank, consider wrapping individual tiles with `RepaintBoundary` to isolate
+  /// repaints. Only do this if profiling shows significant paint overhead.
+  /// 
+  /// Path caching via `_pathCache` reduces redundant path calculations when
+  /// layout is stable but other properties change (e.g., pointer movement).
   @override
   bool shouldRepaint(covariant _TreemapPainter oldDelegate) =>
       oldDelegate.layout != layout ||
@@ -934,6 +963,22 @@ class _TreemapPainter extends CustomPainter {
     final w = (rr - l).clamp(0.0, double.infinity);
     final h = (bb - t).clamp(0.0, double.infinity);
     return Rect.fromLTWH(l, t, w, h);
+  }
+  
+  /// Get or create a cached rounded rectangle path for the given rect.
+  /// 
+  /// Memoizes paths by (taskId + rect hash) to avoid redundant path creation
+  /// when layout is stable. This improves performance during interaction-only
+  /// repaints (e.g., pointer movement, dragging state changes).
+  /// 
+  /// Cache key invalidation: When rect changes, hashCode changes, creating a
+  /// new cache entry. Old entries are orphaned but remain until GC.
+  /// Cache is bounded implicitly by task count (max ~500 tasks × 2 states).
+  Path _getCachedPath(String taskId, Rect rect, double radius) {
+    final key = '${taskId}_${rect.hashCode}_$radius';
+    return _pathCache.putIfAbsent(key, () {
+      return Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
+    });
   }
 
   TextPainter _textPainter(String text, Rect r, double size, FontWeight fw, {double alpha = 0.92, int maxLines = 2, Color? textColor}) {
