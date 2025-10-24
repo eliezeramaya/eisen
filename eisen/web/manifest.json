@@ -1,13 +1,15 @@
 {
-    "name": "eisen",
-    "short_name": "eisen",
+    "name": "Eisenhower Matrix - Timmr Eisen",
+    "short_name": "Eisen",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#F9FAFB",
+    "theme_color": "#12B76A",
+    "description": "Visual task prioritization using the Eisenhower Matrix with adaptive treemap layouts. Organize tasks by urgency and importance for better focus and productivity.",
+    "orientation": "any",
     "prefer_related_applications": false,
+    "categories": ["productivity", "business", "utilities"],
+    "screenshots": [],
     "icons": [
         {
             "src": "icons/Icon-192.png",

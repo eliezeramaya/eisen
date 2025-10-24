@@ -1,6 +1,15 @@
 /// Simple in-memory metrics aggregator for the current app session.
 /// 
-/// Tracks layout performance, user interactions, and web vitals (LCP).
+/// Privacy-safe: All metrics are aggregated locally and contain NO task IDs
+/// or personally identifiable information (PII). Only performance statistics
+/// and interaction counts are tracked.
+/// 
+/// Tracks:
+/// - Layout performance (ms) - helps optimize rendering
+/// - User interactions (clicks, exposures) - helps improve UX
+/// - Web vitals (LCP) - helps optimize web performance
+///
+/// Safe for local use even without telemetry consent.
 class Metrics {
   Metrics._();
   static final instance = Metrics._();

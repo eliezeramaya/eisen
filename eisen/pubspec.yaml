@@ -38,6 +38,7 @@ dependencies:
   go_router: ^16.2.4
   shared_preferences: ^2.5.3
   intl: ^0.20.2
+  crypto: ^3.0.6
   flutter_localizations:
     sdk: flutter
   device_preview: ^1.2.0

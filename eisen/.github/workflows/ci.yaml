@@ -18,11 +18,24 @@ jobs:
         run: |
           cd eisen
           flutter pub get
+      - name: Generate l10n (Internationalization)
+        run: |
+          cd eisen
+          flutter gen-l10n
+      - name: Verify l10n Generation
+        run: |
+          cd eisen
+          # Verify generated files exist (configured in l10n.yaml to output-dir: lib/l10n)
+          if [ ! -f "lib/l10n/app_localizations.dart" ]; then
+            echo "Error: l10n generation failed - app_localizations.dart not found"
+            exit 1
+          fi
+          echo "✓ l10n files generated successfully"
       - name: Analyze
         run: |
           cd eisen
           flutter analyze
-      - name: Test
+      - name: Test (including i18n ARB validation)
         run: |
           cd eisen
           flutter test --no-pub

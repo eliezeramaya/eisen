@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +8,6 @@ import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/features/eisen_matrix/data/local_repo.dart';
 import 'package:eisen/core/services/storage_prefs.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
-import 'package:eisen/core/services/telemetry.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/create_task_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/update_task_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/delete_task_usecase.dart';
