@@ -156,14 +156,42 @@ class Task {
 
 /// Computes the visual weight for a task used by the treemap layout.
 ///
-/// Weight = priority × minutes × due-date urgency multiplier.
-/// Tasks without due dates receive a base multiplier of 1.0.
-/// Closer due dates receive higher multipliers exponentially.
+/// **Formula:**
+/// ```
+/// weight = priority^α × minutes^β × urgencyBoost × dueBoost × freshnessDecay
+/// ```
 ///
-/// Monotonicity guarantee w.r.t. due date proximity:
-///   For two otherwise-identical tasks A and B, if A has an earlier due date
-///   than B (i.e., fewer daysToDue), then weight(A) >= weight(B).
-///   This is enforced via an increasing `dueBoost` factor when due approaches.
+/// **Parameters:**
+/// - `α = 1.2`: Priority exponent (emphasizes high-priority tasks)
+/// - `β = 0.8`: Minutes exponent (sub-linear to avoid extreme dominance)
+/// - `urgencyBoost = 1.15` if urgent (Q1/Q3), else `1.0`
+/// - `dueBoost = 1.0 + 0.25 × exp(-0.7 × daysToDue)`: Exponentially increases as due approaches
+/// - `freshnessDecay = 0.75 + 0.25 × exp(-0.15 × daysSinceLastTouch)`: Slight decay for stale tasks
+///
+/// **Input Ranges (clamped internally):**
+/// - `priority`: [1, 10] (user input clamped)
+/// - `minutes`: [5, 240] (user input clamped)
+/// - `daysToDue`: [0, ∞) (null due dates treated as ∞)
+/// - `daysSinceLastTouch`: [0, ∞)
+///
+/// **Output Range:**
+/// - Minimum: ~3.78 (priority=1, minutes=5, no boosts, max decay)
+/// - Maximum: ~318.2 (priority=10, minutes=240, urgent, due today, fresh)
+/// - Typical range: [10, 150] for most tasks
+///
+/// **Monotonicity Guarantees:**
+/// 1. **Due date proximity:** For two otherwise-identical tasks A and B,
+///    if A.due is earlier than B.due, then weight(A) >= weight(B).
+/// 2. **Priority:** Higher priority always increases weight.
+/// 3. **Minutes:** More minutes always increases weight (sub-linearly).
+///
+/// **Edge Cases:**
+/// - No due date (`null`): `dueBoost = 1.0` (base weight)
+/// - Due in past: `daysToDue` clamped to 0, `dueBoost = 1.25` (maximum urgency)
+/// - Invalid values (NaN/infinite): Returns `0.0` safely
+///
+/// **Testing:** See `test/unit/domain/weight_monotonicity_test.dart` for
+/// property-based tests verifying monotonicity and range bounds.
 double weight(Task t) {
   const alpha = 1.2; // priority exponent
   const beta = 0.8; // minutes exponent
