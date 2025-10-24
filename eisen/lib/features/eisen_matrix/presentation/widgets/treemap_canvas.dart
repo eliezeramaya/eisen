@@ -902,21 +902,69 @@ class _TreemapPainter extends CustomPainter {
         final nodes = <CustomPainterSemantics>[];
         for (final tr in layout) {
           final r = Rect.fromLTWH(tr.rect01.left * size.width, tr.rect01.top * size.height, tr.rect01.width * size.width, tr.rect01.height * size.height);
-          final meta = 'P${tr.task.priority} • ${tr.task.minutes}m';
-          final label = tr.stackChildren.isNotEmpty
-              ? 'Grupo ${tr.task.quadrant.name.toUpperCase()} (+${tr.stackChildren.length})'
-              : '${tr.task.title}, $meta, ${tr.task.quadrant.name.toUpperCase()}${(suggested?.contains(tr.task.id) ?? false) ? ', sugerida' : ''}';
+          
+          // Enhanced semantic label with complete task context
+          final String label;
+          if (tr.stackChildren.isNotEmpty) {
+            // Stack tile: announce group size and quadrant
+            label = 'Group of ${tr.stackChildren.length + 1} tasks in quadrant ${tr.task.quadrant.name.toUpperCase()}, tap to expand';
+          } else {
+            // Individual tile: full task details for screen readers
+            final parts = <String>[
+              'Task: ${tr.task.title}',
+              'Priority: ${tr.task.priority} out of 10',
+              'Duration: ${tr.task.minutes} minutes',
+              'Quadrant: ${_quadrantName(tr.task.quadrant)}',
+            ];
+            
+            // Add due date if present
+            if (tr.task.due != null) {
+              final daysUntil = tr.task.due!.difference(DateTime.now()).inDays;
+              if (daysUntil < 0) {
+                parts.add('Overdue by ${-daysUntil} days');
+              } else if (daysUntil == 0) {
+                parts.add('Due today');
+              } else if (daysUntil == 1) {
+                parts.add('Due tomorrow');
+              } else {
+                parts.add('Due in $daysUntil days');
+              }
+            }
+            
+            // Add suggestion status
+            if (suggested?.contains(tr.task.id) ?? false) {
+              parts.add('Suggested task');
+            }
+            
+            label = parts.join(', ');
+          }
+          
           nodes.add(CustomPainterSemantics(
             rect: r,
             properties: SemanticsProperties(
               label: label,
               button: true,
               textDirection: TextDirection.ltr,
+              hint: 'Double tap to edit, or drag to move to another quadrant',
             ),
           ));
         }
         return nodes;
       };
+  
+  /// Get human-readable quadrant name for semantics.
+  String _quadrantName(Quadrant q) {
+    switch (q) {
+      case Quadrant.q1:
+        return 'Q1: Urgent and Important';
+      case Quadrant.q2:
+        return 'Q2: Not Urgent but Important';
+      case Quadrant.q3:
+        return 'Q3: Urgent but Not Important';
+      case Quadrant.q4:
+        return 'Q4: Not Urgent and Not Important';
+    }
+  }
 
   Color _byQuadrant(Quadrant q) {
     switch (q) {
