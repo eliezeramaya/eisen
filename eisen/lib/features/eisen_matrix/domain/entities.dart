@@ -10,8 +10,8 @@ enum Quadrant { q1, q2, q3, q4 }
 
 /// Extension providing urgency and importance flags for quadrants.
 extension QuadrantX on Quadrant {
-  bool get isUrgent => this == Quadrant.q1 || this == Quadrant.q2;
-  bool get isImportant => this == Quadrant.q1 || this == Quadrant.q4;
+  bool get isUrgent => this == Quadrant.q1 || this == Quadrant.q3;
+  bool get isImportant => this == Quadrant.q1 || this == Quadrant.q2;
 }
 
 /// A task in the Eisenhower matrix.
