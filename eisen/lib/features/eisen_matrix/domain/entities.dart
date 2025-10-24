@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show listEquals;
 
 /// Eisenhower matrix quadrant.
 ///
@@ -109,6 +110,48 @@ class Task {
   /// they are used; otherwise deterministic normalization is applied.
   double get priorityNorm => ((normalizedPriority ?? (priorityClamped - 1.0) / 9.0)).clamp(0.0, 1.0);
   double get minutesNorm => ((normalizedMinutes ?? (minutesClamped - 5.0) / (240.0 - 5.0))).clamp(0.0, 1.0);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Task &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          title == other.title &&
+          quadrant == other.quadrant &&
+          priority == other.priority &&
+          minutes == other.minutes &&
+          due == other.due &&
+          listEquals(tags, other.tags) &&
+          notes == other.notes &&
+          category == other.category &&
+          createdAt == other.createdAt &&
+          updatedAt == other.updatedAt &&
+          completedAt == other.completedAt &&
+          replanCount == other.replanCount &&
+          snoozeCount == other.snoozeCount &&
+          normalizedPriority == other.normalizedPriority &&
+          normalizedMinutes == other.normalizedMinutes;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        title,
+        quadrant,
+        priority,
+        minutes,
+        due,
+        Object.hashAll(tags),
+        notes,
+        category,
+        createdAt,
+        updatedAt,
+        completedAt,
+        replanCount,
+        snoozeCount,
+        normalizedPriority,
+        normalizedMinutes,
+      );
 }
 
 /// Computes the visual weight for a task used by the treemap layout.
