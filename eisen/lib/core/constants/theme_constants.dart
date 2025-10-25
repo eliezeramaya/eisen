@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+// Centralized theme constants; no Flutter imports needed here.
 
 /// Theme constants for glass morphism effects and visual styling.
 ///

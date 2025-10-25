@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:eisen/app/app.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/semantics.dart';
 
 void main() {
   // Ensures binding is initialized for golden tests

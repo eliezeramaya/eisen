@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/core/a11y/semantics.dart';
-import 'package:eisen/core/theme/colors.dart';
 import 'package:flutter/material.dart';
 
 void main() {

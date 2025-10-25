@@ -111,8 +111,8 @@ class Task extends Equatable {
 
   /// Normalized [0..1] values. If user-provided normalized values exist,
   /// they are used; otherwise deterministic normalization is applied.
-  double get priorityNorm => ((normalizedPriority ?? (priorityClamped - 1.0) / 9.0)).clamp(0.0, 1.0);
-  double get minutesNorm => ((normalizedMinutes ?? (minutesClamped - 5.0) / (240.0 - 5.0))).clamp(0.0, 1.0);
+  double get priorityNorm => (normalizedPriority ?? (priorityClamped - 1.0) / 9.0).clamp(0.0, 1.0);
+  double get minutesNorm => (normalizedMinutes ?? (minutesClamped - 5.0) / (240.0 - 5.0)).clamp(0.0, 1.0);
 
   /// Equatable props for structural equality (prevents unnecessary rebuilds).
   /// All fields that affect rendering/business logic are included.

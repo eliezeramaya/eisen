@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 /// Debug overlay helpers for the treemap. Lightweight and pure static.

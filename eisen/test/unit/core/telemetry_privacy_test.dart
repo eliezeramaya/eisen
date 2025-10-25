@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/core/services/telemetry.dart';
-import 'package:eisen/core/services/telemetry_consent.dart';
 
 void main() {
   group('Telemetry Privacy', () {

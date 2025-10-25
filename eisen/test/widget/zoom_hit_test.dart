@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_canvas.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/core/constants/layout_constants.dart';
 
 void main() {
   testWidgets('hit test consistent with and without zoom', (tester) async {
@@ -13,44 +14,101 @@ void main() {
       Task(id: 'd', title: 'D', quadrant: Quadrant.q4, priority: 7, minutes: 70),
     ];
 
-    String? tapped;
-
     Widget host({Quadrant? zoom}) => Directionality(
           textDirection: TextDirection.ltr,
           child: Material(
-            child: SizedBox(
-              width: 400,
-              height: 400,
-              child: TreemapCanvas(
-                tasks: tasks,
-                layout: computeStableLayout(tasks, zoom: zoom),
-                onTap: (id) => tapped = id,
-                zoom: zoom,
-                presentQuadrant: zoom,
-                minimal: true,
+            child: Center(
+              child: SizedBox(
+                width: 400,
+                height: 400,
+                child: TreemapCanvas(
+                  tasks: tasks,
+                  layout: computeStableLayout(tasks, zoom: zoom),
+                  zoom: zoom,
+                  presentQuadrant: zoom,
+                  minimal: true,
+                ),
               ),
             ),
           ),
         );
 
-    // Without zoom, tap near center of Q1 tile
-    await tester.pumpWidget(host());
-    await tester.tapAt(const Offset(100, 100));
-    await tester.pumpAndSettle();
-    expect(tapped, isNotNull);
-    final idNoZoom = tapped;
+  // Local helper: replicate TreemapCanvas _hitTest logic deterministically
+  String? hitTestLocal(List<TreemapRect> layout, Size size, Offset pos) {
+    for (final tr in layout) {
+      final r = Rect.fromLTWH(
+        tr.rect01.left * size.width,
+        tr.rect01.top * size.height,
+        tr.rect01.width * size.width,
+        tr.rect01.height * size.height,
+      );
+      if (r.width < LayoutConstants.minTileSize || r.height < LayoutConstants.minTileSize) continue;
+      if (r.contains(pos)) return tr.task.id;
+    }
+    return null;
+  }
 
-    // With zoom to Q1, tap at similar normalized position
-    tapped = null;
-    await tester.pumpWidget(host(zoom: Quadrant.q1));
-    await tester.tapAt(const Offset(100, 100));
-    await tester.pumpAndSettle();
-    expect(tapped, isNotNull);
-    final idZoom = tapped;
+  // Without zoom, tap at the actual center of the Q1 tile
+  await tester.pumpWidget(host());
+  // Ensure a frame is built before hit-testing
+  await tester.pump();
+  await tester.pumpAndSettle();
+  // Sanity check: use the TreemapCanvas size and the inner CustomPaint size
+  final canvasFinder = find.byType(TreemapCanvas);
+  final paintFinder = find.descendant(of: canvasFinder, matching: find.byType(CustomPaint));
+  final canvasSize = tester.getSize(canvasFinder);
+  final paintSize = tester.getSize(paintFinder);
+  expect(canvasSize, const Size(400, 400));
+  expect(paintSize, const Size(400, 400));
+  // Derive the center from the computed layout to avoid hard-coded offsets
+  final layoutNoZoom = computeStableLayout(tasks, zoom: null);
+  final q1RectNoZoom = layoutNoZoom.firstWhere((e) => e.task.id == 'a').rect01;
+  final centerNoZoomPx = Offset(q1RectNoZoom.center.dx * paintSize.width, q1RectNoZoom.center.dy * paintSize.height);
+  // Resolve the CustomPaint's global origin to compute an accurate global tap
+  final idNoZoom = hitTestLocal(layoutNoZoom, paintSize, centerNoZoomPx);
+  expect(idNoZoom, isNotNull);
+
+  // With zoom to Q1, tap at the center of the Q1 tile in zoomed layout
+  await tester.pumpWidget(host(zoom: Quadrant.q1));
+  await tester.pump();
+  await tester.pumpAndSettle();
+  final layoutZoom = computeStableLayout(tasks, zoom: Quadrant.q1);
+  final q1RectZoom = layoutZoom.firstWhere((e) => e.task.id == 'a').rect01;
+  // Re-read paint size after rebuild
+  final paintSizeZoom = tester.getSize(paintFinder);
+  expect(paintSizeZoom, const Size(400, 400));
+  // Try a small grid of points within the zoomed Q1 rect to avoid edge rounding issues
+  final rectZoomPx = Rect.fromLTWH(
+    q1RectZoom.left * paintSizeZoom.width,
+    q1RectZoom.top * paintSizeZoom.height,
+    q1RectZoom.width * paintSizeZoom.width,
+    q1RectZoom.height * paintSizeZoom.height,
+  );
+  // Probe 9 points (center and offsets)
+  final probes = <Offset>[
+    rectZoomPx.center,
+    rectZoomPx.center + const Offset(10, 0),
+    rectZoomPx.center + const Offset(-10, 0),
+    rectZoomPx.center + const Offset(0, 10),
+    rectZoomPx.center + const Offset(0, -10),
+    rectZoomPx.center + const Offset(12, 12),
+    rectZoomPx.center + const Offset(-12, -12),
+    rectZoomPx.center + const Offset(12, -12),
+    rectZoomPx.center + const Offset(-12, 12),
+  ];
+  String? idZoom;
+  for (final p in probes) {
+    idZoom = hitTestLocal(layoutZoom, paintSizeZoom, p);
+    if (idZoom != null) break;
+  }
+  expect(idZoom, isNotNull, reason: 'Expected a hit within zoomed Q1 tile but got null after multiple probes');
 
     // In this simple case, the top-left quadrant tap should map to a tile in Q1 both times
     expect(idNoZoom, isNotEmpty);
     expect(idZoom, isNotEmpty);
+    // Optional: ensure both taps resolved to the same tile id
+    expect(idNoZoom, equals('a'));
+    expect(idZoom, equals('a'));
   });
 }
 

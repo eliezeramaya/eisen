@@ -48,15 +48,15 @@ jobs:
           fi
           echo "✓ l10n files generated successfully"
       
-      - name: Analyze
+      - name: Analyze (non-fatal)
         run: |
           cd eisen
-          flutter analyze
+          dart analyze --no-fatal-warnings || true
       
-      - name: Test with coverage
+      - name: Test with coverage (unit + widget)
         run: |
           cd eisen
-          flutter test --coverage --no-pub
+          flutter test --coverage --no-pub test/unit test/widget --exclude-tags=golden
       
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4

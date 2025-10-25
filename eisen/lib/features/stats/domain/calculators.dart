@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'models.dart';
 

@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:eisen/l10n/app_localizations.dart';
-import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 
 class AppToolbar extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -45,7 +44,6 @@ class _AppToolbarState extends State<AppToolbar> {
     final themeLabel = isEs
         ? (widget.themeMode == ThemeMode.dark ? 'Claro' : 'Oscuro')
         : (widget.themeMode == ThemeMode.dark ? 'Light' : 'Dark');
-    final minimalLabel = isEs ? 'Minimalista' : 'Minimal';
 
     final width = MediaQuery.of(context).size.width;
     final compactActions = width < 1100; // icons-only when narrow

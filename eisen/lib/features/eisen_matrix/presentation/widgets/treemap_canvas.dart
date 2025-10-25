@@ -194,6 +194,42 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
           }
         }
 
+        // Add non-interactive testing overlays: tile keys and quadrant dropzones (debug only)
+        assert(() {
+          // Current interpolated rects for tiles
+          final curveT = AnimTokens.curve.transform(_t.clamp(0.0, 1.0));
+          for (final tr in widget.layout) {
+            final id = tr.task.id;
+            final r01From = _prevRects01[id] ?? tr.rect01;
+            final r01To = _nextRects01[id] ?? tr.rect01;
+            final r01 = Rect.lerp(r01From, r01To, curveT)!;
+            final r = _px(r01, size);
+            if (r.width >= LayoutConstants.minTileSize && r.height >= LayoutConstants.minTileSize) {
+              overlay.add(Positioned(
+                key: ValueKey('tile_${id}'),
+                left: r.left,
+                top: r.top,
+                width: r.width,
+                height: r.height,
+                child: const IgnorePointer(child: SizedBox.expand()),
+              ));
+            }
+          }
+          // Quadrant dropzone keys for testing
+          for (final q in Quadrant.values) {
+            final qRect = _quadrantRect(q, size);
+            overlay.add(Positioned(
+              key: ValueKey('quadrant_${q.name}_dropzone'),
+              left: qRect.left,
+              top: qRect.top,
+              width: qRect.width,
+              height: qRect.height,
+              child: const IgnorePointer(child: SizedBox.expand()),
+            ));
+          }
+          return true;
+        }());
+
         return Stack(
           children: [
             Positioned.fill(
@@ -208,6 +244,20 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                     final tr = idx == -1 ? null : widget.layout[idx];
                     if (tr != null && tr.stackChildren.isNotEmpty) {
                       // Open stack sheet for this quadrant
+                      Telemetry.stackOpen(tr.task.quadrant.name, tr.stackChildren.length);
+                      _openStackSheet(context, tr.task.quadrant, tr.stackChildren);
+                      return;
+                    }
+                    Telemetry.tileTap(id);
+                  }
+                  widget.onTap?.call(id);
+                },
+                onTapUp: (d) {
+                  final id = _hitTest(d.localPosition, size);
+                  if (id != null) {
+                    final idx = widget.layout.indexWhere((e) => e.task.id == id);
+                    final tr = idx == -1 ? null : widget.layout[idx];
+                    if (tr != null && tr.stackChildren.isNotEmpty) {
                       Telemetry.stackOpen(tr.task.quadrant.name, tr.stackChildren.length);
                       _openStackSheet(context, tr.task.quadrant, tr.stackChildren);
                       return;
@@ -351,6 +401,21 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
     if (!left && top) return Quadrant.q2;
     if (left && !top) return Quadrant.q3;
     return Quadrant.q4;
+  }
+
+  Rect _quadrantRect(Quadrant q, Size size) {
+    final halfW = size.width / 2;
+    final halfH = size.height / 2;
+    switch (q) {
+      case Quadrant.q1:
+        return Rect.fromLTWH(0, 0, halfW, halfH);
+      case Quadrant.q2:
+        return Rect.fromLTWH(halfW, 0, halfW, halfH);
+      case Quadrant.q3:
+        return Rect.fromLTWH(0, halfH, halfW, halfH);
+      case Quadrant.q4:
+        return Rect.fromLTWH(halfW, halfH, halfW, halfH);
+    }
   }
 
   Rect _px(Rect r01, Size size) => Rect.fromLTWH(r01.left * size.width, r01.top * size.height, r01.width * size.width, r01.height * size.height);

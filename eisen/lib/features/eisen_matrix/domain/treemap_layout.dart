@@ -319,7 +319,6 @@ List<TreemapRect> _layoutStableIntoRect(
   if (tasks.isEmpty) return const [];
 
   // Smoothed, root-scaled areas
-  final ids = tasks.map((t) => t.id).toList(growable: false);
   final values = <double>[];
   for (final t in tasks) {
     final w = weight(t);
@@ -334,7 +333,9 @@ List<TreemapRect> _layoutStableIntoRect(
 
   var sum = values.fold<double>(0, (a, b) => a + b);
   if (sum <= 0) {
-    for (var i = 0; i < values.length; i++) values[i] = 1.0;
+    for (var i = 0; i < values.length; i++) {
+      values[i] = 1.0;
+    }
     sum = values.length.toDouble();
   }
   final rawAreas = values.map((v) => (v / sum) * rect.width * rect.height).toList(growable: false);

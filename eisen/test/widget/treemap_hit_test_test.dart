@@ -1,15 +1,8 @@
-import 'package:eisen/core/theme/app_theme.dart';
+import 'dart:ui' show Size;
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_canvas.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-Offset _centerPx(Rect r01, Size size) => Offset(
-      r01.left * size.width + r01.width * size.width / 2,
-      r01.top * size.height + r01.height * size.height / 2,
-    );
 
 void main() {
   testWidgets('tiles < 44x44 are not clickable and are stacked', (tester) async {

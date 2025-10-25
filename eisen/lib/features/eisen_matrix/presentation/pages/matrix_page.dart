@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/core/theme/app_theme.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/legend.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/minimap.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/toolbar.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/profile_sheet.dart';
