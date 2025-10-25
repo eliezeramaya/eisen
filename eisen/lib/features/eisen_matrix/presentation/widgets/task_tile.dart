@@ -1,36 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:eisen/core/theme/ui_tokens.dart';
 
+/// A task tile widget with built-in accessibility support.
+/// 
+/// Features:
+/// - Semantic labels for screen readers
+/// - Focus indication for keyboard navigation
+/// - High contrast support
 class TaskTile extends StatelessWidget {
   final String title;
   final String subtitle;
-  const TaskTile({super.key, required this.title, required this.subtitle});
+  final VoidCallback? onTap;
+  final bool selected;
+  
+  const TaskTile({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    this.onTap,
+    this.selected = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: _HoverScale(
-        child: AnimatedContainer(
-          duration: kAnimFast,
-          curve: Curves.easeInOut,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface.withOpacity(0.75),
-            borderRadius: BorderRadius.circular(kRadius),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.10),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: ListTile(
-            title: Text(title, style: theme.textTheme.titleMedium),
-            subtitle: Text(subtitle, style: theme.textTheme.bodySmall),
-            dense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    
+    return Semantics(
+      label: 'Task: $title, $subtitle',
+      button: true,
+      enabled: true,
+      selected: selected,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: _HoverScale(
+          child: Focus(
+            child: Builder(
+              builder: (context) {
+                final focusNode = Focus.of(context);
+                final isFocused = focusNode.hasFocus;
+                
+                return AnimatedContainer(
+                  duration: kAnimFast,
+                  curve: Curves.easeInOut,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface.withOpacity(0.75),
+                    borderRadius: BorderRadius.circular(kRadius),
+                    border: isFocused
+                        ? Border.all(
+                            color: theme.colorScheme.primary,
+                            width: 2,
+                          )
+                        : null,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.10),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: onTap,
+                      borderRadius: BorderRadius.circular(kRadius),
+                      focusColor: theme.colorScheme.primary.withOpacity(0.2),
+                      hoverColor: theme.colorScheme.primary.withOpacity(0.1),
+                      child: ListTile(
+                        title: Text(title, style: theme.textTheme.titleMedium),
+                        subtitle: Text(subtitle, style: theme.textTheme.bodySmall),
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        selected: selected,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),

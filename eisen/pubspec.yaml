@@ -42,6 +42,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   device_preview: ^1.2.0
+  equatable: ^2.0.7
 
 dev_dependencies:
   flutter_test:

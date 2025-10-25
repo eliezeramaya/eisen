@@ -3,6 +3,7 @@
 > Interactive, performant Eisenhower Matrix as a squarified treemap. Built with Flutter 3.x, Riverpod, and custom layout algorithms.
 
 <p align="center">
+  <a href="https://github.com/eliezeramaya/eisen/actions/workflows/ci.yaml"><img src="https://github.com/eliezeramaya/eisen/actions/workflows/ci.yaml/badge.svg" alt="CI Status"/></a>
   <img src="https://img.shields.io/badge/Flutter-3.35%2B-02569B?logo=flutter" alt="Flutter 3.35+"/>
   <img src="https://img.shields.io/badge/Dart-3.9%2B-0175C2?logo=dart" alt="Dart 3.9+"/>
   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"/>

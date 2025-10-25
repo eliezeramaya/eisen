@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:equatable/equatable.dart';
 
 /// Eisenhower matrix quadrant.
 ///
@@ -21,7 +21,10 @@ extension QuadrantX on Quadrant {
 /// and optional due date, tags, notes, and category.
 ///
 /// Weight for layout is computed from priority × minutes × due-date urgency.
-class Task {
+///
+/// Uses [Equatable] for structural equality to avoid unnecessary rebuilds
+/// when task data hasn't meaningfully changed.
+class Task extends Equatable {
   final String id;
   final String title;
   final Quadrant quadrant;
@@ -111,37 +114,17 @@ class Task {
   double get priorityNorm => ((normalizedPriority ?? (priorityClamped - 1.0) / 9.0)).clamp(0.0, 1.0);
   double get minutesNorm => ((normalizedMinutes ?? (minutesClamped - 5.0) / (240.0 - 5.0))).clamp(0.0, 1.0);
 
+  /// Equatable props for structural equality (prevents unnecessary rebuilds).
+  /// All fields that affect rendering/business logic are included.
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Task &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          title == other.title &&
-          quadrant == other.quadrant &&
-          priority == other.priority &&
-          minutes == other.minutes &&
-          due == other.due &&
-          listEquals(tags, other.tags) &&
-          notes == other.notes &&
-          category == other.category &&
-          createdAt == other.createdAt &&
-          updatedAt == other.updatedAt &&
-          completedAt == other.completedAt &&
-          replanCount == other.replanCount &&
-          snoozeCount == other.snoozeCount &&
-          normalizedPriority == other.normalizedPriority &&
-          normalizedMinutes == other.normalizedMinutes;
-
-  @override
-  int get hashCode => Object.hash(
+  List<Object?> get props => [
         id,
         title,
         quadrant,
         priority,
         minutes,
         due,
-        Object.hashAll(tags),
+        tags,
         notes,
         category,
         createdAt,
@@ -151,7 +134,7 @@ class Task {
         snoozeCount,
         normalizedPriority,
         normalizedMinutes,
-      );
+      ];
 }
 
 /// Computes the visual weight for a task used by the treemap layout.

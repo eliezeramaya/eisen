@@ -11,17 +11,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      # Cache Pub dependencies for faster builds
+      - name: Cache Pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            eisen/.dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+      
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          cache: true
+      
       - name: Flutter Pub Get
         run: |
           cd eisen
           flutter pub get
+      
       - name: Generate l10n (Internationalization)
         run: |
           cd eisen
           flutter gen-l10n
+      
       - name: Verify l10n Generation
         run: |
           cd eisen
@@ -31,15 +47,40 @@ jobs:
             exit 1
           fi
           echo "✓ l10n files generated successfully"
+      
       - name: Analyze
         run: |
           cd eisen
           flutter analyze
-      - name: Test (including i18n ARB validation)
+      
+      - name: Test with coverage
         run: |
           cd eisen
-          flutter test --no-pub
+          flutter test --coverage --no-pub
+      
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: eisen/coverage/lcov.info
+          if-no-files-found: warn
+      
+      - name: Upload golden test failures (if any)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures
+          path: eisen/test/**/failures/*.png
+          if-no-files-found: ignore
+      
       - name: Build Web
         run: |
           cd eisen
           flutter build web --no-tree-shake-icons --release
+      
+      - name: Upload web build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-release
+          path: eisen/build/web
+          if-no-files-found: error

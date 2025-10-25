@@ -1,7 +1,8 @@
 {
     "name": "Eisenhower Matrix - Timmr Eisen",
     "short_name": "Eisen",
-    "start_url": ".",
+    "start_url": "/eisen/",
+    "scope": "/eisen/",
     "display": "standalone",
     "background_color": "#F9FAFB",
     "theme_color": "#12B76A",
