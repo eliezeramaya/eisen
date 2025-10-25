@@ -903,6 +903,9 @@ class _TreemapPainter extends CustomPainter {
         for (final tr in layout) {
           final r = Rect.fromLTWH(tr.rect01.left * size.width, tr.rect01.top * size.height, tr.rect01.width * size.width, tr.rect01.height * size.height);
           
+          // Skip tiles with zero or negative dimensions (invisible to users)
+          if (r.width <= 0 || r.height <= 0) continue;
+          
           // Enhanced semantic label with complete task context
           final String label;
           if (tr.stackChildren.isNotEmpty) {
