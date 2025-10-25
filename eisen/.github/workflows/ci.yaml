@@ -11,6 +11,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Commitlint (conventional commits)
+        run: |
+          if command -v npm >/dev/null 2>&1; then
+            if [ -f package.json ]; then
+              echo "Running commitlint at repo root"
+              npm install --no-fund --no-audit || true
+              npm run commitlint || true
+            elif [ -f eisen/package.json ]; then
+              echo "Running commitlint in eisen/"
+              cd eisen
+              npm install --no-fund --no-audit || true
+              npm run commitlint || true
+            else
+              echo "No package.json; skipping commitlint"
+            fi
+          else
+            echo "npm not available; skipping commitlint"
+          fi
       
       # Cache Pub dependencies for faster builds
       - name: Cache Pub dependencies

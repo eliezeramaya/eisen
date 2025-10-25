@@ -1,4 +1,4 @@
-package com.example.eisen
+package io.timmr.eisen
 
 import io.flutter.embedding.android.FlutterActivity
 

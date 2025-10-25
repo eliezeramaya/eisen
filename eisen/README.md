@@ -83,35 +83,39 @@ flutter build apk --release       # Android APK
 flutter build ios --release       # iOS (macOS only)
 ```
 
-## ⌨️ Keyboard Shortcuts
+## ⌨️ Atajos de Teclado / Keyboard Shortcuts
 
-| Shortcut | Action | Context |
-|----------|--------|---------|
-| `1` `2` `3` `4` | Zoom to quadrant Q1/Q2/Q3/Q4 | Matrix view |
-| `Escape` | Exit zoom / Close dialogs | Any |
-| `N` | Create new task | Matrix view |
-| `Delete` / `Backspace` | Delete selected task | Task selected |
-| `F` | Toggle fullscreen | Web/Desktop |
-| `?` | Show keyboard help | Any |
-| `Ctrl/Cmd + F` | Focus search | Matrix view |
-| `Tab` | Navigate between tasks | Keyboard mode |
-| `Enter` | Activate/Edit task | Task focused |
-| `Arrow Keys` | Navigate quadrants | Matrix view |
+| Acción | Atajo (Web/Desktop) |
+|---|---|
+| Zoom en cuadrante | Doble clic/doble tap sobre cuadrante |
+| Salir de zoom | `Esc` |
+| Navegar tiles/selección | `←` `→` `↑` `↓` |
+| Expandir stack “+N” | Clic/Tap sobre el chip “+N” del cuadrante |
+| Seleccionar tile | Clic/Tap sobre tile |
+| Editar tile | `Enter` sobre tile o icono editar |
+| Crear nueva tarea | `N` o botón “+” |
+| Eliminar tarea | `Delete` / `Backspace` |
+| Buscar | `Ctrl/Cmd + F` |
+| Ayuda | `?` |
 
-## 📐 Responsive Breakpoints
+Notas:
+- En desktop, la navegación por teclado asume foco en el canvas/área de matriz.
+- En móvil, prioriza gestos: tap para seleccionar, doble tap para zoom.
 
-| Breakpoint | Width | Layout | Features |
-|------------|-------|--------|----------|
-| **Mobile** | < 600px | Single column | Compact toolbar, bottom nav |
-| **Tablet** | 600-1024px | 2-column | Side panel, floating toolbar |
-| **Desktop** | 1024-1440px | Full layout | All features, keyboard shortcuts |
-| **Wide** | > 1440px | Optimized | Large treemap tiles, more density |
+## 📐 Breakpoints (xs/sm/md/lg/xl)
 
-**Adaptive Features:**
-- Tile minimum size: 44×44px (touch targets)
-- Text scaling: Responsive font sizes
-- Drawer behavior: Modal (mobile) vs Rail (desktop)
-- Toolbar: Bottom (mobile) vs Top (desktop)
+| Nombre | Ancho | Densidad recomendada | TextScale recomendada | Uso |
+|---|---|---|---|---|
+| xs | <600 px | Cómoda (por defecto) | 1.0–1.3 (accesibilidad 1.6) | móvil chico |
+| sm | 600–904 px | Cómoda | 1.0–1.3 (accesibilidad 1.6) | móvil grande / tablet chica |
+| md | 905–1239 px | Cómoda | 1.0–1.3 (accesibilidad 1.6) | tablet |
+| lg | 1240–1439 px | Compacta | 1.0–1.3 | desktop común |
+| xl | ≥1440 px | Compacta | 1.0–1.3 | desktop amplio |
+
+Referencias: lib/core/responsive/app_breakpoints.dart y docs/RESPONSIVE_GUIDE.md.
+Recomendaciones:
+- Targets táctiles mínimos: 48×48 px (móvil), ≥40×40 px (desktop).
+- En pantallas lg/xl, activar “Compact” si se muestran muchas tareas.
 
 ## 🧪 Testing
 
@@ -147,6 +151,34 @@ flutter test test/golden/treemap_canvas_golden_test.dart --update-goldens
 5. Commit new golden images
 
 **Note**: Golden tests are platform-specific. CI runs on Linux. For consistent results, regenerate on the same platform as CI.
+
+### Mobile Branding (Launchers & Splash)
+
+Comandos útiles (requiere assets en `assets/branding/`):
+
+```bash
+cd eisen
+
+# Iconos adaptativos (usa config en pubspec.yaml)
+flutter pub get
+flutter pub run flutter_launcher_icons
+
+# Splash (Android 12+ incluido)
+flutter pub run flutter_native_splash:create
+```
+
+Asegúrate de ubicar:
+- `assets/branding/icon.png`
+- `assets/branding/icon_foreground.png`
+- `assets/branding/splash.png`
+
+#### Regeneración de goldens y política (ES)
+- Regenerar goldens localmente:
+  ```bash
+  cd eisen
+  flutter test --update-goldens
+  ```
+- Política de revisión: inspeccionar visualmente los difs y, si cambian, adjuntar capturas/before-after en la PR (los PNG de fallos suelen generarse bajo `test/**/failures/`).
 
 ### Test Coverage
 

@@ -63,6 +63,8 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
   late final AnimationController _pulse;
   double _pulseT = 0.0;
   Quadrant? _pulseQuadrant;
+  // Increments whenever a new layout list is provided, used to invalidate path cache
+  int _layoutVersion = 0;
 
   @override
   void initState() {
@@ -100,6 +102,8 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
         _anim.stop();
         _anim.forward(from: 0);
       }
+      // New layout list provided -> bump layout version to invalidate path cache
+      _layoutVersion++;
     }
     if (oldWidget.inlineEditId != widget.inlineEditId) {
         if (widget.inlineEditId != null) {
@@ -323,6 +327,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                     pointer: _lastPos,
                     hoverQuadrant: widget.zoom == null ? _hoverQuadrant : null,
                     presentQuadrant: widget.presentQuadrant,
+                    zoom: widget.zoom,
                     prevRects01: _prevRects01,
                     nextRects01: _nextRects01,
                     t: _t,
@@ -331,6 +336,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                     pulseQuadrant: _pulseQuadrant,
                     pulseT: _pulseT,
                     suggested: widget.suggestedIds,
+                    layoutVersion: _layoutVersion,
                   ),
                   isComplex: true,
                   willChange: true,
@@ -348,25 +354,27 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                 key: ValueKey('stack_${q.name}'),
                 left: pos.dx,
                 top: pos.dy,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      Telemetry.stackOpen(q.name, count);
-                      _openStackSheet(context, q, tinyByQ[q]!.map((e) => e.task).toList());
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: widget.minimal ? Colors.white.withValues(alpha: 0.9) : Colors.black.withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.18), width: 1),
+                child: RepaintBoundary(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        Telemetry.stackOpen(q.name, count);
+                        _openStackSheet(context, q, tinyByQ[q]!.map((e) => e.task).toList());
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: widget.minimal ? Colors.white.withValues(alpha: 0.9) : Colors.black.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.18), width: 1),
+                        ),
+                        child: Text('+${count}', style: TextStyle(
+                          color: widget.minimal ? Colors.black : Colors.white,
+                          fontWeight: FontWeight.w600,
+                        )),
                       ),
-                      child: Text('+${count}', style: TextStyle(
-                        color: widget.minimal ? Colors.black : Colors.white,
-                        fontWeight: FontWeight.w600,
-                      )),
                     ),
                   ),
                 ),
@@ -568,20 +576,22 @@ class _EditDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.45),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1),
-        ),
-        child: IconButton(
-          onPressed: onPressed,
-          padding: EdgeInsets.zero,
-          splashRadius: 16,
-          icon: const Icon(Icons.edit, size: 16, color: Colors.white),
-          tooltip: 'Edit task',
+    return RepaintBoundary(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.45),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1),
+          ),
+          child: IconButton(
+            onPressed: onPressed,
+            padding: EdgeInsets.zero,
+            splashRadius: 16,
+            icon: const Icon(Icons.edit, size: 16, color: Colors.white),
+            tooltip: 'Edit task',
+          ),
         ),
       ),
     );
@@ -595,20 +605,22 @@ class _CheckDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        decoration: BoxDecoration(
-          color: minimal ? Colors.white.withValues(alpha: 0.9) : Colors.black.withValues(alpha: 0.45),
-          shape: BoxShape.circle,
-          border: Border.all(color: minimal ? Colors.black26 : Colors.white.withValues(alpha: 0.25), width: 1),
-        ),
-        child: IconButton(
-          onPressed: onPressed,
-          padding: EdgeInsets.zero,
-          splashRadius: 16,
-          icon: Icon(Icons.check, size: 16, color: minimal ? Colors.black : Colors.white),
-          tooltip: 'Completar',
+    return RepaintBoundary(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: minimal ? Colors.white.withValues(alpha: 0.9) : Colors.black.withValues(alpha: 0.45),
+            shape: BoxShape.circle,
+            border: Border.all(color: minimal ? Colors.black26 : Colors.white.withValues(alpha: 0.25), width: 1),
+          ),
+          child: IconButton(
+            onPressed: onPressed,
+            padding: EdgeInsets.zero,
+            splashRadius: 16,
+            icon: Icon(Icons.check, size: 16, color: minimal ? Colors.black : Colors.white),
+            tooltip: 'Completar',
+          ),
         ),
       ),
     );
@@ -621,6 +633,7 @@ class _TreemapPainter extends CustomPainter {
   final Offset? pointer;
   final Quadrant? hoverQuadrant;
   final Quadrant? presentQuadrant;
+  final Quadrant? zoom;
   final Map<String, Rect> prevRects01;
   final Map<String, Rect> nextRects01;
   final double t; // 0..1
@@ -629,6 +642,7 @@ class _TreemapPainter extends CustomPainter {
   final Quadrant? pulseQuadrant;
   final double pulseT; // 0..1
   final Set<String>? suggested;
+  final int layoutVersion;
   
   /// Tile path cache for performance optimization.
   /// 
@@ -650,6 +664,7 @@ class _TreemapPainter extends CustomPainter {
     this.pointer,
     this.hoverQuadrant,
     this.presentQuadrant,
+    this.zoom,
     required this.prevRects01,
     required this.nextRects01,
     required this.t,
@@ -658,6 +673,7 @@ class _TreemapPainter extends CustomPainter {
     this.pulseQuadrant,
     this.pulseT = 0.0,
     this.suggested,
+    required this.layoutVersion,
   });
 
   @override
@@ -947,17 +963,32 @@ class _TreemapPainter extends CustomPainter {
   /// Path caching via `_pathCache` reduces redundant path calculations when
   /// layout is stable but other properties change (e.g., pointer movement).
   @override
-  bool shouldRepaint(covariant _TreemapPainter oldDelegate) =>
-      oldDelegate.layout != layout ||
-      oldDelegate.draggingId != draggingId ||
-      oldDelegate.pointer != pointer ||
-      oldDelegate.hoverQuadrant != hoverQuadrant ||
-      oldDelegate.t != t ||
-      oldDelegate.suggested != suggested ||
-      oldDelegate.pulseQuadrant != pulseQuadrant ||
-      oldDelegate.pulseT != pulseT ||
-      oldDelegate.prevRects01 != prevRects01 ||
-      oldDelegate.nextRects01 != nextRects01;
+  bool shouldRepaint(covariant _TreemapPainter oldDelegate) {
+    final repaint =
+        oldDelegate.layout != layout ||
+        oldDelegate.draggingId != draggingId ||
+        oldDelegate.pointer != pointer ||
+        oldDelegate.hoverQuadrant != hoverQuadrant ||
+        oldDelegate.t != t ||
+        oldDelegate.suggested != suggested ||
+        oldDelegate.pulseQuadrant != pulseQuadrant ||
+        oldDelegate.pulseT != pulseT ||
+        oldDelegate.prevRects01 != prevRects01 ||
+        oldDelegate.nextRects01 != nextRects01 ||
+        oldDelegate.layoutVersion != layoutVersion ||
+        oldDelegate.tokens != tokens ||
+        oldDelegate.minimal != minimal ||
+        oldDelegate.zoom != zoom;
+
+    // Invalidate path cache on layout version or key visual changes.
+    if (oldDelegate.layoutVersion != layoutVersion ||
+        oldDelegate.tokens != tokens ||
+        oldDelegate.minimal != minimal ||
+        oldDelegate.zoom != zoom) {
+      _pathCache.clear();
+    }
+    return repaint;
+  }
 
   @override
   bool shouldRebuildSemantics(covariant _TreemapPainter oldDelegate) => oldDelegate.layout != layout;
@@ -1091,7 +1122,7 @@ class _TreemapPainter extends CustomPainter {
   /// new cache entry. Old entries are orphaned but remain until GC.
   /// Cache is bounded implicitly by task count (max ~500 tasks × 2 states).
   Path _getCachedPath(String taskId, Rect rect, double radius) {
-    final key = '${taskId}_${rect.hashCode}_$radius';
+    final key = '${taskId}_${rect.hashCode}_$radius#v$layoutVersion';
     return _pathCache.putIfAbsent(key, () {
       return Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
     });
