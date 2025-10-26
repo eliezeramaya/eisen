@@ -298,6 +298,53 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                           ),
                                         ),
                                       ],
+                                      if (dynamicLayout.isNotEmpty) ...[
+                                        // Show placeholders for empty quadrants even when others have tasks
+                                        if (!tasks.any((t) => t.completedAt == null && t.quadrant == Quadrant.q1))
+                                          Positioned(
+                                            left: 0,
+                                            top: 0,
+                                            width: size.width / 2,
+                                            height: size.height / 2,
+                                            child: const QuadrantEmptyPlaceholder(
+                                              title: 'Q1 · Urgente e Importante',
+                                              hint: 'No tienes tareas aquí. Usa “Agregar tarea”.',
+                                            ),
+                                          ),
+                                        if (!tasks.any((t) => t.completedAt == null && t.quadrant == Quadrant.q2))
+                                          Positioned(
+                                            left: size.width / 2,
+                                            top: 0,
+                                            width: size.width / 2,
+                                            height: size.height / 2,
+                                            child: const QuadrantEmptyPlaceholder(
+                                              title: 'Q2 · No Urgente e Importante',
+                                              hint: 'Planifica aquí objetivos clave.',
+                                            ),
+                                          ),
+                                        if (!tasks.any((t) => t.completedAt == null && t.quadrant == Quadrant.q3))
+                                          Positioned(
+                                            left: 0,
+                                            top: size.height / 2,
+                                            width: size.width / 2,
+                                            height: size.height / 2,
+                                            child: const QuadrantEmptyPlaceholder(
+                                              title: 'Q3 · Urgente y No Importante',
+                                              hint: 'Delegables o de baja prioridad.',
+                                            ),
+                                          ),
+                                        if (!tasks.any((t) => t.completedAt == null && t.quadrant == Quadrant.q4))
+                                          Positioned(
+                                            left: size.width / 2,
+                                            top: size.height / 2,
+                                            width: size.width / 2,
+                                            height: size.height / 2,
+                                            child: const QuadrantEmptyPlaceholder(
+                                              title: 'Q4 · No Urgente y No Importante',
+                                              hint: 'Evita o elimina distracciones.',
+                                            ),
+                                          ),
+                                      ],
                                     ],
                                   );
                                 },

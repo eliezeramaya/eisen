@@ -97,6 +97,7 @@ flutter build ios --release       # iOS (macOS only)
 | Eliminar tarea | `Delete` / `Backspace` |
 | Buscar | `Ctrl/Cmd + F` |
 | Ayuda | `?` |
+| Abrir Settings (desktop) | `Cmd+,` (macOS) / `Ctrl+,` (Win/Linux) |
 
 Notas:
 - En desktop, la navegación por teclado asume foco en el canvas/área de matriz.
@@ -149,6 +150,12 @@ flutter test test/golden/treemap_canvas_golden_test.dart --update-goldens
 3. Review diffs (goldens are committed to git)
 4. If changes are correct: `flutter test test/golden/ --update-goldens`
 5. Commit new golden images
+
+## Desktop Settings (/settings)
+
+- En plataformas de escritorio, Ajustes se abre a pantalla completa en la ruta `/settings`, con Sidebar (categorías), Content (opciones) y Footer (Apply/Cancel/Reset). En móvil se mantiene el bottom‑sheet.
+- Live Preview: panel opcional (≥1280 px) que muestra un mini‑treemap en base a los valores staged de Layout.
+- Apply persiste en `UiPrefsController` y fuerza recomputo inmediato del treemap; Cancel descarta cambios; Reset prepara valores por defecto (requiere Apply).
 
 **Note**: Golden tests are platform-specific. CI runs on Linux. For consistent results, regenerate on the same platform as CI.
 

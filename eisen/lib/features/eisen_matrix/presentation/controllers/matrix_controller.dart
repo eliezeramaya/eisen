@@ -319,6 +319,12 @@ class MatrixController extends Notifier<MatrixState> {
     _computeLayoutUseCase.invalidate(q);
   }
 
+  /// Public method to explicitly notify listeners that layout should recompute.
+  /// Increments [layoutVersion] to trigger dependent UI updates.
+  void notifyLayoutRecompute() {
+    state = state.copyWith(layoutVersion: state.layoutVersion + 1);
+  }
+
   List<Task> _demoTasks() {
     final now = DateTime.now();
     return [

@@ -5,6 +5,7 @@ import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/features/settings/presentation/section_bus.dart';
 import 'package:eisen/features/settings/presentation/settings_content.dart';
 import 'package:eisen/features/settings/presentation/settings_search.dart';
+import 'package:eisen/features/settings/presentation/live_preview_pane.dart';
 
 class SettingsPageDesktop extends ConsumerStatefulWidget {
   const SettingsPageDesktop({super.key});
@@ -113,12 +114,23 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
                   onGammaChanged: (v) => setState(() => _stagedGamma = v),
                   onMinAreaChanged: (v) => setState(() => _stagedMinArea = v),
                   onPaddingChanged: (v) => setState(() => _stagedPadding = v),
+                  previewEnabled: _previewEnabled,
+                  onPreviewChanged: (v) => setState(() => _previewEnabled = v),
                 ),
               ),
             ),
             if (wide) ...[
               const VerticalDivider(width: 1),
-              const SizedBox(width: 320, child: LivePreviewPane()),
+              SizedBox(
+                width: 320,
+                child: LivePreviewPane(
+                  enabled: _previewEnabled,
+                  topK: _stagedTopK,
+                  gamma: _stagedGamma,
+                  minArea: _stagedMinArea,
+                  qPad: _stagedPadding,
+                ),
+              ),
             ],
           ],
         ),
@@ -181,15 +193,16 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
     if (current.minimal != _stagedMinimal) ctrl.toggleMinimal();
     if (current.showAxisLegends != _stagedAxis) ctrl.toggleAxisLegends();
 
-    final ui = ref.read(uiPrefsControllerProvider);
     final uiCtl = ref.read(uiPrefsControllerProvider.notifier);
-    final futures = <Future<void>>[];
-    if (ui.topKPerQuadrant != _stagedTopK) futures.add(uiCtl.setTopK(_stagedTopK));
-    if (ui.gamma != _stagedGamma) futures.add(uiCtl.setGamma(_stagedGamma));
-    if (ui.minAreaNormalized != _stagedMinArea) futures.add(uiCtl.setMinArea(_stagedMinArea));
-    if (ui.quadrantPadding != _stagedPadding) futures.add(uiCtl.setPadding(_stagedPadding));
-
-    Future.wait(futures).whenComplete(() {
+    uiCtl
+        .applyLayoutPrefs(
+          topKPerQuadrant: _stagedTopK,
+          gamma: _stagedGamma,
+          minAreaNormalized: _stagedMinArea,
+          quadrantPadding: _stagedPadding,
+        )
+        .whenComplete(() {
+      ref.read(matrixControllerProvider.notifier).notifyLayoutRecompute();
       setState(() {
         _dirty = false;
         // Refresh originals to current staged (now applied)

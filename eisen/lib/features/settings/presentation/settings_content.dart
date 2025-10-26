@@ -21,6 +21,8 @@ class SettingsContent extends StatelessWidget {
   final ValueChanged<double> onGammaChanged;
   final ValueChanged<double> onMinAreaChanged;
   final ValueChanged<double> onPaddingChanged;
+  final bool previewEnabled;
+  final ValueChanged<bool> onPreviewChanged;
 
   const SettingsContent({
     super.key,
@@ -42,6 +44,8 @@ class SettingsContent extends StatelessWidget {
     required this.onGammaChanged,
     required this.onMinAreaChanged,
     required this.onPaddingChanged,
+    required this.previewEnabled,
+    required this.onPreviewChanged,
   });
 
   @override
@@ -91,6 +95,11 @@ class SettingsContent extends StatelessWidget {
           onPadding: (v) {
             onPaddingChanged(v);
             onDirty(true);
+          },
+          preview: previewEnabled,
+          onPreview: (v) {
+            onPreviewChanged(v);
+            // do not mark dirty; preview is visual only
           },
         );
       case 'Accessibility':
@@ -186,6 +195,8 @@ class _LayoutPanel extends StatelessWidget {
   final ValueChanged<double> onGamma;
   final ValueChanged<double> onMinArea;
   final ValueChanged<double> onPadding;
+  final bool preview;
+  final ValueChanged<bool> onPreview;
   const _LayoutPanel({
     required this.topK,
     required this.gamma,
@@ -195,12 +206,20 @@ class _LayoutPanel extends StatelessWidget {
     required this.onGamma,
     required this.onMinArea,
     required this.onPadding,
+    required this.preview,
+    required this.onPreview,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       children: [
+        SwitchListTile(
+          value: preview,
+          onChanged: onPreview,
+          secondary: const Icon(Icons.visibility),
+          title: const Text('Preview changes'),
+        ),
         const ListTile(
           leading: Icon(Icons.grid_view_rounded),
           title: Text('Treemap · Layout'),
@@ -317,13 +336,4 @@ class _AboutPanel extends StatelessWidget {
   Widget build(BuildContext context) => const Text('About');
 }
 
-class LivePreviewPane extends StatelessWidget {
-  const LivePreviewPane({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Theme.of(context).colorScheme.surfaceContainerLow,
-      child: const Center(child: Text('Live Preview')),
-    );
-  }
-}
+// LivePreviewPane moved to its own file: settings/presentation/live_preview_pane.dart

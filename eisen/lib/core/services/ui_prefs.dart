@@ -148,6 +148,26 @@ class UiPrefsController extends Notifier<UiPrefsData> {
     state = state.copyWith(quadrantPadding: v);
     await _save();
   }
+
+  /// Apply multiple layout-related preferences in a single save.
+  Future<void> applyLayoutPrefs({
+    required int topKPerQuadrant,
+    required double gamma,
+    required double minAreaNormalized,
+    required double quadrantPadding,
+  }) async {
+    final k = topKPerQuadrant.clamp(5, 60);
+    final g = gamma.clamp(0.70, 1.0);
+    final minA = minAreaNormalized.clamp(0.00002, 0.0002);
+    final pad = quadrantPadding.clamp(0.0, 0.02);
+    state = state.copyWith(
+      topKPerQuadrant: k,
+      gamma: g,
+      minAreaNormalized: minA,
+      quadrantPadding: pad,
+    );
+    await _save();
+  }
 }
 
 final uiPrefsControllerProvider = NotifierProvider<UiPrefsController, UiPrefsData>(UiPrefsController.new);

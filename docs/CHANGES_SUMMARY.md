@@ -2,6 +2,15 @@
 
 ## 📝 Resumen de Cambios
 
+### Desktop Settings (+ Preview) y mejoras de painter
+
+- Nueva pantalla de Ajustes de escritorio (`/settings`) con Sidebar/Content/Footer y Live Preview opcional en pantallas ≥1280 px.
+- Atajos globales (desktop): `Cmd+,` (macOS) / `Ctrl+,` (Windows/Linux).
+- Apply/Cancel/Reset: Apply persiste en `UiPrefsController` y fuerza recomputo inmediato del treemap; Cancel revierte staged; Reset carga defaults (requiere Apply).
+- Live Preview: mini‑treemap alimentado por valores staged (Top‑K, Gamma, Min Area, Padding).
+- Painter: líneas divisorias de cuadrantes con `outlineVariant` 28%, borde hairline 1 px en tiles, overlay 8% en hover/focus, placas de cuadrante opcionales (surfaceContainerLow) y snap threshold en lerp para reducir micro‑vibración.
+- Placeholders por cuadrante cuando está vacío, con copy guía.
+
 ### Nuevos Archivos Creados
 
 #### Scripts de Automatización (`tools/`)
