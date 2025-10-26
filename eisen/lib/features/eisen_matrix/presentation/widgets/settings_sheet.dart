@@ -179,6 +179,7 @@ class SettingsSheet extends ConsumerWidget {
           ],
         ),
       ),
+    ),
     );
   }
 
