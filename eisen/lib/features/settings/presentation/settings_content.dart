@@ -289,12 +289,19 @@ class _LayoutPanel extends StatelessWidget {
     required T Function(double) fromDouble,
     required ValueChanged<T> onChanged,
   }) {
+    final cs = Theme.of(context).colorScheme;
     return ListTile(
-      title: Text(label),
+      title: Row(
+        children: [
+          Text(label),
+          const SizedBox(width: 6),
+          Tooltip(message: helper, child: Icon(Icons.help_outline, size: 16, color: cs.onSurfaceVariant)),
+        ],
+      ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(helper),
+          Text(helper, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
           Slider(
             value: toDouble(value),
             min: min,
@@ -306,7 +313,7 @@ class _LayoutPanel extends StatelessWidget {
       ),
       trailing: ConstrainedBox(
         constraints: const BoxConstraints(minWidth: 64),
-        child: Text(toDouble(value).toString(), textAlign: TextAlign.end),
+        child: Text(toDouble(value).toString(), textAlign: TextAlign.end, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
       ),
     );
   }
@@ -315,25 +322,100 @@ class _LayoutPanel extends StatelessWidget {
 class _AccessibilityPanel extends StatelessWidget {
   const _AccessibilityPanel();
   @override
-  Widget build(BuildContext context) => const Text('A11y options');
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.all(8),
+      children: [
+        Text('Accessibility', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text('Ajustes de legibilidad y navegación por teclado', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+        const SizedBox(height: 16),
+        _bullet('High contrast mode'),
+        _bullet('Text scaling (100–150%)'),
+        _bullet('Keyboard focus ring visible'),
+        _bullet('Color-blind safe palette'),
+      ],
+    );
+  }
 }
 
 class _KeyboardPanel extends StatelessWidget {
   const _KeyboardPanel();
   @override
-  Widget build(BuildContext context) => const Text('Shortcuts list');
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.all(8),
+      children: [
+        Text('Keyboard', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text('Atajos de teclado más usados', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+        const SizedBox(height: 12),
+        DataTable(columns: const [
+          DataColumn(label: Text('Acción')),
+          DataColumn(label: Text('Atajo')),
+        ], rows: const [
+          DataRow(cells: [DataCell(Text('Abrir Settings')), DataCell(Text('Ctrl + , / ⌘ + ,'))]),
+          DataRow(cells: [DataCell(Text('Nueva tarea')), DataCell(Text('N'))]),
+          DataRow(cells: [DataCell(Text('Cambiar tema')), DataCell(Text('Ctrl + T'))]),
+          DataRow(cells: [DataCell(Text('Mostrar estadísticas')), DataCell(Text('Ctrl + Shift + S'))]),
+        ]),
+      ],
+    );
+  }
 }
 
 class _PrivacyPanel extends StatelessWidget {
   const _PrivacyPanel();
   @override
-  Widget build(BuildContext context) => const Text('Data & Privacy');
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.all(8),
+      children: [
+        Text('Data & Privacy', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text('Importación/exportación y telemetría', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+        const SizedBox(height: 16),
+        _bullet('Export tasks (JSON/CSV)'),
+        _bullet('Import from file'),
+        _bullet('Telemetry consent (anonymous)'),
+        _bullet('Reset all data'),
+      ],
+    );
+  }
 }
 
 class _AboutPanel extends StatelessWidget {
   const _AboutPanel();
   @override
-  Widget build(BuildContext context) => const Text('About');
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.all(8),
+      children: [
+        Text('About', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text('Versión y créditos', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+        const SizedBox(height: 12),
+        const Text('Eisen – Productivity Matrix'),
+        const SizedBox(height: 8),
+        const Text('Version: 1.0.0'),
+        const SizedBox(height: 8),
+        const Text('Plan smart. Move fast.'),
+      ],
+    );
+  }
 }
+
+Widget _bullet(String text) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(children: [const Icon(Icons.circle, size: 6), const SizedBox(width: 8), Text(text)]),
+    );
 
 // LivePreviewPane moved to its own file: settings/presentation/live_preview_pane.dart

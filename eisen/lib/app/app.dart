@@ -29,11 +29,9 @@ class EisenApp extends ConsumerWidget {
       locale: userLocale ?? DevicePreview.locale(context),
       builder: (ctx, child) {
         final wrapped = Shortcuts(
-          shortcuts: const <LogicalKeySet, Intent>{
-            // macOS
-            LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.comma): OpenSettingsIntent(),
-            // Windows/Linux
-            LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.comma): OpenSettingsIntent(),
+          shortcuts: {
+            LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.comma): const OpenSettingsIntent(),
+            LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.comma): const OpenSettingsIntent(),
           },
           child: Actions(
             actions: <Type, Action<Intent>>{

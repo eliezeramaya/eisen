@@ -93,6 +93,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             ctrl.setZoom(null);
             ctrl.select(null);
             ctrl.setQuery('');
+            ctrl.invalidateLayout();
           },
           canExitZoom: zoom != null,
           onOpenSettings: () {
@@ -147,20 +148,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                         borderRadius: BorderRadius.circular(tokens.radius),
                         child: Stack(
                           children: [
-                            Positioned(
-                              left: 8,
-                              top: 8,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: minimal ? Colors.white.withValues(alpha: 0.7) : Colors.black.withValues(alpha: 0.28),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  child: _ProgressBanner(minimal: minimal),
-                                ),
-                              ),
-                            ),
+                            // Removed Beta banner
                             Positioned.fill(
                               child: minimal
                                   ? const SizedBox.expand()
@@ -252,6 +240,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                           onDoubleTapQuadrant: (q) {
                                             ctrl.setZoom(zoom == q ? null : q);
                                             ctrl.setPresentQuadrant(q);
+                                            ctrl.invalidateLayout();
                                           },
                                         ),
                                       ),
@@ -389,11 +378,15 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           zoom: zoom,
           minimal: minimal,
           tasks: tasks,
-          onSelectQuadrant: (q) => ctrl.setZoom(q),
+          onSelectQuadrant: (q) {
+            ctrl.setZoom(q);
+            ctrl.invalidateLayout();
+          },
           onFullView: () {
             ctrl.setZoom(null);
             ctrl.select(null);
             ctrl.setQuery('');
+            ctrl.invalidateLayout();
           },
         ),
       ),
@@ -408,27 +401,6 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           },
         ),
       ),
-    );
-  }
-}
-
-class _ProgressBanner extends StatelessWidget {
-  final bool minimal;
-  const _ProgressBanner({required this.minimal});
-
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: minimal ? Colors.black87 : Colors.white.withValues(alpha: 0.9),
-          fontWeight: FontWeight.w600,
-        );
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.auto_awesome, size: 14, color: minimal ? Colors.black87 : Colors.white.withValues(alpha: 0.9)),
-        const SizedBox(width: 6),
-        Text('Beta • Mejoras activas', style: style),
-      ],
     );
   }
 }
@@ -528,6 +500,8 @@ class _BottomActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final entryLabel = isEs ? 'Entrada' : 'Entry';
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -542,29 +516,36 @@ class _BottomActionBar extends StatelessWidget {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final tight = constraints.maxWidth < 400;
             final hideMinimap = constraints.maxWidth < 560;
 
-            final children = <Widget>[
-              if (!hideMinimap && minimap != null) ...[
-                const SizedBox(width: 12),
-                minimap!,
-              ],
-            ];
+            return SizedBox(
+              height: 56,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Centered primary action button (Entrada)
+                  Semantics(
+                    button: true,
+                    enabled: true,
+                    label: entryLabel,
+                    child: FilledButton.icon(
+                      onPressed: onNew,
+                      icon: const Icon(Icons.add),
+                      label: Text(entryLabel),
+                    ),
+                  ),
 
-            if (tight) {
-              return Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
-                children: children,
-              );
-            }
-
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: children,
+                  // Minimap pinned to the right when there's space
+                  if (!hideMinimap && minimap != null)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 12),
+                        child: minimap!,
+                      ),
+                    ),
+                ],
+              ),
             );
           },
         ),

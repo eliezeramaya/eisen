@@ -229,6 +229,10 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
     return Rect.fromLTWH(cx - w * 0.5, cy - h * 0.5, w, h);
   }
 
+  Rect _lerpSnapRect(Rect a, Rect b, double t) {
+    return Rect.lerp(a, b, t)!;
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -442,7 +446,6 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                     tileBorderColor: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.18),
                     onSurface: Theme.of(context).colorScheme.onSurface,
                     onSurfaceVariant: Theme.of(context).colorScheme.onSurfaceVariant,
-                    plateColor: Theme.of(context).colorScheme.surfaceContainerLow,
                   ),
                   isComplex: true,
                   willChange: true,
@@ -906,13 +909,7 @@ class _TreemapPainter extends CustomPainter {
       }
     }
 
-    // Present quadrant glow
-    if (presentQuadrant != null && hoverQuadrant == null) {
-      final qRect = _quadrantRect(presentQuadrant!, size);
-      final grad = RadialGradient(colors: [Colors.white.withValues(alpha: minimal ? 0.12 : 0.06), Colors.transparent]);
-      final paintGlow = Paint()..shader = grad.createShader(qRect);
-      canvas.drawRect(qRect, paintGlow);
-    }
+    // Removed present quadrant glow to avoid confusing highlight
 
     // Highlight hovered quadrant as a subtle overlay (takes precedence)
     if (hoverQuadrant != null) {
@@ -964,7 +961,7 @@ class _TreemapPainter extends CustomPainter {
       final id = tr.task.id;
       final r01From = prevRects01[id] ?? tr.rect01;
       final r01To = nextRects01[id] ?? tr.rect01;
-      final r01 = _lerpSnapRect(r01From, r01To, curveT);
+      final r01 = Rect.lerp(r01From, r01To, curveT)!;
       final r0 = Rect.fromLTWH(r01.left * size.width, r01.top * size.height, r01.width * size.width, r01.height * size.height);
       final r = _snapRect(r0);
       final color = minimal ? Colors.black : _byQuadrant(tr.task.quadrant);
@@ -1346,21 +1343,6 @@ class _TreemapPainter extends CustomPainter {
     return _pathCache.putIfAbsent(key, () {
       return Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
     });
-  }
-
-  Rect _lerpSnapRect(Rect a, Rect b, double t) {
-    double lerp(double x, double y) {
-      final d = (y - x).abs();
-      // Snap tiny deltas to target to reduce micro-vibration
-      if (d < 1e-4) return y;
-      return x + (y - x) * t;
-    }
-    return Rect.fromLTWH(
-      lerp(a.left, b.left),
-      lerp(a.top, b.top),
-      lerp(a.width, b.width),
-      lerp(a.height, b.height),
-    );
   }
 
   TextPainter _textPainter(String text, Rect r, double size, FontWeight fw, {double alpha = 0.92, int maxLines = 2, Color? textColor}) {

@@ -16,15 +16,16 @@ class SettingsPageDesktop extends ConsumerStatefulWidget {
 class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
   String _section = 'General';
   bool _dirty = false;
-  // Staged values
-  late ThemeMode _stagedTheme;
-  late bool _stagedCompact;
-  late bool _stagedMinimal;
-  late bool _stagedAxis;
-  late int _stagedTopK;
-  late double _stagedGamma;
-  late double _stagedMinArea;
-  late double _stagedPadding;
+  bool _previewEnabled = false;
+  // Staged values - initialized with defaults, will be updated from providers
+  ThemeMode _stagedTheme = ThemeMode.system;
+  bool _stagedCompact = false;
+  bool _stagedMinimal = false;
+  bool _stagedAxis = true;
+  int _stagedTopK = 20;
+  double _stagedGamma = 1.0;
+  double _stagedMinArea = 0.00004;
+  double _stagedPadding = 0.012;
 
   // Original snapshot for rollback
   ThemeMode? _origTheme;
@@ -90,8 +91,12 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
         ),
         body: Row(
           children: [
-            const _SettingsSidebar(),
-            const VerticalDivider(width: 1),
+            Container(
+              width: 240,
+              color: cs.surfaceContainerHigh,
+              child: _SettingsSidebar(selected: _section, onSelect: (s) => setState(() => _section = s)),
+            ),
+            Container(width: 1, color: cs.outlineVariant.withValues(alpha: 0.28)),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
@@ -251,14 +256,10 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
   }
 }
 
-class _SettingsSidebar extends StatefulWidget {
-  const _SettingsSidebar();
-  @override
-  State<_SettingsSidebar> createState() => _SettingsSidebarState();
-}
-
-class _SettingsSidebarState extends State<_SettingsSidebar> {
-  String _selected = 'General';
+class _SettingsSidebar extends StatelessWidget {
+  final String selected;
+  final ValueChanged<String> onSelect;
+  const _SettingsSidebar({super.key, required this.selected, required this.onSelect});
   @override
   Widget build(BuildContext context) {
     const items = <(String, IconData)>[
@@ -273,19 +274,16 @@ class _SettingsSidebarState extends State<_SettingsSidebar> {
     return SizedBox(
       width: 240,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
         itemBuilder: (_, i) {
           final (label, icon) = items[i];
-          final sel = label == _selected;
+          final sel = label == selected;
           return ListTile(
             leading: Icon(icon),
             title: Text(label),
             selected: sel,
             selectedTileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-            onTap: () {
-              setState(() => _selected = label);
-              SettingsSectionBus.of(context).jumpTo(label);
-            },
+            onTap: () => onSelect(label),
           );
         },
         separatorBuilder: (_, __) => const SizedBox(height: 4),
