@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/core/services/telemetry.dart';
 import 'package:eisen/core/constants/layout_constants.dart';
+import 'package:eisen/features/eisen_matrix/domain/layout/layout_config.dart';
+import 'package:eisen/features/eisen_matrix/domain/layout/eisen_treemap_hybrid.dart';
 
 /// Use case for computing the treemap layout with incremental updates.
 ///
@@ -16,6 +18,7 @@ import 'package:eisen/core/constants/layout_constants.dart';
 class ComputeLayoutUseCase {
   final LayoutCache _cache;
   final BanditService _bandit;
+  final LayoutConfig? _hybridCfg;
   
   // Memoization state
   int _lastHash = 0;
@@ -27,8 +30,10 @@ class ComputeLayoutUseCase {
   ComputeLayoutUseCase({
     required LayoutCache cache,
     required BanditService bandit,
+    LayoutConfig? hybridConfig,
   })  : _cache = cache,
-        _bandit = bandit;
+        _bandit = bandit,
+        _hybridCfg = hybridConfig;
 
   /// Computes the treemap layout for given [tasks].
   ///
@@ -88,21 +93,43 @@ class ComputeLayoutUseCase {
       return _lastLayout;
     }
 
-    // Full recompute for zoomed view
+    // Hybrid engine bypasses incremental logic for simplicity and consistency
+    if (_hybridCfg != null) {
+      if (zoom != null) {
+        return _computeHybrid(tasks, only: zoom, minArea01: minArea01, hash: hash, viewport: viewport);
+      }
+      return _computeHybrid(tasks, minArea01: minArea01, hash: hash, viewport: viewport);
+    }
+
+    // Original engine paths
     if (zoom != null) {
       return _computeZoomedLayout(tasks, zoom, minArea01, hash, viewport);
     }
-
-    // Full recompute if many quadrants dirty or major state change
-    if (_lastLayout.isEmpty || 
-        viewportChanged || 
-        zoomChanged || 
-        _dirtyQuadrants.length >= 4) {
+    if (_lastLayout.isEmpty || viewportChanged || zoomChanged || _dirtyQuadrants.length >= 4) {
       return _computeFullLayout(tasks, minArea01, hash, viewport);
     }
-
-    // Incremental update: recompute only dirty quadrants
     return _computeIncrementalLayout(tasks, minArea01, hash, viewport);
+  }
+
+  List<TreemapRect> _computeHybrid(
+    List<Task> tasks, {
+    Quadrant? only,
+    double? minArea01,
+    required int hash,
+    Size? viewport,
+  }) {
+    final sw = Stopwatch()..start();
+    final engine = EisenTreemapHybrid(_hybridCfg!);
+    final layouts = engine.layout(tasks, only: only, minArea01: minArea01);
+    sw.stop();
+    Telemetry.layoutTime(only?.name, sw.elapsedMicroseconds / 1000.0);
+
+    _lastLayout = layouts;
+    _lastHash = hash;
+    _lastZoom = only;
+    _lastViewport = viewport;
+    _dirtyQuadrants.clear();
+    return layouts;
   }
 
   List<TreemapRect> _computeZoomedLayout(

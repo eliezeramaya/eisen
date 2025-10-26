@@ -14,6 +14,7 @@ import 'package:eisen/features/eisen_matrix/domain/usecases/delete_task_usecase.
 import 'package:eisen/features/eisen_matrix/domain/usecases/compute_layout_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/suggest_top_spots_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/compute_reorder_delta_usecase.dart';
+import 'package:eisen/features/eisen_matrix/domain/layout/layout_providers.dart';
 
 /// Immutable state for the Eisenhower matrix.
 ///
@@ -112,7 +113,8 @@ class MatrixController extends Notifier<MatrixState> {
     _createTaskUseCase = CreateTaskUseCase();
     _updateTaskUseCase = UpdateTaskUseCase();
     _deleteTaskUseCase = DeleteTaskUseCase();
-    _computeLayoutUseCase = ComputeLayoutUseCase(cache: _cache, bandit: _bandit);
+    final cfg = ref.read(layoutConfigProvider);
+    _computeLayoutUseCase = ComputeLayoutUseCase(cache: _cache, bandit: _bandit, hybridConfig: cfg);
     _suggestTopSpotsUseCase = SuggestTopSpotsUseCase(_bandit);
     _computeReorderDeltaUseCase = ComputeReorderDeltaUseCase(_cache);
     

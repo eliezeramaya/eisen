@@ -9,4 +9,3 @@ void main() {
     expect(find.byKey(const Key('btn_manage_filters')), findsOneWidget);
   });
 }
-
