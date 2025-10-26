@@ -1,17 +1,71 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/features/settings/presentation/section_bus.dart';
 import 'package:eisen/features/settings/presentation/settings_content.dart';
 import 'package:eisen/features/settings/presentation/settings_search.dart';
 
-class SettingsPageDesktop extends StatefulWidget {
+class SettingsPageDesktop extends ConsumerStatefulWidget {
   const SettingsPageDesktop({super.key});
   @override
-  State<SettingsPageDesktop> createState() => _SettingsPageDesktopState();
+  ConsumerState<SettingsPageDesktop> createState() => _SettingsPageDesktopState();
 }
 
-class _SettingsPageDesktopState extends State<SettingsPageDesktop> {
+class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
   String _section = 'General';
   bool _dirty = false;
+  // Staged values
+  late ThemeMode _stagedTheme;
+  late bool _stagedCompact;
+  late bool _stagedMinimal;
+  late bool _stagedAxis;
+  late int _stagedTopK;
+  late double _stagedGamma;
+  late double _stagedMinArea;
+  late double _stagedPadding;
+
+  // Original snapshot for rollback
+  ThemeMode? _origTheme;
+  bool? _origCompact;
+  bool? _origMinimal;
+  bool? _origAxis;
+  int? _origTopK;
+  double? _origGamma;
+  double? _origMinArea;
+  double? _origPadding;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize from providers after first frame to ensure context is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadFromProviders());
+  }
+
+  void _loadFromProviders() {
+    final ms = ref.read(matrixControllerProvider);
+    final ui = ref.read(uiPrefsControllerProvider);
+    setState(() {
+      _stagedTheme = ms.themeMode;
+      _stagedCompact = ms.compact;
+      _stagedMinimal = ms.minimal;
+      _stagedAxis = ms.showAxisLegends;
+      _stagedTopK = ui.topKPerQuadrant;
+      _stagedGamma = ui.gamma;
+      _stagedMinArea = ui.minAreaNormalized;
+      _stagedPadding = ui.quadrantPadding;
+      // Save originals
+      _origTheme = _stagedTheme;
+      _origCompact = _stagedCompact;
+      _origMinimal = _stagedMinimal;
+      _origAxis = _stagedAxis;
+      _origTopK = _stagedTopK;
+      _origGamma = _stagedGamma;
+      _origMinArea = _stagedMinArea;
+      _origPadding = _stagedPadding;
+      _dirty = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +97,22 @@ class _SettingsPageDesktopState extends State<SettingsPageDesktop> {
                 child: SettingsContent(
                   section: _section,
                   onDirty: (v) => setState(() => _dirty = _dirty || v),
+                  themeMode: _stagedTheme,
+                  compact: _stagedCompact,
+                  minimal: _stagedMinimal,
+                  showAxisLegends: _stagedAxis,
+                  onThemeChanged: (m) => setState(() => _stagedTheme = m),
+                  onCompactChanged: (v) => setState(() => _stagedCompact = v),
+                  onMinimalChanged: (v) => setState(() => _stagedMinimal = v),
+                  onAxisLegendsChanged: (v) => setState(() => _stagedAxis = v),
+                  topK: _stagedTopK,
+                  gamma: _stagedGamma,
+                  minAreaNormalized: _stagedMinArea,
+                  quadrantPadding: _stagedPadding,
+                  onTopKChanged: (v) => setState(() => _stagedTopK = v),
+                  onGammaChanged: (v) => setState(() => _stagedGamma = v),
+                  onMinAreaChanged: (v) => setState(() => _stagedMinArea = v),
+                  onPaddingChanged: (v) => setState(() => _stagedPadding = v),
                 ),
               ),
             ),
@@ -97,18 +167,74 @@ class _SettingsPageDesktopState extends State<SettingsPageDesktop> {
   }
 
   void _applyChanges() {
-    // TODO: Persist preferences and notify providers
-    setState(() => _dirty = false);
+    // Apply staged values to providers and persist
+    final ctrl = ref.read(matrixControllerProvider.notifier);
+    // ThemeMode: cycle toggle until desired (max 3 steps)
+    int guard = 0;
+    while (ref.read(matrixControllerProvider).themeMode != _stagedTheme && guard < 3) {
+      ctrl.toggleTheme();
+      guard++;
+    }
+    // Booleans
+    final current = ref.read(matrixControllerProvider);
+    if (current.compact != _stagedCompact) ctrl.toggleCompact();
+    if (current.minimal != _stagedMinimal) ctrl.toggleMinimal();
+    if (current.showAxisLegends != _stagedAxis) ctrl.toggleAxisLegends();
+
+    final ui = ref.read(uiPrefsControllerProvider);
+    final uiCtl = ref.read(uiPrefsControllerProvider.notifier);
+    final futures = <Future<void>>[];
+    if (ui.topKPerQuadrant != _stagedTopK) futures.add(uiCtl.setTopK(_stagedTopK));
+    if (ui.gamma != _stagedGamma) futures.add(uiCtl.setGamma(_stagedGamma));
+    if (ui.minAreaNormalized != _stagedMinArea) futures.add(uiCtl.setMinArea(_stagedMinArea));
+    if (ui.quadrantPadding != _stagedPadding) futures.add(uiCtl.setPadding(_stagedPadding));
+
+    Future.wait(futures).whenComplete(() {
+      setState(() {
+        _dirty = false;
+        // Refresh originals to current staged (now applied)
+        _origTheme = _stagedTheme;
+        _origCompact = _stagedCompact;
+        _origMinimal = _stagedMinimal;
+        _origAxis = _stagedAxis;
+        _origTopK = _stagedTopK;
+        _origGamma = _stagedGamma;
+        _origMinArea = _stagedMinArea;
+        _origPadding = _stagedPadding;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Settings applied')),
+      );
+    });
   }
 
   void _cancelChanges() {
-    // TODO: Reload initial state and discard cached changes
-    setState(() => _dirty = false);
+    setState(() {
+      // Rollback to original snapshot
+      _stagedTheme = _origTheme ?? ThemeMode.system;
+      _stagedCompact = _origCompact ?? false;
+      _stagedMinimal = _origMinimal ?? false;
+      _stagedAxis = _origAxis ?? true;
+      _stagedTopK = _origTopK ?? 20;
+      _stagedGamma = _origGamma ?? 1.0;
+      _stagedMinArea = _origMinArea ?? 0.00004;
+      _stagedPadding = _origPadding ?? 0.012;
+      _dirty = false;
+    });
   }
 
   void _resetToDefaults() {
-    // TODO: Set defaults and mark as dirty
-    setState(() => _dirty = true);
+    setState(() {
+      _stagedTheme = ThemeMode.system;
+      _stagedCompact = false;
+      _stagedMinimal = false;
+      _stagedAxis = true;
+      _stagedTopK = const UiPrefsData().topKPerQuadrant;
+      _stagedGamma = const UiPrefsData().gamma;
+      _stagedMinArea = const UiPrefsData().minAreaNormalized;
+      _stagedPadding = const UiPrefsData().quadrantPadding;
+      _dirty = true;
+    });
   }
 }
 
@@ -155,4 +281,3 @@ class _SettingsSidebarState extends State<_SettingsSidebar> {
     );
   }
 }
-
