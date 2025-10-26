@@ -13,15 +13,21 @@ class EisenApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(matrixControllerProvider.select((s) => s.themeMode));
+    final minimal = ref.watch(matrixControllerProvider.select((s) => s.minimal));
     final userLocale = ref.watch(localeProvider);
     
+    final light = buildAppTheme(Brightness.light);
+    final dark = buildAppTheme(Brightness.dark);
+    final theme = minimal ? asMinimal(light) : light;
+    final darkTheme = minimal ? asMinimal(dark) : dark;
+
     return MaterialApp.router(
       locale: userLocale ?? DevicePreview.locale(context),
       builder: DevicePreview.appBuilder,
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
-      theme: buildAppTheme(Brightness.light),
-      darkTheme: buildAppTheme(Brightness.dark),
+      theme: theme,
+      darkTheme: darkTheme,
       themeMode: themeMode,
       routerConfig: createRouter(),
       localizationsDelegates: AppLocalizations.localizationsDelegates,

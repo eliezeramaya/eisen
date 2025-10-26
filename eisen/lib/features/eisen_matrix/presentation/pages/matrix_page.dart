@@ -174,6 +174,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                           compact: compact,
                                           suggestedIds: suggested,
                                           minimal: minimal,
+                                          selectedId: selectedId,
                                           zoom: zoom,
                                           presentQuadrant: zoom ?? ref.read(matrixControllerProvider).presentQuadrant,
                                           inlineEditId: _inlineEditId,

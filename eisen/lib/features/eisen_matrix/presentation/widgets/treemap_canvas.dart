@@ -28,6 +28,7 @@ class TreemapCanvas extends StatefulWidget {
   final void Function(String id)? onInlineCancel;
   final bool minimal;
   final bool compact;
+  final String? selectedId;
 
   const TreemapCanvas({
     super.key,
@@ -46,6 +47,7 @@ class TreemapCanvas extends StatefulWidget {
     this.onInlineCancel,
     this.minimal = false,
     this.compact = false,
+    this.selectedId,
   });
 
   @override
@@ -342,6 +344,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                     pulseT: _pulseT,
                     suggested: widget.suggestedIds,
                     layoutVersion: _layoutVersion,
+                    selectedId: widget.selectedId,
                   ),
                   isComplex: true,
                   willChange: true,
@@ -648,6 +651,7 @@ class _TreemapPainter extends CustomPainter {
   final double pulseT; // 0..1
   final Set<String>? suggested;
   final int layoutVersion;
+  final String? selectedId;
   
   /// Tile path cache for performance optimization.
   /// 
@@ -679,6 +683,7 @@ class _TreemapPainter extends CustomPainter {
     this.pulseT = 0.0,
     this.suggested,
     required this.layoutVersion,
+    this.selectedId,
   });
 
   @override
@@ -875,27 +880,34 @@ class _TreemapPainter extends CustomPainter {
       // If this is a stack tile, render a centered +N label and skip details
       if (tr.stackChildren.isNotEmpty) {
         final label = '+${tr.stackChildren.length}';
-        final tp = _textPainter(label, drawRect, 14, FontWeight.w700, textColor: minimal ? Colors.black : Colors.white);
-        tp.paint(canvas, Offset(drawRect.center.dx - tp.width / 2, drawRect.center.dy - tp.height / 2));
+        if (minimal) {
+          final tp = _textPainter(label, drawRect, 12, FontWeight.w700, textColor: minimal ? Colors.black : Colors.white);
+          tp.paint(canvas, Offset(drawRect.right - tp.width - 6, drawRect.bottom - tp.height - 4));
+        } else {
+          final tp = _textPainter(label, drawRect, 14, FontWeight.w700, textColor: minimal ? Colors.black : Colors.white);
+          tp.paint(canvas, Offset(drawRect.center.dx - tp.width / 2, drawRect.center.dy - tp.height / 2));
+        }
         continue;
       }
 
-      // Title + metadata
+      // Title + metadata (minimal: show only on interaction)
       final area = drawRect.width * drawRect.height;
       final availableHeight = drawRect.height - 12; // padding top+bottom
       double currentY = drawRect.top + 6;
 
-      // Paint title: keep sizes conservative; only allow multi-line in explicit debug mode
       final titleSize = debugTreemap ? 16.0 : 14.0;
       final canShowTitle = debugTreemap || availableHeight > 18.0;
-      if (canShowTitle) {
+      final pointerInside = pointer != null && drawRect.contains(pointer!);
+      final isSelected = selectedId != null && selectedId == tr.task.id;
+      final showLabel = !minimal || isDragging || pointerInside || isSelected;
+      if (showLabel && canShowTitle) {
         final tp = _textPainter(tr.task.title, drawRect, titleSize, FontWeight.w700, textColor: minimal ? Colors.black : Colors.white, maxLines: debugTreemap ? 3 : 1);
         tp.paint(canvas, Offset(drawRect.left + 8, currentY));
         currentY += tp.height + 2;
       }
       
       // Priority and time (if medium+ size)
-      if (area > 12000 && currentY + 14 < drawRect.bottom - 6 && !debugTreemap) {
+      if (showLabel && area > 12000 && currentY + 14 < drawRect.bottom - 6 && !debugTreemap) {
         final meta = 'P${tr.task.priority} • ${tr.task.minutes}m';
         final tp2 = _textPainter(meta, drawRect, 13, FontWeight.w500, alpha: minimal ? 0.95 : 0.9, textColor: minimal ? Colors.black : Colors.white);
         tp2.paint(canvas, Offset(drawRect.left + 8, currentY));
@@ -903,7 +915,7 @@ class _TreemapPainter extends CustomPainter {
       }
       
       // Notes preview (if large size and has notes)
-      if (area > 26000 && tr.task.notes != null && tr.task.notes!.isNotEmpty && currentY + 14 < drawRect.bottom - 6 && !debugTreemap) {
+      if (showLabel && area > 26000 && tr.task.notes != null && tr.task.notes!.isNotEmpty && currentY + 14 < drawRect.bottom - 6 && !debugTreemap) {
         final notesPreview = tr.task.notes!.length > 50 
             ? '${tr.task.notes!.substring(0, 50)}...' 
             : tr.task.notes!;
@@ -911,12 +923,14 @@ class _TreemapPainter extends CustomPainter {
         tp3.paint(canvas, Offset(drawRect.left + 8, currentY));
       }
 
-      // Quadrant color indicator
-      paint
-        ..style = PaintingStyle.fill
-        ..color = minimal ? Colors.black.withValues(alpha: 0.5) : color.withValues(alpha: 0.12);
-      final ind = Rect.fromLTWH(drawRect.right - 10, drawRect.top + 4, 6, 6);
-      canvas.drawRRect(RRect.fromRectAndRadius(ind, const Radius.circular(2)), paint);
+      // Quadrant color indicator: skip in minimal to reduce chroma
+      if (!minimal) {
+        paint
+          ..style = PaintingStyle.fill
+          ..color = color.withValues(alpha: 0.12);
+        final ind = Rect.fromLTWH(drawRect.right - 10, drawRect.top + 4, 6, 6);
+        canvas.drawRRect(RRect.fromRectAndRadius(ind, const Radius.circular(2)), paint);
+      }
 
       // Suggested by bandit badge (small star)
       if (suggested?.contains(tr.task.id) == true) {

@@ -31,6 +31,7 @@ void main() {
                   droppedTo = q;
                 },
                 minimal: true,
+                selectedId: null,
               ),
             ),
           ),
@@ -103,6 +104,7 @@ void main() {
                 tasks: tasks,
                 layout: computeStableLayout(tasks),
                 minimal: true,
+                selectedId: null,
               ),
             ),
           ),

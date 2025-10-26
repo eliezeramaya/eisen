@@ -27,6 +27,7 @@ void main() {
                   zoom: zoom,
                   presentQuadrant: zoom,
                   minimal: true,
+                  selectedId: null,
                 ),
               ),
             ),
@@ -111,4 +112,3 @@ void main() {
     expect(idZoom, equals('a'));
   });
 }
-

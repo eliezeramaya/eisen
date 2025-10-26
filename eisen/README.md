@@ -152,6 +152,15 @@ flutter test test/golden/treemap_canvas_golden_test.dart --update-goldens
 
 **Note**: Golden tests are platform-specific. CI runs on Linux. For consistent results, regenerate on the same platform as CI.
 
+## Modo Minimalista
+Actívalo en Ajustes → “Modo minimalista”. Reduce cromo/ruido visual, bordes hairline y etiquetas en el treemap solo cuando interactúas (focus/hover/selección). Mantiene AA en texto y UI.
+
+Goldens:
+```bash
+cd eisen
+flutter test --update-goldens
+```
+
 ### Mobile Branding (Launchers & Splash)
 
 Comandos útiles (requiere assets en `assets/branding/`):

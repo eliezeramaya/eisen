@@ -51,7 +51,7 @@ void main() {
             child: SizedBox(
               width: 300,
               height: 220,
-              child: TreemapCanvas(tasks: tasks, layout: layout1, minimal: true),
+              child: TreemapCanvas(tasks: tasks, layout: layout1, minimal: true, selectedId: null),
             ),
           ),
         ),
@@ -71,7 +71,7 @@ void main() {
             child: SizedBox(
               width: 300,
               height: 220,
-              child: TreemapCanvas(tasks: tasks2, layout: layout2, minimal: true),
+              child: TreemapCanvas(tasks: tasks2, layout: layout2, minimal: true, selectedId: null),
             ),
           ),
         ),
@@ -85,4 +85,3 @@ void main() {
     expect(diffs < 2000, isTrue);
   });
 }
-
