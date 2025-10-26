@@ -8,7 +8,7 @@ class TreemapDebugOverlay {
   static void drawQuadrantBounds(Canvas c, Rect quad) {
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..color = Colors.blueAccent.withOpacity(0.7)
+      ..color = Colors.blueAccent.withValues(alpha: 0.7)
       ..strokeWidth = 1.5;
     c.drawRect(quad.deflate(0.5), paint);
   }
@@ -16,12 +16,12 @@ class TreemapDebugOverlay {
   static void drawShelf(Canvas c, Rect shelfBounds) {
     final paint = Paint()
       ..style = PaintingStyle.fill
-      ..color = Colors.blue.withOpacity(0.08);
+      ..color = Colors.blue.withValues(alpha: 0.08);
     c.drawRect(shelfBounds, paint);
     final border = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.8
-      ..color = Colors.blue.withOpacity(0.25);
+      ..color = Colors.blue.withValues(alpha: 0.25);
     c.drawRect(shelfBounds.deflate(0.5), border);
   }
 
@@ -39,7 +39,7 @@ class TreemapDebugOverlay {
     )..layout(maxWidth: r.width - 4);
     final bg = Paint()
       ..style = PaintingStyle.fill
-      ..color = Colors.yellow.withOpacity(0.75);
+      ..color = Colors.yellow.withValues(alpha: 0.75);
     final pad = const EdgeInsets.symmetric(horizontal: 2, vertical: 1);
     final rect = Rect.fromLTWH(r.left + 2, r.top + 2, tp.width + pad.horizontal, tp.height + pad.vertical);
     c.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(3)), bg);

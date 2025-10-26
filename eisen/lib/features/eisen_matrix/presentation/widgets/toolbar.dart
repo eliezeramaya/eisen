@@ -55,7 +55,7 @@ class _AppToolbarState extends State<AppToolbar> {
     }
 
     final theme = Theme.of(context);
-    final bg = theme.colorScheme.surface.withOpacity(0.65);
+  final bg = theme.colorScheme.surface.withValues(alpha: 0.65);
     final border = theme.brightness == Brightness.dark
         ? Colors.white.withValues(alpha: 0.08)
         : Colors.black.withValues(alpha: 0.08);
@@ -74,7 +74,7 @@ class _AppToolbarState extends State<AppToolbar> {
               border: Border.all(color: border, width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.25),
+                  color: Colors.black.withValues(alpha: 0.25),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -83,7 +83,7 @@ class _AppToolbarState extends State<AppToolbar> {
             child: Row(
               children: [
                 const SizedBox(width: 12),
-                Icon(Icons.search, size: 18, color: theme.colorScheme.onSurface.withOpacity(0.75)),
+                Icon(Icons.search, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.75)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(

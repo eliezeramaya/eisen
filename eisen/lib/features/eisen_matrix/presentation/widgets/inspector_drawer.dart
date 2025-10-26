@@ -75,7 +75,7 @@ class _InspectorDrawerState extends State<InspectorDrawer> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<Quadrant>(
-              value: _quadrant,
+              initialValue: _quadrant,
               decoration: const InputDecoration(labelText: 'Quadrant'),
               items: Quadrant.values
                   .map((q) => DropdownMenuItem(value: q, child: Text(q.name.toUpperCase())))

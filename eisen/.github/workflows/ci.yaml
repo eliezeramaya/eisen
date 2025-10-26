@@ -96,6 +96,39 @@ jobs:
         run: |
           cd eisen
           flutter build web --no-tree-shake-icons --release
+
+      - name: Install Lighthouse CI (non-blocking)
+        if: always()
+        continue-on-error: true
+        run: |
+          if command -v npm >/dev/null 2>&1; then
+            npm i -g @lhci/cli@0.14.0 http-server@14 || true
+          else
+            echo "npm not available; skipping lhci install"
+          fi
+
+      - name: Run Lighthouse CI (desktop profile)
+        if: always()
+        continue-on-error: true
+        working-directory: eisen/build/web
+        run: |
+          if command -v http-server >/dev/null 2>&1 && command -v lhci >/dev/null 2>&1; then
+            nohup http-server -p 8080 -s >/dev/null 2>&1 &
+            sleep 3
+            lhci autorun --upload.target=temporary-public-storage --collect.url=http://127.0.0.1:8080 --assert.assertions.file=../../lighthouserc.json || true
+          else
+            echo "lhci/http-server not available; skipping"
+          fi
+
+      - name: Upload Lighthouse Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: |
+            ~/.lhci/**/*
+            .lighthouseci/**/*
+          if-no-files-found: ignore
       
       - name: Upload web build artifacts
         uses: actions/upload-artifact@v4

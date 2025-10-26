@@ -8,7 +8,7 @@ TextTheme buildTypography(TextTheme base) {
     titleLarge: base.titleLarge?.copyWith(
       fontWeight: FontWeight.w700,
       fontSize: 20,
-      color: base.titleLarge?.color?.withOpacity(0.9),
+      color: base.titleLarge?.color?.withValues(alpha: 0.9),
       fontFamily: family,
     ),
     // Task names
@@ -23,7 +23,7 @@ TextTheme buildTypography(TextTheme base) {
       fontWeight: FontWeight.w400,
       fontSize: 13,
       height: 1.2,
-      color: base.bodySmall?.color?.withOpacity(0.7),
+      color: base.bodySmall?.color?.withValues(alpha: 0.7),
       fontFamily: family,
     ),
     // General body

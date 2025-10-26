@@ -89,7 +89,7 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<Quadrant>(
-                value: _quadrant,
+                initialValue: _quadrant,
                 decoration: const InputDecoration(labelText: 'Quadrant'),
                 items: Quadrant.values
                     .map((q) => DropdownMenuItem(value: q, child: Text(q.name.toUpperCase())))

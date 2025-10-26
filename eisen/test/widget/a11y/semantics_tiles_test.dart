@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/task_tile.dart';
 
@@ -127,10 +126,11 @@ void main() {
       );
 
       final semanticsNode = tester.getSemantics(find.byType(TaskTile));
+      final semanticsData = semanticsNode.getSemanticsData();
 
       // Verify selection is included in semantic data
       expect(
-        semanticsNode.getSemanticsData().hasFlag(SemanticsFlag.isSelected),
+        semanticsData.flagsCollection.isSelected,
         isTrue,
         reason: 'Selected state should be announced to screen readers',
       );

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/app/app.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 
 /// Integration tests for treemap interactions.
@@ -321,7 +322,7 @@ void main() {
       // Compute layout with no viewport specified
       final rects = controller.computeLayout();
 
-      expect(rects, isA<List>(),
+    expect(rects, isA<List<TreemapRect>>(),
           reason: 'Layout should return a list of rectangles');
     });
 
@@ -346,7 +347,7 @@ void main() {
         // Compute layout for Q1 only
         final q1Rects = controller.computeLayout(only: Quadrant.q1);
 
-        expect(q1Rects, isA<List>(),
+    expect(q1Rects, isA<List<TreemapRect>>(),
             reason: 'Filtered layout should return rectangles');
       }
     });

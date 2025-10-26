@@ -67,22 +67,25 @@ class GlassTokens extends ThemeExtension<GlassTokens> {
 
 ThemeData buildAppTheme(Brightness brightness) {
   final isDark = brightness == Brightness.dark;
+  final surfaceColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFFFFFFF);
+  final canvasColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF9FAFB);
+
+  final colorScheme = (isDark
+          ? ColorScheme.dark(
+              primary: EisenColors.q2Dark,
+              secondary: EisenColors.q3Dark,
+              surface: surfaceColor,
+            )
+          : ColorScheme.light(
+              primary: EisenColors.q2,
+              secondary: EisenColors.q3,
+              surface: surfaceColor,
+            ))
+  .copyWith(surfaceContainerLowest: canvasColor);
+
   final base = ThemeData(
     brightness: brightness,
-    colorScheme: isDark
-        ? const ColorScheme.dark(
-            primary: EisenColors.q2Dark,
-            secondary: EisenColors.q3Dark,
-            surface: Color(0xFF1E293B), // card
-            background: Color(0xFF0F172A), // canvas
-          )
-        : const ColorScheme.light(
-            // Emotional palette tuned for light mode
-            primary: EisenColors.q2,
-            secondary: EisenColors.q3,
-            surface: Color(0xFFFFFFFF),
-            background: Color(0xFFF9FAFB),
-          ),
+    colorScheme: colorScheme,
     useMaterial3: true,
   );
 
@@ -119,18 +122,18 @@ ThemeData buildAppTheme(Brightness brightness) {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(tokens.radius),
         side: BorderSide(
-      color: isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.08),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.black.withValues(alpha: 0.08),
           width: 1,
         ),
       ),
     ),
-    scaffoldBackgroundColor: base.colorScheme.background,
+    scaffoldBackgroundColor: colorScheme.surfaceContainerLowest,
     appBarTheme: AppBarTheme(
       elevation: 0,
-      backgroundColor: base.colorScheme.surface.withValues(alpha: isDark ? 0.35 : 0.85),
-      foregroundColor: base.colorScheme.onSurface,
+      backgroundColor: colorScheme.surface.withValues(alpha: isDark ? 0.35 : 0.85),
+      foregroundColor: colorScheme.onSurface,
     ),
   );
 }

@@ -43,7 +43,7 @@ class TaskTile extends StatelessWidget {
                   duration: kAnimFast,
                   curve: Curves.easeInOut,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surface.withOpacity(0.75),
+                    color: theme.colorScheme.surface.withValues(alpha: 0.75),
                     borderRadius: BorderRadius.circular(kRadius),
                     border: isFocused
                         ? Border.all(
@@ -53,7 +53,7 @@ class TaskTile extends StatelessWidget {
                         : null,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.10),
+                        color: Colors.black.withValues(alpha: 0.10),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -64,8 +64,8 @@ class TaskTile extends StatelessWidget {
                     child: InkWell(
                       onTap: onTap,
                       borderRadius: BorderRadius.circular(kRadius),
-                      focusColor: theme.colorScheme.primary.withOpacity(0.2),
-                      hoverColor: theme.colorScheme.primary.withOpacity(0.1),
+                      focusColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+                      hoverColor: theme.colorScheme.primary.withValues(alpha: 0.1),
                       child: ListTile(
                         title: Text(title, style: theme.textTheme.titleMedium),
                         subtitle: Text(subtitle, style: theme.textTheme.bodySmall),

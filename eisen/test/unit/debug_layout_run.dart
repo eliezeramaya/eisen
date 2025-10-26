@@ -1,5 +1,6 @@
-import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -13,7 +14,9 @@ void main() {
       Task(id: 't5', title: 'Social', quadrant: Quadrant.q4, priority: 2, minutes: 20, createdAt: now.subtract(const Duration(hours:6))),
     ];
     final layout = computeStableLayout(demo, minTileArea01: (44.0*44.0)/(600.0*600.0), cache: LayoutCache());
-    print('Demo tasks: ${demo.length}, layout tiles: ${layout.length}');
+    if (kDebugMode) {
+      debugPrint('Demo tasks: ${demo.length}, layout tiles: ${layout.length}');
+    }
     expect(layout.isNotEmpty, isTrue);
   });
 }
