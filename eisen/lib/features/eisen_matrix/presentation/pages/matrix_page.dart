@@ -171,6 +171,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                           key: ValueKey('${zoom}_${dynamicLayout.length}_${suggested.length}'),
                                           tasks: tasks,
                                           layout: dynamicLayout,
+                                          compact: compact,
                                           suggestedIds: suggested,
                                           minimal: minimal,
                                           zoom: zoom,

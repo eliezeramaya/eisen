@@ -270,6 +270,7 @@ class MatrixController extends Notifier<MatrixState> {
       zoom: state.zoom,
       viewport: viewport,
       only: only,
+      compactDensity: state.compact,
     );
 
     // Update suggestions and compute metrics

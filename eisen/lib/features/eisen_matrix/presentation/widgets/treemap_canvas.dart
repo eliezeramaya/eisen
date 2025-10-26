@@ -27,6 +27,7 @@ class TreemapCanvas extends StatefulWidget {
   final void Function(String id, String title)? onInlineSubmit;
   final void Function(String id)? onInlineCancel;
   final bool minimal;
+  final bool compact;
 
   const TreemapCanvas({
     super.key,
@@ -44,6 +45,7 @@ class TreemapCanvas extends StatefulWidget {
     this.onInlineSubmit,
     this.onInlineCancel,
     this.minimal = false,
+    this.compact = false,
   });
 
   @override
@@ -155,7 +157,8 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
         // If layout already contains stack tiles, skip overlay fallback
         final hasStackTiles = widget.layout.any((e) => e.stackChildren.isNotEmpty);
         // Compute tiny tiles per quadrant only if no integrated stacks present
-  final minAreaPx = LayoutConstants.minTileAreaPx;
+        // Adjust minimum area threshold based on density mode to make the change noticeable
+        final double minAreaPx = LayoutConstants.minTileAreaPx * (widget.compact ? 0.7 : 1.0);
         final tinyByQ = <Quadrant, List<TreemapRect>>{
           Quadrant.q1: [], Quadrant.q2: [], Quadrant.q3: [], Quadrant.q4: []
         };
@@ -169,10 +172,12 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
           }
         }
         if (widget.onEditTask != null || widget.onMarkDone != null) {
+          // Adjust button visibility threshold by density
+          final double minAreaForButtons = LayoutConstants.minAreaForButtons * (widget.compact ? 0.85 : 1.0);
           for (final tr in widget.layout) {
             final r = _px(tr.rect01, size);
             // Show edit button only for reasonably large tiles
-            if (r.width * r.height < LayoutConstants.minAreaForButtons) continue;
+            if (r.width * r.height < minAreaForButtons) continue;
             const btn = 28.0;
             if (widget.onMarkDone != null) {
               overlay.add(Positioned(

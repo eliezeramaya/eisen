@@ -44,6 +44,7 @@ class ComputeLayoutUseCase {
     Quadrant? zoom,
     Size? viewport,
     Quadrant? only,
+    bool compactDensity = false,
   }) {
     // DEBUG: surface runtime info to logs to help diagnose empty-layout issues
     if (kDebugMode) {
@@ -59,7 +60,10 @@ class ComputeLayoutUseCase {
     // Calculate minimum area from viewport
     double? minArea01;
     if (viewport != null && viewport.width > 0 && viewport.height > 0) {
-      final minPx = LayoutConstants.minTileAreaPx; // centralized constant
+      // Adjust minimum interactive tile area depending on density mode
+      final baseMinPx = LayoutConstants.minTileAreaPx; // centralized constant
+      final densityFactor = compactDensity ? 0.7 : 1.0; // smaller threshold in compact mode
+      final minPx = baseMinPx * densityFactor;
       final totalPx = viewport.width * viewport.height;
       minArea01 = (minPx / totalPx).clamp(0.0, 1.0);
       hash ^= viewport.width.round();
