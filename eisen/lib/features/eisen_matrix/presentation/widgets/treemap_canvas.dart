@@ -421,8 +421,9 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                       _hoverQuadrant = _quadrantAt(_lastPos!, size);
                     });
                   },
-                child: CustomPaint(
-                  painter: _TreemapPainter(
+                child: RepaintBoundary(
+                  child: CustomPaint(
+                    painter: _TreemapPainter(
                     widget.layout,
                     draggingId: _draggingId,
                     pointer: _lastPos,
@@ -447,9 +448,10 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                     onSurface: Theme.of(context).colorScheme.onSurface,
                     onSurfaceVariant: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                  isComplex: true,
-                  willChange: true,
-                  child: const SizedBox.expand(),
+                    isComplex: true,
+                    willChange: true,
+                    child: const SizedBox.expand(),
+                  ),
                 ),
                 ),
               ),

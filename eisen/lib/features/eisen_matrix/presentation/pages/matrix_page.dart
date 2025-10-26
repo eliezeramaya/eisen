@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/stats_page.dart';
 import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/quadrant_empty_placeholder.dart';
+import 'package:eisen/core/ui/ui_breakpoints.dart';
 import 'package:eisen/core/platform/platform_utils.dart';
 import 'package:go_router/go_router.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/fab_add_task.dart';
@@ -36,6 +38,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
   String? _inlineEditId;
   final _scrollController = ScrollController();
   bool _fabVisible = true;
+  Size? _lastSize;
   @override
   void initState() {
     super.initState();
@@ -71,6 +74,17 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
   final _selectedTask = selectedId == null
     ? null
     : (tasks.indexWhere((t) => t.id == selectedId) == -1 ? null : tasks.firstWhere((t) => t.id == selectedId));
+
+    final screenSize = MediaQuery.sizeOf(context);
+    final screenWidth = screenSize.width;
+    // Trigger recompute when size changes (orientation/resize)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_lastSize != screenSize) {
+        _lastSize = screenSize;
+        ref.read(matrixControllerProvider.notifier).notifyLayoutRecompute();
+      }
+    });
+    final legendsVisible = showAxisLegends && zoom == null && screenWidth >= 600;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -137,12 +151,12 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (showAxisLegends && zoom == null) _LeftAxisLegends(minimal: minimal),
+              if (legendsVisible) _LeftAxisLegends(minimal: minimal),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (showAxisLegends && zoom == null) _TopAxisLegends(minimal: minimal),
+                    if (legendsVisible) _TopAxisLegends(minimal: minimal),
                     Expanded(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(tokens.radius),
@@ -179,7 +193,9 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                   final dynamicLayout = ctrl.computeLayout(viewport: size);
                                   final suggested = ctrl.suggestedTopSpots;
                                   final l10n = AppLocalizations.of(context);
-                                  return Stack(
+                                  return clampTreemapTSF(
+                                    context,
+                                    child: Stack(
                                     children: [
                                       AnimatedSwitcher(
                                         duration: const Duration(milliseconds: 240),
@@ -335,7 +351,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                           ),
                                       ],
                                     ],
-                                  );
+                                  ));
                                 },
                               ),
                             ),
@@ -361,7 +377,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('¡Tarea completada!'), duration: Duration(milliseconds: 900)));
         },
       ),
-      bottomNavigationBar: _BottomActionBar(
+      bottomNavigationBar: (kIsWeb || isDesktop) ? _BottomActionBar(
         onNew: () {
           _openAddTaskSheet(context);
         },
@@ -389,7 +405,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             ctrl.invalidateLayout();
           },
         ),
-      ),
+      ) : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endContained,
       floatingActionButton: FabCoachmark(
         show: ref.watch(onboardingProvider.select((s) => s.showFabCoachmark)),
