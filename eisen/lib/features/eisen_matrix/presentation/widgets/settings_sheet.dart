@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:eisen/l10n/app_localizations.dart';
+import 'package:eisen/core/providers/locale_provider.dart';
 
-class SettingsSheet extends StatelessWidget {
+class SettingsSheet extends ConsumerWidget {
   final VoidCallback onToggleTheme;
   final VoidCallback onToggleDensity;
   final bool compact;
@@ -23,7 +26,10 @@ class SettingsSheet extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final currentLocale = ref.watch(localeProvider);
+    
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -35,13 +41,13 @@ class SettingsSheet extends StatelessWidget {
               children: [
                 const Icon(Icons.settings),
                 const SizedBox(width: 8),
-                Text('Settings', style: Theme.of(context).textTheme.titleMedium),
+                Text(l10n.settingsTitle, style: Theme.of(context).textTheme.titleMedium),
               ],
             ),
             const SizedBox(height: 12),
             ListTile(
               leading: const Icon(Icons.brightness_6),
-              title: const Text('Toggle theme'),
+              title: Text(l10n.settingsTheme),
               onTap: () {
                 onToggleTheme();
                 Navigator.of(context).pop();
@@ -54,7 +60,7 @@ class SettingsSheet extends StatelessWidget {
                 Navigator.of(context).pop();
               },
               secondary: const Icon(Icons.density_medium),
-              title: Text(compact ? 'Compact density' : 'Comfortable density'),
+              title: Text(compact ? l10n.settingsDensityCompact : l10n.settingsDensityComfortable),
             ),
             SwitchListTile(
               value: showAxisLegends,
@@ -63,7 +69,7 @@ class SettingsSheet extends StatelessWidget {
                 Navigator.of(context).pop();
               },
               secondary: const Icon(Icons.label_outline),
-              title: const Text('Mostrar leyendas de ejes'),
+              title: Text(l10n.settingsShowAxisLegends),
             ),
             if (minimal != null && onToggleMinimal != null)
               SwitchListTile(
@@ -73,32 +79,38 @@ class SettingsSheet extends StatelessWidget {
                   Navigator.of(context).pop();
                 },
                 secondary: const Icon(Icons.filter_b_and_w),
-                title: const Text('Modo minimalista'),
+                title: Text(l10n.settingsMinimalMode),
               ),
+            ListTile(
+              leading: const Icon(Icons.language),
+              title: Text(l10n.settingsLanguage),
+              subtitle: Text(_getLanguageLabel(currentLocale, l10n)),
+              onTap: () => _showLanguageDialog(context, ref, l10n),
+            ),
             if (onResetToDemo != null) ...[
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.refresh, color: Colors.orange),
-                title: const Text('Restaurar tareas demo'),
-                subtitle: const Text('Reemplazar todas las tareas con ejemplos'),
+                title: Text(l10n.settingsResetDemo),
+                subtitle: Text(l10n.settingsResetDemoSubtitle),
                 onTap: () {
                   Navigator.of(context).pop();
                   showDialog(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      title: const Text('¿Restaurar tareas demo?'),
-                      content: const Text('Esto eliminará todas tus tareas actuales y las reemplazará con 20 tareas de ejemplo.'),
+                      title: Text(l10n.settingsResetDemoDialogTitle),
+                      content: Text(l10n.settingsResetDemoDialogContent),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(),
-                          child: const Text('Cancelar'),
+                          child: Text(l10n.settingsCancel),
                         ),
                         FilledButton(
                           onPressed: () {
                             Navigator.of(ctx).pop();
                             onResetToDemo!();
                           },
-                          child: const Text('Restaurar'),
+                          child: Text(l10n.settingsRestore),
                         ),
                       ],
                     ),
@@ -107,6 +119,64 @@ class SettingsSheet extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getLanguageLabel(Locale? locale, AppLocalizations l10n) {
+    if (locale == null) return l10n.languageSystem;
+    switch (locale.languageCode) {
+      case 'en':
+        return l10n.languageEnglish;
+      case 'es':
+        return l10n.languageSpanish;
+      default:
+        return l10n.languageSystem;
+    }
+  }
+
+  void _showLanguageDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    final currentLocale = ref.read(localeProvider);
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.settingsLanguage),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String?>(
+              title: Text(l10n.languageSystem),
+              value: null,
+              groupValue: currentLocale?.languageCode,
+              onChanged: (_) {
+                ref.read(localeProvider.notifier).setLocale(null);
+                Navigator.of(ctx).pop();
+                Navigator.of(context).pop();
+              },
+            ),
+            RadioListTile<String?>(
+              title: Text(l10n.languageEnglish),
+              value: 'en',
+              groupValue: currentLocale?.languageCode,
+              onChanged: (_) {
+                ref.read(localeProvider.notifier).setLocale(const Locale('en'));
+                Navigator.of(ctx).pop();
+                Navigator.of(context).pop();
+              },
+            ),
+            RadioListTile<String?>(
+              title: Text(l10n.languageSpanish),
+              value: 'es',
+              groupValue: currentLocale?.languageCode,
+              onChanged: (_) {
+                ref.read(localeProvider.notifier).setLocale(const Locale('es'));
+                Navigator.of(ctx).pop();
+                Navigator.of(context).pop();
+              },
+            ),
           ],
         ),
       ),

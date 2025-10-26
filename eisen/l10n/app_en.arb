@@ -10,5 +10,20 @@
   "minimapDecide": "Decide",
   "minimapDelegate": "Delegate",
   "minimapDelete": "Delete",
-  "settingsShowAxisLegends": "Show axis legends"
+  "settingsShowAxisLegends": "Show axis legends",
+  "settingsTitle": "Settings",
+  "settingsTheme": "Toggle theme",
+  "settingsDensityCompact": "Compact density",
+  "settingsDensityComfortable": "Comfortable density",
+  "settingsMinimalMode": "Minimal mode",
+  "settingsLanguage": "Language",
+  "settingsResetDemo": "Restore demo tasks",
+  "settingsResetDemoSubtitle": "Replace all tasks with examples",
+  "settingsResetDemoDialogTitle": "Restore demo tasks?",
+  "settingsResetDemoDialogContent": "This will delete all your current tasks and replace them with 20 example tasks.",
+  "settingsCancel": "Cancel",
+  "settingsRestore": "Restore",
+  "languageSystem": "System default",
+  "languageEnglish": "English",
+  "languageSpanish": "Español"
 }

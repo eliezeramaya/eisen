@@ -43,4 +43,50 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsShowAxisLegends => 'Show axis legends';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsTheme => 'Toggle theme';
+
+  @override
+  String get settingsDensityCompact => 'Compact density';
+
+  @override
+  String get settingsDensityComfortable => 'Comfortable density';
+
+  @override
+  String get settingsMinimalMode => 'Minimal mode';
+
+  @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get settingsResetDemo => 'Restore demo tasks';
+
+  @override
+  String get settingsResetDemoSubtitle => 'Replace all tasks with examples';
+
+  @override
+  String get settingsResetDemoDialogTitle => 'Restore demo tasks?';
+
+  @override
+  String get settingsResetDemoDialogContent =>
+      'This will delete all your current tasks and replace them with 20 example tasks.';
+
+  @override
+  String get settingsCancel => 'Cancel';
+
+  @override
+  String get settingsRestore => 'Restore';
+
+  @override
+  String get languageSystem => 'System default';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get languageSpanish => 'Español';
 }

@@ -258,11 +258,9 @@ class MatrixController extends Notifier<MatrixState> {
 
   /// Computes the treemap layout with filtering and delegates to use case.
   List<TreemapRect> layout({Quadrant? only, Size? viewport}) {
-    // Filter out completed tasks and apply search query
+    // Filter out completed tasks
     final filtered = state.tasks
         .where((t) => t.completedAt == null)
-        .where((t) => state.query.isEmpty || 
-                     t.title.toLowerCase().contains(state.query.toLowerCase()))
         .toList();
 
     final layout = _computeLayoutUseCase.execute(

@@ -32,6 +32,8 @@ class Task extends Equatable {
   final int minutes; // estimated minutes
   final DateTime? due;
   final List<String> tags;
+  /// Categorías definidas por el usuario para filtrado
+  final List<String> categories;
   final String? notes;
   final String? category;
   // Volatile fields (not persisted): timestamps for freshness/analytics
@@ -53,6 +55,7 @@ class Task extends Equatable {
     required this.minutes,
     this.due,
     this.tags = const [],
+    this.categories = const [],
     this.notes,
     this.category,
     this.createdAt,
@@ -71,6 +74,7 @@ class Task extends Equatable {
     int? minutes,
     DateTime? due,
     List<String>? tags,
+    List<String>? categories,
     String? notes,
     String? category,
     DateTime? createdAt,
@@ -89,6 +93,7 @@ class Task extends Equatable {
       minutes: minutes ?? this.minutes,
       due: due ?? this.due,
       tags: tags ?? this.tags,
+      categories: categories ?? this.categories,
       notes: notes ?? this.notes,
       category: category ?? this.category,
       createdAt: createdAt ?? this.createdAt,
@@ -125,6 +130,7 @@ class Task extends Equatable {
         minutes,
         due,
         tags,
+        categories,
         notes,
         category,
         createdAt,

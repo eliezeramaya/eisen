@@ -169,6 +169,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show axis legends'**
   String get settingsShowAxisLegends;
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle theme'**
+  String get settingsTheme;
+
+  /// No description provided for @settingsDensityCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact density'**
+  String get settingsDensityCompact;
+
+  /// No description provided for @settingsDensityComfortable.
+  ///
+  /// In en, this message translates to:
+  /// **'Comfortable density'**
+  String get settingsDensityComfortable;
+
+  /// No description provided for @settingsMinimalMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimal mode'**
+  String get settingsMinimalMode;
+
+  /// No description provided for @settingsLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get settingsLanguage;
+
+  /// No description provided for @settingsResetDemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore demo tasks'**
+  String get settingsResetDemo;
+
+  /// No description provided for @settingsResetDemoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace all tasks with examples'**
+  String get settingsResetDemoSubtitle;
+
+  /// No description provided for @settingsResetDemoDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore demo tasks?'**
+  String get settingsResetDemoDialogTitle;
+
+  /// No description provided for @settingsResetDemoDialogContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This will delete all your current tasks and replace them with 20 example tasks.'**
+  String get settingsResetDemoDialogContent;
+
+  /// No description provided for @settingsCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get settingsCancel;
+
+  /// No description provided for @settingsRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get settingsRestore;
+
+  /// No description provided for @languageSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System default'**
+  String get languageSystem;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// No description provided for @languageSpanish.
+  ///
+  /// In en, this message translates to:
+  /// **'Español'**
+  String get languageSpanish;
 }
 
 class _AppLocalizationsDelegate

@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:eisen/l10n/app_localizations.dart';
 
 class AppToolbar extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -41,6 +40,9 @@ class _AppToolbarState extends State<AppToolbar> {
     final statsLabel = isEs ? 'Estadísticas' : 'Stats';
     final settingsLabel = isEs ? 'Ajustes' : 'Settings';
     final profileLabel = isEs ? 'Mi perfil' : 'My profile';
+    final minimalLabel = isEs
+        ? (widget.minimal ? 'Normal' : 'Minimalista')
+        : (widget.minimal ? 'Normal' : 'Minimal');
     final themeLabel = isEs
         ? (widget.themeMode == ThemeMode.dark ? 'Claro' : 'Oscuro')
         : (widget.themeMode == ThemeMode.dark ? 'Light' : 'Dark');
@@ -83,19 +85,7 @@ class _AppToolbarState extends State<AppToolbar> {
             child: Row(
               children: [
                 const SizedBox(width: 12),
-                Icon(Icons.search, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.75)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    onChanged: widget.onQuery,
-                    style: theme.textTheme.titleMedium,
-                    decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context).searchHint,
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
+                // Search bar removed: filters are handled via chips in page body
                 if (widget.canExitZoom && widget.onExitZoom != null)
                   actionButton(onPressed: widget.onExitZoom, icon: Icons.fullscreen_exit, label: fullViewLabel),
                 if (widget.onOpenStats != null)
@@ -105,7 +95,12 @@ class _AppToolbarState extends State<AppToolbar> {
                   icon: widget.themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
                   label: themeLabel,
                 ),
-                // Minimalista se movió al menú inferior (SettingsSheet)
+                if (widget.onToggleMinimal != null)
+                  actionButton(
+                    onPressed: widget.onToggleMinimal,
+                    icon: widget.minimal ? Icons.visibility : Icons.filter_b_and_w,
+                    label: minimalLabel,
+                  ),
                 if (widget.onOpenSettings != null)
                   actionButton(onPressed: widget.onOpenSettings, icon: Icons.settings, label: settingsLabel),
                 if (widget.onOpenProfile != null)

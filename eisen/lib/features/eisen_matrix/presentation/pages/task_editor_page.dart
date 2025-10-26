@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/l10n/app_localizations.dart';
 
 class TaskEditorPage extends ConsumerStatefulWidget {
   final Task task;
@@ -17,6 +18,7 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
   late TextEditingController _notes;
   late int _priority;
   late Quadrant _quadrant;
+  late List<String> _categories;
 
   @override
   void initState() {
@@ -26,6 +28,7 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
     _notes = TextEditingController(text: widget.task.notes ?? '');
     _priority = widget.task.priority;
     _quadrant = widget.task.quadrant;
+    _categories = List<String>.from(widget.task.categories);
   }
 
   @override
@@ -97,6 +100,12 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
                 onChanged: (q) => setState(() => _quadrant = q ?? _quadrant),
               ),
               const SizedBox(height: 16),
+              // Categories selector
+              _CategoriesSelector(
+                selected: _categories,
+                onChanged: (sel) => setState(() => _categories = sel),
+              ),
+              const SizedBox(height: 16),
               TextField(
                 controller: _notes,
                 decoration: InputDecoration(labelText: detailsLabel),
@@ -137,7 +146,28 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
       minutes: minutes,
       priority: _priority,
       quadrant: _quadrant,
+      categories: _categories,
       notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+    );
+  }
+}
+
+class _CategoriesSelector extends ConsumerWidget {
+  final List<String> selected;
+  final ValueChanged<List<String>> onChanged;
+  const _CategoriesSelector({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Categories feature removed - return empty state
+    return Row(
+      children: [
+        const Icon(Icons.label_outline, size: 18),
+        const SizedBox(width: 8),
+        Text(Theme.of(context).brightness == Brightness.dark
+            ? 'Categories coming soon'
+            : 'Categorías próximamente'),
+      ],
     );
   }
 }
