@@ -5,7 +5,8 @@ class InspectorDrawer extends StatefulWidget {
   final Task task;
   final ValueChanged<Task> onChanged;
   final VoidCallback onDelete;
-  const InspectorDrawer({super.key, required this.task, required this.onChanged, required this.onDelete});
+  final VoidCallback? onComplete;
+  const InspectorDrawer({super.key, required this.task, required this.onChanged, required this.onDelete, this.onComplete});
 
   @override
   State<InspectorDrawer> createState() => _InspectorDrawerState();
@@ -88,7 +89,25 @@ class _InspectorDrawerState extends State<InspectorDrawer> {
               },
             ),
             const Divider(height: 24),
-            FilledButton.icon(onPressed: widget.onDelete, icon: const Icon(Icons.delete), label: const Text('Delete')),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: widget.onComplete,
+                    icon: const Icon(Icons.check_circle),
+                    label: const Text('Completar'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: widget.onDelete,
+                    icon: const Icon(Icons.delete),
+                    label: const Text('Eliminar'),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),

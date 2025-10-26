@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// kept for features that use category filters; not required by add task sheet
 import 'package:shared_preferences/shared_preferences.dart';
 
 final userCategoriesProvider = StateNotifierProvider<UserCategoriesController, List<String>>((ref) {
@@ -49,4 +50,3 @@ class UserCategoriesController extends StateNotifier<List<String>> {
     await _save();
   }
 }
-

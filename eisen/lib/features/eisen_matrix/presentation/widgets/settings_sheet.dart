@@ -31,38 +31,46 @@ class SettingsSheet extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final currentLocale = ref.watch(localeProvider);
     final prefs = ref.watch(uiPrefsControllerProvider);
+    final cs = Theme.of(context).colorScheme;
+    final bottomPad = MediaQuery.paddingOf(context).bottom + 16;
     
-    return SafeArea(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPad),
           child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.settings),
-                const SizedBox(width: 8),
-                Text(l10n.settingsTitle, style: Theme.of(context).textTheme.titleMedium),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              leading: const Icon(Icons.brightness_6),
-              title: Text(l10n.settingsTheme),
-              onTap: () {
-                onToggleTheme();
-                Navigator.of(context).pop();
-              },
-            ),
-            SwitchListTile(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.settings, size: 22),
+                  const SizedBox(width: 8),
+                  Text(l10n.settingsTitle, style: Theme.of(context).textTheme.titleMedium),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.brightness_6, size: 22),
+                minLeadingWidth: 32,
+                title: Text(l10n.settingsTheme),
+                onTap: () {
+                  onToggleTheme();
+                  Navigator.of(context).pop();
+                },
+              ),
+              SwitchListTile(
               value: compact,
               onChanged: (_) {
                 onToggleDensity();
                 Navigator.of(context).pop();
               },
-              secondary: const Icon(Icons.density_medium),
+              secondary: const Icon(Icons.density_medium, size: 22),
               title: Text(compact ? l10n.settingsDensityCompact : l10n.settingsDensityComfortable),
             ),
             SwitchListTile(
@@ -71,7 +79,7 @@ class SettingsSheet extends ConsumerWidget {
                 onToggleAxisLegends();
                 Navigator.of(context).pop();
               },
-              secondary: const Icon(Icons.label_outline),
+              secondary: const Icon(Icons.label_outline, size: 22),
               title: Text(l10n.settingsShowAxisLegends),
             ),
             if (minimal != null && onToggleMinimal != null)
@@ -81,18 +89,20 @@ class SettingsSheet extends ConsumerWidget {
                   onToggleMinimal!();
                   Navigator.of(context).pop();
                 },
-                secondary: const Icon(Icons.filter_b_and_w),
+                secondary: const Icon(Icons.filter_b_and_w, size: 22),
                 title: Text(l10n.settingsMinimalMode),
               ),
             ListTile(
-              leading: const Icon(Icons.language),
+              leading: const Icon(Icons.language, size: 22),
+              minLeadingWidth: 32,
               title: Text(l10n.settingsLanguage),
               subtitle: Text(_getLanguageLabel(currentLocale, l10n)),
               onTap: () => _showLanguageDialog(context, ref, l10n),
             ),
-            const Divider(),
+            const Divider(height: 24),
             const ListTile(
-              leading: Icon(Icons.grid_view_rounded),
+              leading: Icon(Icons.grid_view_rounded, size: 22),
+              minLeadingWidth: 32,
               title: Text('Treemap · Layout'),
               subtitle: Text('Ajusta proporcionalidad y densidad visual'),
             ),
@@ -145,9 +155,10 @@ class SettingsSheet extends ConsumerWidget {
               onChanged: (v) => ref.read(uiPrefsControllerProvider.notifier).setPadding(v),
             ),
             if (onResetToDemo != null) ...[
-              const Divider(),
+              const Divider(height: 24),
               ListTile(
-                leading: const Icon(Icons.refresh, color: Colors.orange),
+                leading: const Icon(Icons.refresh, size: 22, color: Colors.orange),
+                minLeadingWidth: 32,
                 title: Text(l10n.settingsResetDemo),
                 subtitle: Text(l10n.settingsResetDemoSubtitle),
                 onTap: () {
@@ -175,11 +186,11 @@ class SettingsSheet extends ConsumerWidget {
                 },
               ),
             ],
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 

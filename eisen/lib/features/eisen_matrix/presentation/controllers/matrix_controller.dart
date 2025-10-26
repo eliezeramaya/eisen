@@ -39,6 +39,8 @@ class MatrixState {
   final bool showAxisLegends;
   final bool minimal;
   final int version; // increments on task list mutations to help .select
+  // Increments when layout configuration changes to force recompute/refresh
+  final int layoutVersion;
 
   const MatrixState({
     required this.tasks,
@@ -51,6 +53,7 @@ class MatrixState {
     this.minimal = false,
     this.version = 0,
     this.presentQuadrant,
+    this.layoutVersion = 0,
   });
 
   MatrixState copyWith({
@@ -64,6 +67,7 @@ class MatrixState {
     bool? showAxisLegends,
     bool? minimal,
     int? version,
+    int? layoutVersion,
   }) =>
       MatrixState(
         tasks: tasks ?? this.tasks,
@@ -76,6 +80,7 @@ class MatrixState {
         showAxisLegends: showAxisLegends ?? this.showAxisLegends,
         minimal: minimal ?? this.minimal,
         version: version ?? this.version,
+        layoutVersion: layoutVersion ?? this.layoutVersion,
       );
 }
 
@@ -96,7 +101,7 @@ class MatrixController extends Notifier<MatrixState> {
   late final CreateTaskUseCase _createTaskUseCase;
   late final UpdateTaskUseCase _updateTaskUseCase;
   late final DeleteTaskUseCase _deleteTaskUseCase;
-  late final ComputeLayoutUseCase _computeLayoutUseCase;
+  late ComputeLayoutUseCase _computeLayoutUseCase;
   late final SuggestTopSpotsUseCase _suggestTopSpotsUseCase;
   late final ComputeReorderDeltaUseCase _computeReorderDeltaUseCase;
   
@@ -115,6 +120,24 @@ class MatrixController extends Notifier<MatrixState> {
     _deleteTaskUseCase = DeleteTaskUseCase();
     final cfg = ref.read(layoutConfigProvider);
     _computeLayoutUseCase = ComputeLayoutUseCase(cache: _cache, bandit: _bandit, hybridConfig: cfg);
+
+    // Listen to UI prefs for layout-related changes and bump layoutVersion + reconfigure
+    ref.listen<UiPrefsData>(uiPrefsProvider, (prev, next) {
+      if (prev == null) return;
+      final changed =
+          prev.topKPerQuadrant != next.topKPerQuadrant ||
+          prev.gamma != next.gamma ||
+          prev.minAreaNormalized != next.minAreaNormalized ||
+          prev.quadrantPadding != next.quadrantPadding;
+      if (changed) {
+        final newCfg = ref.read(layoutConfigProvider);
+        _computeLayoutUseCase = ComputeLayoutUseCase(cache: _cache, bandit: _bandit, hybridConfig: newCfg);
+        // Invalidate all quadrants to ensure fresh layout with new config
+        _computeLayoutUseCase.invalidate();
+        // Bump layout version to notify UI
+        state = state.copyWith(layoutVersion: state.layoutVersion + 1);
+      }
+    });
     _suggestTopSpotsUseCase = SuggestTopSpotsUseCase(_bandit);
     _computeReorderDeltaUseCase = ComputeReorderDeltaUseCase(_cache);
     
@@ -184,7 +207,9 @@ class MatrixController extends Notifier<MatrixState> {
   }
 
   Future<void> _saveUi() async {
-    final data = UiPrefsData(
+    // Preserve existing layout-related fields when saving basic toggles.
+    final prev = await _ui.load();
+    final data = prev.copyWith(
       themeMode: state.themeMode,
       compact: state.compact,
       showAxisLegends: state.showAxisLegends,

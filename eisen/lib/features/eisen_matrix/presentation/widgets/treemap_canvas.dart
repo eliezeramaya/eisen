@@ -62,6 +62,14 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
   double _t = 1.0;
   Map<String, Rect> _prevRects01 = {};
   Map<String, Rect> _nextRects01 = {};
+  // Stable rect memo per task id (normalized 0..1). Updated on commit of transitions
+  final Map<String, Rect> _lastStableRectById = {};
+  // Fade-out states for removed tiles
+  final Map<String, _OutroState> _pendingOutros = {};
+  // Track ids that are appearing (for 0->1 alpha ramp)
+  final Set<String> _appearingIds = <String>{};
+  // Bump to force painter repaint when outros advance without layout animation
+  int _outrosVersion = 0;
   final _inlineController = TextEditingController();
   final _inlineFocus = FocusNode();
   late final AnimationController _pulse;
@@ -76,6 +84,18 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
     _anim = AnimationController(vsync: this, duration: AnimTokens.layout)
       ..addListener(() {
         setState(() => _t = _anim.value);
+      })
+      ..addStatusListener((s) {
+        if (s == AnimationStatus.completed) {
+          // Commit next rects as new stable positions
+          for (final e in _nextRects01.entries) {
+            _lastStableRectById[e.key] = e.value;
+          }
+          // GC stale
+          final alive = _nextRects01.keys.toSet();
+          _lastStableRectById.removeWhere((id, _) => !alive.contains(id));
+          _appearingIds.clear();
+        }
       });
     _pulse = AnimationController(vsync: this, duration: AnimTokens.pulse)
       ..addListener(() {
@@ -89,6 +109,10 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
     // Initialize next rects with initial layout
     _nextRects01 = _rectMap(widget.layout);
     _t = 1.0;
+    // Initialize stable memo on first mount
+    _lastStableRectById
+      ..clear()
+      ..addAll(_nextRects01);
   }
 
   @override
@@ -96,18 +120,74 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.layout, widget.layout)) {
       final newRects = _rectMap(widget.layout);
+
       if (_nextRects01.isEmpty) {
+        // First layout: no animation. Commit as stable directly.
         _nextRects01 = newRects;
+        _lastStableRectById
+          ..clear()
+          ..addAll(newRects);
+        _appearingIds.clear();
         _t = 1.0;
       } else {
-        _prevRects01 = _nextRects01;
-        _nextRects01 = newRects;
+        // Build interpolation maps using last stable rects when possible.
+        final fromRects = <String, Rect>{};
+        final toRects = <String, Rect>{};
+        _appearingIds.clear();
+
+        // Appearing/updated ids (present in next)
+        for (final entry in newRects.entries) {
+          final id = entry.key;
+          final toR = entry.value;
+          final fromR = _lastStableRectById[id] ?? _prevRects01[id];
+          if (fromR != null) {
+            fromRects[id] = fromR;
+          } else {
+            // Seed around target for smooth grow-in
+            fromRects[id] = _seedFromTarget(toR, seedScale: 0.85);
+            _appearingIds.add(id);
+          }
+          toRects[id] = toR;
+        }
+
+        // Removed ids: present before or as stable but not in next
+        final prevIds = {..._prevRects01.keys, ..._lastStableRectById.keys};
+        final removed = <String>{
+          for (final id in prevIds)
+            if (!newRects.containsKey(id)) id,
+        };
+        if (removed.isNotEmpty) {
+          // Create fast fade-out outros using last stable geometry, color by quadrant from old layout if available
+          final oldById = {for (final tr in oldWidget.layout) tr.task.id: tr};
+          final now = DateTime.now();
+          for (final id in removed) {
+            final r = _lastStableRectById[id] ?? _prevRects01[id];
+            if (r == null) continue;
+            final tr = oldById[id];
+            final q = tr?.task.quadrant;
+            _pendingOutros[id] = _OutroState(
+              rect: r,
+              quadrant: q,
+              startedAt: now,
+              duration: const Duration(milliseconds: 150),
+            );
+          }
+          // Ensure painter repaints outros even if no anim would run
+          _outrosVersion++;
+        }
+
+        _prevRects01 = fromRects;
+        _nextRects01 = toRects;
+
         // Restart animation
         _anim.stop();
         _anim.forward(from: 0);
       }
       // New layout list provided -> bump layout version to invalidate path cache
       _layoutVersion++;
+      // Prune stable rects for ids no longer present
+      final alive = newRects.keys.toSet();
+      _lastStableRectById.removeWhere((id, _) => !alive.contains(id));
     }
     if (oldWidget.inlineEditId != widget.inlineEditId) {
         if (widget.inlineEditId != null) {
@@ -137,6 +217,16 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
     _inlineController.dispose();
     _inlineFocus.dispose();
     super.dispose();
+  }
+
+  // Create a seed rect centered on target for new/returning items
+  Rect _seedFromTarget(Rect to, {double seedScale = 0.85}) {
+    final s = seedScale.clamp(0.2, 1.0);
+    final w = to.width * s;
+    final h = to.height * s;
+    final cx = to.left + to.width * 0.5;
+    final cy = to.top + to.height * 0.5;
+    return Rect.fromLTWH(cx - w * 0.5, cy - h * 0.5, w, h);
   }
 
   @override
@@ -345,6 +435,10 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                     suggested: widget.suggestedIds,
                     layoutVersion: _layoutVersion,
                     selectedId: widget.selectedId,
+                    appearingIds: _appearingIds,
+                    outros: _pendingOutros,
+                    outrosVersion: _outrosVersion,
+                    outlineColor: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: widget.minimal ? 0.22 : 0.28),
                   ),
                   isComplex: true,
                   willChange: true,
@@ -652,6 +746,10 @@ class _TreemapPainter extends CustomPainter {
   final Set<String>? suggested;
   final int layoutVersion;
   final String? selectedId;
+  final Set<String> appearingIds;
+  final Map<String, _OutroState> outros;
+  final int outrosVersion;
+  final Color outlineColor;
   
   /// Tile path cache for performance optimization.
   /// 
@@ -684,6 +782,10 @@ class _TreemapPainter extends CustomPainter {
     this.suggested,
     required this.layoutVersion,
     this.selectedId,
+    this.appearingIds = const <String>{},
+    this.outros = const <String, _OutroState>{},
+    this.outrosVersion = 0,
+    required this.outlineColor,
   });
 
   @override
@@ -695,7 +797,7 @@ class _TreemapPainter extends CustomPainter {
     final centerLine = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1
-      ..color = minimal ? Colors.black.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.08);
+      ..color = outlineColor;
     final halfW = size.width / 2;
     final halfH = size.height / 2;
     // Vertical center line
@@ -855,15 +957,17 @@ class _TreemapPainter extends CustomPainter {
       drawRect = _snapRect(drawRect.deflate(safeGap));
       // Fill + Border (guarded for debug vs. normal styling)
       final rr = RRect.fromRectAndRadius(drawRect, const Radius.circular(12));
-      // Use conservative alphas for production; reserve higher alpha for ephemeral debug builds
-      final fillAlpha = (debugTreemap && !minimal) ? 0.28 : (minimal ? 0.25 : 0.18);
+      // Base alpha tuned for theme; scale by appear factor if this is a new tile
+      final baseAlpha = (debugTreemap && !minimal) ? 0.28 : (minimal ? 0.25 : 0.18);
+      final appearFactor = appearingIds.contains(tr.task.id) ? t.clamp(0.0, 1.0) : 1.0;
+      final fillAlpha = baseAlpha * appearFactor;
       paint
         ..style = PaintingStyle.fill
         ..color = color.withValues(alpha: fillAlpha);
       canvas.drawRRect(rr, paint);
       paint
         ..style = PaintingStyle.stroke
-        ..color = minimal ? Colors.black.withValues(alpha: 0.20) : Colors.white.withValues(alpha: 0.18)
+        ..color = (minimal ? Colors.black.withValues(alpha: 0.20) : Colors.white.withValues(alpha: 0.18)).withValues(alpha: (minimal ? 0.20 : 0.18) * appearFactor)
         ..strokeWidth = (debugTreemap && !minimal) ? 2.0 : 1.0;
       canvas.drawRRect(rr, paint);
 
@@ -947,6 +1051,31 @@ class _TreemapPainter extends CustomPainter {
       final rr = ratio < 1 ? 1 / (ratio == 0.0 ? 1.0 : ratio) : ratio;
       TreemapDebugOverlay.labelTile(canvas, drawRect, tr.task.id, area, rr);
     }
+
+    // Draw fade-out outros on top
+    if (outros.isNotEmpty) {
+      final now = DateTime.now();
+      for (final entry in outros.entries) {
+        final o = entry.value;
+        final prog = o.progress(now);
+        if (prog >= 1.0) continue;
+        final alpha = (1.0 - prog).clamp(0.0, 1.0);
+        final r0 = Rect.fromLTWH(o.rect.left * size.width, o.rect.top * size.height, o.rect.width * size.width, o.rect.height * size.height);
+        final r = _snapRect(r0);
+        final rr = RRect.fromRectAndRadius(r, const Radius.circular(12));
+        final baseColor = o.quadrant == null ? (minimal ? Colors.black : Colors.white) : _byQuadrant(o.quadrant!);
+        final baseAlpha = (debugTreemap && !minimal) ? 0.28 : (minimal ? 0.25 : 0.18);
+        final fill = Paint()
+          ..style = PaintingStyle.fill
+          ..color = baseColor.withValues(alpha: baseAlpha * alpha);
+        canvas.drawRRect(rr, fill);
+        final stroke = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = (debugTreemap && !minimal) ? 2.0 : 1.0
+          ..color = (minimal ? Colors.black.withValues(alpha: 0.20) : Colors.white.withValues(alpha: 0.18)).withValues(alpha: (minimal ? 0.20 : 0.18) * alpha);
+        canvas.drawRRect(rr, stroke);
+      }
+    }
     }
 
     // Debug: visualize inferred shelves after tiles are drawn
@@ -997,7 +1126,11 @@ class _TreemapPainter extends CustomPainter {
         oldDelegate.layoutVersion != layoutVersion ||
         oldDelegate.tokens != tokens ||
         oldDelegate.minimal != minimal ||
-        oldDelegate.zoom != zoom;
+        oldDelegate.zoom != zoom ||
+        oldDelegate.outrosVersion != outrosVersion ||
+        oldDelegate.outros.length != outros.length ||
+        oldDelegate.appearingIds.length != appearingIds.length ||
+        oldDelegate.outlineColor != outlineColor;
 
     // Invalidate path cache on layout version or key visual changes.
     if (oldDelegate.layoutVersion != layoutVersion ||
@@ -1158,6 +1291,21 @@ class _TreemapPainter extends CustomPainter {
     return tp;
   }
 
+}
+
+class _OutroState {
+  final Rect rect; // normalized 0..1
+  final Quadrant? quadrant;
+  final DateTime startedAt;
+  final Duration duration;
+  _OutroState({required this.rect, required this.quadrant, required this.startedAt, required this.duration});
+  double progress(DateTime now) {
+    final dt = now.difference(startedAt).inMilliseconds;
+    final total = duration.inMilliseconds;
+    if (total <= 0) return 1.0;
+    final t = dt / total;
+    return t.clamp(0.0, 1.0);
+  }
 }
 
 // Top-level helper: reorder paint z-order so suggested ids in tie groups paint last per quadrant.

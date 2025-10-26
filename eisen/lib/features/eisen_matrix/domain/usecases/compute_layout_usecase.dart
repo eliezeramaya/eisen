@@ -95,10 +95,13 @@ class ComputeLayoutUseCase {
 
     // Hybrid engine bypasses incremental logic for simplicity and consistency
     if (_hybridCfg != null) {
+      // Merge prefs-configured minimum area with viewport-derived threshold: take the max
+      final cfgMin = _hybridCfg!.minAreaNormalized;
+      final effMin = (minArea01 == null) ? cfgMin : (minArea01 > cfgMin ? minArea01 : cfgMin);
       if (zoom != null) {
-        return _computeHybrid(tasks, only: zoom, minArea01: minArea01, hash: hash, viewport: viewport);
+        return _computeHybrid(tasks, only: zoom, minArea01: effMin, hash: hash, viewport: viewport);
       }
-      return _computeHybrid(tasks, minArea01: minArea01, hash: hash, viewport: viewport);
+      return _computeHybrid(tasks, minArea01: effMin, hash: hash, viewport: viewport);
     }
 
     // Original engine paths

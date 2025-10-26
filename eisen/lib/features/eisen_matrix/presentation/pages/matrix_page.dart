@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/rendering.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +15,11 @@ import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet.
 import 'package:eisen/features/eisen_matrix/presentation/pages/task_editor_page.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/stats_page.dart';
+import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/quadrant_empty_placeholder.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/fab_add_task.dart';
+import 'package:eisen/features/onboarding/domain/onboarding_provider.dart';
+import 'package:eisen/features/onboarding/presentation/fab_coachmark.dart';
 
 class MatrixPage extends ConsumerStatefulWidget {
   const MatrixPage({super.key});
@@ -25,10 +31,23 @@ class MatrixPage extends ConsumerStatefulWidget {
 class _MatrixPageState extends ConsumerState<MatrixPage> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   String? _inlineEditId;
+  final _scrollController = ScrollController();
+  bool _fabVisible = true;
   @override
   void initState() {
     super.initState();
     Future.microtask(() => ref.read(matrixControllerProvider.notifier).load());
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final dir = _scrollController.position.userScrollDirection;
+    if (dir == ScrollDirection.reverse && _fabVisible) {
+      setState(() => _fabVisible = false);
+    } else if (dir == ScrollDirection.forward && !_fabVisible) {
+      setState(() => _fabVisible = true);
+    }
   }
 
   @override
@@ -76,7 +95,9 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           onOpenSettings: () => showModalBottomSheet(
             context: context,
             showDragHandle: true,
+            isScrollControlled: true,
             useSafeArea: true,
+            backgroundColor: Colors.transparent,
             builder: (_) => SettingsSheet(
               onToggleTheme: ctrl.toggleTheme,
               onToggleDensity: ctrl.toggleCompact,
@@ -223,56 +244,57 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                             ctrl.setZoom(zoom == q ? null : q);
                                             ctrl.setPresentQuadrant(q);
                                           },
-                                          onEditTask: (id) {
-                                            final idx = tasks.indexWhere((t) => t.id == id);
-                                            if (idx == -1) return;
-                                            final task = tasks[idx];
-                                            Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditorPage(task: task)));
-                                          },
-                                          onMarkDone: (id) {
-                                            ctrl.markTaskDone(id);
-                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('\u00a1Tarea completada!'), duration: Duration(milliseconds: 900)));
-                                          },
                                         ),
                                       ),
-                                      if (dynamicLayout.isEmpty)
-                                        Center(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.grid_view_rounded, size: 40, color: minimal ? Colors.black54 : Colors.white70),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                query.isEmpty ? 'No hay tareas para mostrar' : 'Sin resultados para "${query}"',
-                                                style: TextStyle(
-                                                  color: minimal ? Colors.black87 : Colors.white,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 12),
-                                              FilledButton.icon(
-                                                onPressed: () {
-                                                  final q = zoom ?? Quadrant.q2;
-                                                  final id = ctrl.createTask(quadrant: q);
-                                                  ctrl.select(id);
-                                                  setState(() => _inlineEditId = id);
-                                                },
-                                                icon: const Icon(Icons.add),
-                                                label: Text(l10n.newTask),
-                                              ),
-                                            ],
+                                      if (dynamicLayout.isEmpty) ...[
+                                        // Quadrant-specific placeholders to guide first use
+                                        Positioned(
+                                          left: 0,
+                                          top: 0,
+                                          width: size.width / 2,
+                                          height: size.height / 2,
+                                          child: const QuadrantEmptyPlaceholder(
+                                            title: 'Q1 · Urgente e Importante',
+                                            hint: 'No tienes tareas aquí. Usa “Agregar tarea”.',
                                           ),
                                         ),
+                                        Positioned(
+                                          left: size.width / 2,
+                                          top: 0,
+                                          width: size.width / 2,
+                                          height: size.height / 2,
+                                          child: const QuadrantEmptyPlaceholder(
+                                            title: 'Q2 · No Urgente e Importante',
+                                            hint: 'Planifica aquí objetivos clave.',
+                                          ),
+                                        ),
+                                        Positioned(
+                                          left: 0,
+                                          top: size.height / 2,
+                                          width: size.width / 2,
+                                          height: size.height / 2,
+                                          child: const QuadrantEmptyPlaceholder(
+                                            title: 'Q3 · Urgente y No Importante',
+                                            hint: 'Delegables o de baja prioridad.',
+                                          ),
+                                        ),
+                                        Positioned(
+                                          left: size.width / 2,
+                                          top: size.height / 2,
+                                          width: size.width / 2,
+                                          height: size.height / 2,
+                                          child: const QuadrantEmptyPlaceholder(
+                                            title: 'Q4 · No Urgente y No Importante',
+                                            hint: 'Evita o elimina distracciones.',
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   );
                                 },
                               ),
                             ),
-                            // Quick add buttons por cuadrante
-                            Positioned(left: 12, top: 56, child: _QuickAddButton(label: 'Q1', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q1, ctrl))),
-                            Positioned(right: 12, top: 56, child: _QuickAddButton(label: 'Q2', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q2, ctrl))),
-                            Positioned(left: 12, bottom: 56, child: _QuickAddButton(label: 'Q3', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q3, ctrl))),
-                            Positioned(right: 12, bottom: 56, child: _QuickAddButton(label: 'Q4', minimal: minimal, onTap: () => _quickAdd(context, Quadrant.q4, ctrl))),
+                            // Removed quadrant quick-add buttons; using global FAB instead
                           ],
                         ),
                       ),
@@ -289,6 +311,10 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         task: _selectedTask,
         onChanged: (t) => ctrl.updateTask(t.id, (_) => t),
         onDelete: () => ctrl.deleteTask(_selectedTask.id),
+        onComplete: () {
+          ctrl.markTaskDone(_selectedTask.id);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('¡Tarea completada!'), duration: Duration(milliseconds: 900)));
+        },
       ),
       bottomNavigationBar: _BottomActionBar(
         onNew: () {
@@ -310,8 +336,6 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             SnackBar(content: Text('Tarea creada en ${q.name.toUpperCase()}'), duration: const Duration(seconds: 3)),
           );
         },
-        onToggleDensity: ctrl.toggleCompact,
-        compact: compact,
         minimap: Minimap(
           zoom: zoom,
           minimal: minimal,
@@ -321,6 +345,17 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             ctrl.setZoom(null);
             ctrl.select(null);
             ctrl.setQuery('');
+          },
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endContained,
+      floatingActionButton: FabCoachmark(
+        show: ref.watch(onboardingProvider.select((s) => s.showFabCoachmark)),
+        child: FabAddTask(
+          visible: _fabVisible,
+          onPressed: () {
+            ref.read(onboardingProvider.notifier).dismissFabCoachmark();
+            _openAddTaskSheet(context);
           },
         ),
       ),
@@ -349,34 +384,15 @@ class _ProgressBanner extends StatelessWidget {
   }
 }
 
-class _QuickAddButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-  final bool minimal;
-  const _QuickAddButton({required this.label, required this.onTap, this.minimal = false});
+// Quick quadrant add removed in favor of global FAB
 
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton.icon(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: minimal ? Colors.white.withValues(alpha: 0.85) : Colors.black.withValues(alpha: 0.35),
-        foregroundColor: minimal ? Colors.black : Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        visualDensity: VisualDensity.compact,
-      ),
-      onPressed: onTap,
-      icon: const Icon(Icons.add, size: 16),
-      label: Text(label),
-    );
-  }
-}
-
-void _quickAdd(BuildContext context, Quadrant q, MatrixController ctrl) {
-  final id = ctrl.createTask(quadrant: q);
-  ctrl.select(id);
-  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text('Tarea creada en ${q.name.toUpperCase()}'), duration: const Duration(seconds: 3)),
+Future<void> _openAddTaskSheet(BuildContext context) async {
+  await showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => const AddTaskSheet(),
   );
 }
 
@@ -386,9 +402,11 @@ class _TopAxisLegends extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final cs = Theme.of(context).colorScheme;
     final style = Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: minimal ? Colors.black : Colors.white.withValues(alpha: 0.85),
+          color: cs.onSurfaceVariant,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
         );
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -408,9 +426,11 @@ class _LeftAxisLegends extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final cs = Theme.of(context).colorScheme;
     final style = Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: minimal ? Colors.black : Colors.white.withValues(alpha: 0.85),
+          color: cs.onSurfaceVariant,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
         );
     return SizedBox(
       width: 64,
@@ -435,26 +455,18 @@ class _LeftAxisLegends extends StatelessWidget {
 class _BottomActionBar extends StatelessWidget {
   final VoidCallback onNew;
   final void Function(Quadrant q) onNewInQuadrant;
-  final VoidCallback onToggleDensity;
-  final bool compact;
   final Widget? minimap;
 
   const _BottomActionBar({
     required this.onNew,
     required this.onNewInQuadrant,
-    required this.onToggleDensity,
-    required this.compact,
     this.minimap,
   });
 
   @override
   Widget build(BuildContext context) {
     final isEs = Localizations.localeOf(context).languageCode == 'es';
-    final densityLabel = isEs
-        ? (compact ? 'Cómodo' : 'Compacto')
-        : (compact ? 'Comfortable' : 'Compact');
-    final densityIcon = compact ? Icons.view_comfortable : Icons.view_compact;
-    
+
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -472,74 +484,8 @@ class _BottomActionBar extends StatelessWidget {
             final tight = constraints.maxWidth < 400;
             final hideMinimap = constraints.maxWidth < 560;
 
-            final densityWidget = tight
-                ? IconButton(
-                    onPressed: onToggleDensity,
-                    tooltip: densityLabel,
-                    icon: Icon(densityIcon),
-                  )
-                : TextButton.icon(
-                    onPressed: onToggleDensity,
-                    icon: Icon(densityIcon),
-                    label: Text(densityLabel),
-                  );
-
-            final newTaskCluster = MenuAnchor(
-              builder: (context, controller, child) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    tight
-                        ? IconButton(
-                            onPressed: onNew,
-                            tooltip: AppLocalizations.of(context).newTask,
-                            icon: const Icon(Icons.add),
-                          )
-                        : FilledButton.icon(
-                            onPressed: onNew,
-                            icon: const Icon(Icons.add),
-                            label: Text(AppLocalizations.of(context).newTask),
-                          ),
-                    IconButton(
-                      onPressed: () => controller.isOpen ? controller.close() : controller.open(),
-                      tooltip: isEs ? 'Elegir cuadrante' : 'Choose quadrant',
-                      icon: const Icon(Icons.arrow_drop_down),
-                    ),
-                  ],
-                );
-              },
-              menuChildren: [
-                MenuItemButton(
-                  onPressed: onNew,
-                  leadingIcon: const Icon(Icons.add),
-                  child: Text(isEs ? 'Rápido (cuadrante actual)' : 'Quick (current quadrant)'),
-                ),
-                MenuItemButton(
-                  onPressed: () => onNewInQuadrant(Quadrant.q1),
-                  leadingIcon: const Icon(Icons.filter_1),
-                  child: const Text('Q1'),
-                ),
-                MenuItemButton(
-                  onPressed: () => onNewInQuadrant(Quadrant.q2),
-                  leadingIcon: const Icon(Icons.filter_2),
-                  child: const Text('Q2'),
-                ),
-                MenuItemButton(
-                  onPressed: () => onNewInQuadrant(Quadrant.q3),
-                  leadingIcon: const Icon(Icons.filter_3),
-                  child: const Text('Q3'),
-                ),
-                MenuItemButton(
-                  onPressed: () => onNewInQuadrant(Quadrant.q4),
-                  leadingIcon: const Icon(Icons.filter_4),
-                  child: const Text('Q4'),
-                ),
-              ],
-            );
-
             final children = <Widget>[
-              densityWidget,
-              newTaskCluster,
+              // New task quick actions removed; use global FAB instead
               if (!hideMinimap && minimap != null) ...[
                 const SizedBox(width: 12),
                 minimap!,
