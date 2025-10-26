@@ -34,7 +34,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
       ),
       child: SafeArea(
         top: false,
-        child: Padding(
+        child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(16, 12, 16, bottom + 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,

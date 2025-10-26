@@ -17,9 +17,12 @@ import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/stats_page.dart';
 import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/quadrant_empty_placeholder.dart';
+import 'package:eisen/core/platform/platform_utils.dart';
+import 'package:go_router/go_router.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/fab_add_task.dart';
 import 'package:eisen/features/onboarding/domain/onboarding_provider.dart';
 import 'package:eisen/features/onboarding/presentation/fab_coachmark.dart';
+
 
 class MatrixPage extends ConsumerStatefulWidget {
   const MatrixPage({super.key});
@@ -92,33 +95,39 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             ctrl.setQuery('');
           },
           canExitZoom: zoom != null,
-          onOpenSettings: () => showModalBottomSheet(
-            context: context,
-            showDragHandle: true,
-            isScrollControlled: true,
-            useSafeArea: true,
-            backgroundColor: Colors.transparent,
-            builder: (_) => SettingsSheet(
-              onToggleTheme: ctrl.toggleTheme,
-              onToggleDensity: ctrl.toggleCompact,
-              compact: compact,
-              showAxisLegends: showAxisLegends,
-              onToggleAxisLegends: ctrl.toggleAxisLegends,
-              minimal: minimal,
-              onToggleMinimal: ctrl.toggleMinimal,
-              onResetToDemo: () async {
-                await ctrl.resetToDemo();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('\u2728 Tareas demo restauradas (20 tareas)'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                }
-              },
-            ),
-          ),
+          onOpenSettings: () {
+            if (isDesktop) {
+              context.push('/settings');
+            } else {
+              showModalBottomSheet(
+                context: context,
+                showDragHandle: true,
+                isScrollControlled: true,
+                useSafeArea: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => SettingsSheet(
+                  onToggleTheme: ctrl.toggleTheme,
+                  onToggleDensity: ctrl.toggleCompact,
+                  compact: compact,
+                  showAxisLegends: showAxisLegends,
+                  onToggleAxisLegends: ctrl.toggleAxisLegends,
+                  minimal: minimal,
+                  onToggleMinimal: ctrl.toggleMinimal,
+                  onResetToDemo: () async {
+                    await ctrl.resetToDemo();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('\u2728 Tareas demo restauradas (20 tareas)'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              );
+            }
+          },
         ),
       ),
       body: SafeArea(
@@ -318,14 +327,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
       ),
       bottomNavigationBar: _BottomActionBar(
         onNew: () {
-          final q = zoom ?? Quadrant.q2;
-          final id = ctrl.createTask(quadrant: q);
-          ctrl.select(id);
-          setState(() => _inlineEditId = id);
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Tarea creada en ${q.name.toUpperCase()}'), duration: const Duration(seconds: 3)),
-          );
+          _openAddTaskSheet(context);
         },
         onNewInQuadrant: (q) {
           final id = ctrl.createTask(quadrant: q);
@@ -399,6 +401,7 @@ Future<void> _openAddTaskSheet(BuildContext context) async {
 class _TopAxisLegends extends StatelessWidget {
   final bool minimal;
   const _TopAxisLegends({this.minimal = false});
+  static const double _kAxisHeaderHeight = 40.0;
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -408,8 +411,8 @@ class _TopAxisLegends extends StatelessWidget {
           fontWeight: FontWeight.w600,
           letterSpacing: 0.2,
         );
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+    return SizedBox(
+      height: _kAxisHeaderHeight,
       child: Row(
         children: [
           Expanded(child: Center(child: Text(l10n.axisUrgent, style: style))),
@@ -435,17 +438,30 @@ class _LeftAxisLegends extends StatelessWidget {
     return SizedBox(
       width: 64,
       child: Padding(
-        padding: const EdgeInsets.only(right: 8, top: 20),
-        // Scale down the legends if vertical space is tight to avoid overflows on small screens
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              RotatedBox(quarterTurns: 3, child: Text(l10n.axisImportant, style: style)),
-              RotatedBox(quarterTurns: 3, child: Text(l10n.axisNotImportant, style: style)),
-            ],
-          ),
+        padding: const EdgeInsets.only(right: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Reserve the same vertical space as the top axis headers
+            const SizedBox(height: _TopAxisLegends._kAxisHeaderHeight),
+            // Two equal halves for vertical centering within each quadrant
+            Expanded(
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: RotatedBox(quarterTurns: 3, child: Text(l10n.axisImportant, style: style)),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: RotatedBox(quarterTurns: 3, child: Text(l10n.axisNotImportant, style: style)),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -465,8 +481,6 @@ class _BottomActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isEs = Localizations.localeOf(context).languageCode == 'es';
-
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -485,7 +499,6 @@ class _BottomActionBar extends StatelessWidget {
             final hideMinimap = constraints.maxWidth < 560;
 
             final children = <Widget>[
-              // New task quick actions removed; use global FAB instead
               if (!hideMinimap && minimap != null) ...[
                 const SizedBox(width: 12),
                 minimap!,

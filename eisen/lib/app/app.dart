@@ -5,6 +5,10 @@ import '../core/theme/app_theme.dart';
 import '../core/providers/locale_provider.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'router.dart';
+import 'package:flutter/services.dart';
+import 'package:eisen/core/platform/platform_utils.dart';
+import 'package:eisen/core/intents/open_settings_intent.dart';
+import 'package:go_router/go_router.dart';
 import 'package:device_preview/device_preview.dart';
 
 class EisenApp extends ConsumerWidget {
@@ -23,7 +27,31 @@ class EisenApp extends ConsumerWidget {
 
     return MaterialApp.router(
       locale: userLocale ?? DevicePreview.locale(context),
-      builder: DevicePreview.appBuilder,
+      builder: (ctx, child) {
+        final wrapped = Shortcuts(
+          shortcuts: const <LogicalKeySet, Intent>{
+            // macOS
+            LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.comma): OpenSettingsIntent(),
+            // Windows/Linux
+            LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.comma): OpenSettingsIntent(),
+          },
+          child: Actions(
+            actions: <Type, Action<Intent>>{
+              OpenSettingsIntent: CallbackAction<OpenSettingsIntent>(
+                onInvoke: (_) {
+                  if (isDesktop) {
+                    // Use go_router context to navigate
+                    GoRouter.of(ctx).push('/settings');
+                  }
+                  return null;
+                },
+              ),
+            },
+            child: FocusTraversalGroup(child: child ?? const SizedBox.shrink()),
+          ),
+        );
+        return DevicePreview.appBuilder(ctx, wrapped);
+      },
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
       theme: theme,

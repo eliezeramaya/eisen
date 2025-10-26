@@ -32,4 +32,3 @@ class FabAddTask extends StatelessWidget {
     );
   }
 }
-

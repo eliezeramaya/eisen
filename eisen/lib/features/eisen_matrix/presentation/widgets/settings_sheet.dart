@@ -55,6 +55,12 @@ class SettingsSheet extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 12),
+              const ListTile(
+                leading: Icon(Icons.palette_outlined, size: 22),
+                minLeadingWidth: 32,
+                title: Text('Estilo visual'),
+                subtitle: Text('Tema, densidad y leyendas de ejes'),
+              ),
               ListTile(
                 leading: const Icon(Icons.brightness_6, size: 22),
                 minLeadingWidth: 32,
