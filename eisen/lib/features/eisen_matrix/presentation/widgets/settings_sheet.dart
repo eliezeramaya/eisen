@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/core/providers/locale_provider.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
 
 class SettingsSheet extends ConsumerWidget {
   final VoidCallback onToggleTheme;
@@ -29,11 +30,13 @@ class SettingsSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final currentLocale = ref.watch(localeProvider);
+    final prefs = ref.watch(uiPrefsControllerProvider);
     
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -86,6 +89,60 @@ class SettingsSheet extends ConsumerWidget {
               title: Text(l10n.settingsLanguage),
               subtitle: Text(_getLanguageLabel(currentLocale, l10n)),
               onTap: () => _showLanguageDialog(context, ref, l10n),
+            ),
+            const Divider(),
+            const ListTile(
+              leading: Icon(Icons.grid_view_rounded),
+              title: Text('Treemap · Layout'),
+              subtitle: Text('Ajusta proporcionalidad y densidad visual'),
+            ),
+            _SliderTile<int>(
+              sliderKey: const Key('slider_topk'),
+              label: 'Top-K por cuadrante',
+              value: prefs.topKPerQuadrant,
+              min: 5,
+              max: 60,
+              divisions: 55,
+              helper: 'Más alto = más tareas visibles, menos “+N”.',
+              toDouble: (v) => v.toDouble(),
+              fromDouble: (d) => d.round(),
+              onChanged: (v) => ref.read(uiPrefsControllerProvider.notifier).setTopK(v),
+            ),
+            _SliderTile<double>(
+              sliderKey: const Key('slider_gamma'),
+              label: 'Gamma (suavizado de pesos)',
+              value: prefs.gamma,
+              min: 0.70,
+              max: 1.00,
+              divisions: 30,
+              helper: '0.70 reduce dominantes; 1.00 = lineal.',
+              toDouble: (v) => v,
+              fromDouble: (d) => double.parse(d.toStringAsFixed(2)),
+              onChanged: (v) => ref.read(uiPrefsControllerProvider.notifier).setGamma(v),
+            ),
+            _SliderTile<double>(
+              sliderKey: const Key('slider_min_area'),
+              label: 'Área mínima normalizada',
+              value: prefs.minAreaNormalized,
+              min: 0.00002,
+              max: 0.00020,
+              divisions: 20,
+              helper: 'Más alto = menos micro-tiles, más “+N”.',
+              toDouble: (v) => v,
+              fromDouble: (d) => double.parse(d.toStringAsExponential(5)),
+              onChanged: (v) => ref.read(uiPrefsControllerProvider.notifier).setMinArea(v),
+            ),
+            _SliderTile<double>(
+              sliderKey: const Key('slider_padding'),
+              label: 'Padding interno de cuadrante',
+              value: prefs.quadrantPadding,
+              min: 0.0,
+              max: 0.02,
+              divisions: 20,
+              helper: 'Separación interna para legibilidad.',
+              toDouble: (v) => v,
+              fromDouble: (d) => double.parse(d.toStringAsFixed(3)),
+              onChanged: (v) => ref.read(uiPrefsControllerProvider.notifier).setPadding(v),
             ),
             if (onResetToDemo != null) ...[
               const Divider(),
@@ -182,4 +239,62 @@ class SettingsSheet extends ConsumerWidget {
       ),
     );
   }
+}
+
+// Generic slider tile helper, kept private to this file
+class _SliderTile<T extends num> extends StatelessWidget {
+  final String label;
+  final T value;
+  final double min;
+  final double max;
+  final int divisions;
+  final String helper;
+  final double Function(T) toDouble;
+  final T Function(double) fromDouble;
+  final ValueChanged<T> onChanged;
+  final Key? sliderKey;
+
+  const _SliderTile({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.helper,
+    required this.toDouble,
+    required this.fromDouble,
+    required this.onChanged,
+    this.sliderKey,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final v = toDouble(value);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          title: Text(label),
+          subtitle: Slider(
+            key: sliderKey,
+            value: v.clamp(min, max),
+            min: min,
+            max: max,
+            divisions: divisions,
+            label: _fmt(v),
+            onChanged: (d) => onChanged(fromDouble(d)),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+          child: Text(helper, style: Theme.of(context).textTheme.bodySmall),
+        ),
+      ],
+    );
+  }
+
+  String _fmt(double d) => d >= 1
+      ? d.toStringAsFixed(0)
+      : (d >= 0.01 ? d.toStringAsFixed(2) : d.toStringAsExponential(2));
 }
