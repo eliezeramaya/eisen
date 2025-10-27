@@ -99,9 +99,13 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           onToggleMinimal: ctrl.toggleMinimal,
           showWorkflowPlan: ref.watch(uiPrefsProvider).workflowPlanEnabled,
           onOpenWorkflow: () {
-            final isEs = Localizations.localeOf(context).languageCode == 'es';
-            final msg = isEs ? 'Plan de trabajo (próximamente)' : 'Workflow plan (coming soon)';
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+            if (!ref.read(uiPrefsProvider).workflowPlanEnabled) {
+              final isEs = Localizations.localeOf(context).languageCode == 'es';
+              final msg = isEs ? 'Activa "Workflow plan" en Ajustes' : 'Enable "Workflow plan" in Settings';
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+              return;
+            }
+            context.push('/workflow-plan');
           },
           onOpenStats: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StatsPage())),
           onOpenProfile: () => showModalBottomSheet(

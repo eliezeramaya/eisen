@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/matrix_page.dart';
 import 'package:eisen/features/settings/presentation/settings_page_desktop.dart';
+import 'package:eisen/features/calendar_gantt/presentation/pages/workflow_plan_page.dart';
 
 // Keep a single router instance to avoid route reset on app rebuilds
 final GoRouter _router = GoRouter(
@@ -16,6 +17,13 @@ final GoRouter _router = GoRouter(
       path: '/settings',
       name: 'settings',
       builder: (context, state) => const SettingsPageDesktop(),
+    ),
+    GoRoute(
+      path: '/workflow-plan',
+      name: 'workflow-plan',
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: WorkflowPlanPage(),
+      ),
     ),
   ],
 );
