@@ -8,10 +8,12 @@ class AppToolbar extends StatefulWidget {
   final bool canExitZoom;
   final VoidCallback? onOpenSettings;
   final VoidCallback? onOpenStats;
+  final VoidCallback? onOpenWorkflow;
   final VoidCallback? onOpenProfile;
   final VoidCallback? onToggleMinimal;
   final bool minimal;
   final ThemeMode themeMode;
+  final bool showWorkflowPlan;
   const AppToolbar({
     super.key,
     required this.onToggleTheme,
@@ -21,9 +23,11 @@ class AppToolbar extends StatefulWidget {
     this.canExitZoom = false,
     this.onOpenSettings,
     this.onOpenStats,
+    this.onOpenWorkflow,
     this.onOpenProfile,
     this.onToggleMinimal,
     this.minimal = false,
+    this.showWorkflowPlan = false,
   });
 
   @override
@@ -38,6 +42,7 @@ class _AppToolbarState extends State<AppToolbar> {
     final isEs = Localizations.localeOf(context).languageCode == 'es';
     final fullViewLabel = isEs ? 'Vista completa' : 'Full view';
     final statsLabel = isEs ? 'Estadísticas' : 'Stats';
+    final workflowLabel = isEs ? 'Plan' : 'Workflow';
     final settingsLabel = isEs ? 'Ajustes' : 'Settings';
     final profileLabel = isEs ? 'Mi perfil' : 'My profile';
     final minimalLabel = isEs
@@ -124,6 +129,8 @@ class _AppToolbarState extends State<AppToolbar> {
                   actionButton(onPressed: widget.onExitZoom, icon: Icons.fullscreen_exit, label: fullViewLabel),
                 if (widget.onOpenStats != null)
                   actionButton(onPressed: widget.onOpenStats, icon: Icons.insights, label: statsLabel),
+                if (widget.showWorkflowPlan && widget.onOpenWorkflow != null)
+                  actionButton(onPressed: widget.onOpenWorkflow, icon: Icons.view_timeline, label: workflowLabel),
                 actionButton(
                   onPressed: widget.onToggleTheme,
                   icon: widget.themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,

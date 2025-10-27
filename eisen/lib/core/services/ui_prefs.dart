@@ -25,6 +25,8 @@ class UiPrefsData {
   final String endOfDayTime;      // 'HH:mm' or ''
   final String pomodoroAlert;     // 'sound' | 'vibration' | 'silent'
   final String notificationTone;  // 'default' | 'chime' | 'bell'
+  // Workflow plan (show Gantt-like CTA in toolbar)
+  final bool workflowPlanEnabled;
   // Typography · User text scale (1..5). 3 = default
   final int textScaleLevel;
   const UiPrefsData({
@@ -45,6 +47,7 @@ class UiPrefsData {
     this.endOfDayTime = '',
     this.pomodoroAlert = 'sound',
     this.notificationTone = 'default',
+    this.workflowPlanEnabled = false,
     this.textScaleLevel = 3,
   });
 
@@ -66,6 +69,7 @@ class UiPrefsData {
     String? endOfDayTime,
     String? pomodoroAlert,
     String? notificationTone,
+    bool? workflowPlanEnabled,
     int? textScaleLevel,
   }) => UiPrefsData(
         themeMode: themeMode ?? this.themeMode,
@@ -85,6 +89,7 @@ class UiPrefsData {
         endOfDayTime: endOfDayTime ?? this.endOfDayTime,
         pomodoroAlert: pomodoroAlert ?? this.pomodoroAlert,
         notificationTone: notificationTone ?? this.notificationTone,
+        workflowPlanEnabled: workflowPlanEnabled ?? this.workflowPlanEnabled,
         textScaleLevel: textScaleLevel ?? this.textScaleLevel,
       );
 
@@ -106,6 +111,7 @@ class UiPrefsData {
         'endOfDayTime': endOfDayTime,
         'pomodoroAlert': pomodoroAlert,
         'notificationTone': notificationTone,
+        'workflowPlanEnabled': workflowPlanEnabled,
     'textScaleLevel': textScaleLevel,
       };
 
@@ -138,6 +144,7 @@ class UiPrefsData {
       endOfDayTime: (json['endOfDayTime'] as String?) ?? '',
       pomodoroAlert: (json['pomodoroAlert'] as String?) ?? 'sound',
       notificationTone: (json['notificationTone'] as String?) ?? 'default',
+      workflowPlanEnabled: (json['workflowPlanEnabled'] as bool?) ?? false,
       textScaleLevel: (json['textScaleLevel'] as int?) ?? 3,
     );
   }
@@ -269,6 +276,10 @@ class UiPrefsController extends Notifier<UiPrefsData> {
   }
   Future<void> setNotificationTone(String tone) async {
     state = state.copyWith(notificationTone: tone);
+    await _save();
+  }
+  Future<void> setWorkflowPlanEnabled(bool v) async {
+    state = state.copyWith(workflowPlanEnabled: v);
     await _save();
   }
 

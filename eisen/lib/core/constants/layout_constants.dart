@@ -13,7 +13,7 @@ class LayoutConstants {
   static const double minTileSize = 44.0;
 
   /// Gap between treemap tiles to prevent clipped rounded corners.
-  static const double tileGap = 4.0;
+  static const double tileGap = 3.0;
 
   /// Tile border radius for rounded corners.
   static const double tileBorderRadius = 12.0;

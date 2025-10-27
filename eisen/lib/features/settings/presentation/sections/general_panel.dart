@@ -19,6 +19,9 @@ class GeneralPanel extends ConsumerWidget {
         const SizedBox(height: 24),
         const _SectionHeader(title: 'Notifications', subtitle: 'Recordatorios diarios y alertas'),
         _NotificationsCard(prefs: prefs),
+        const SizedBox(height: 24),
+        const _SectionHeader(title: 'Workflow', subtitle: 'Activa el modo plan de trabajo'),
+        _WorkflowCard(prefs: prefs),
       ],
     );
   }
@@ -192,6 +195,39 @@ class _NotificationsCard extends ConsumerWidget {
   // }
 }
 
+class _WorkflowCard extends ConsumerWidget {
+  final UiPrefsData prefs;
+  const _WorkflowCard({required this.prefs});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ctrl = ref.read(uiPrefsControllerProvider.notifier);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile(
+              title: const Text('Workflow plan'),
+              subtitle: const Text('Muestra un botón con vista tipo Gantt en la barra superior'),
+              value: prefs.workflowPlanEnabled,
+              onChanged: (v) => ctrl.setWorkflowPlanEnabled(v),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Cuando está activo, verás un icono de líneas temporales en el menú superior.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SectionHeader extends StatelessWidget {
   final String title, subtitle;
   const _SectionHeader({super.key, required this.title, required this.subtitle});
@@ -256,4 +292,3 @@ class _TimePickerRow extends StatelessWidget {
     );
   }
 }
-

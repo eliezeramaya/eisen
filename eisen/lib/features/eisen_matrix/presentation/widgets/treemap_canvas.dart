@@ -869,7 +869,7 @@ class _TreemapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..isAntiAlias = true;
-    final double gap = UiTokens.tileMargin; // uniform gap between tiles
+    final double gap = LayoutConstants.tileGap; // uniform gap between tiles
 
     // Always draw subtle quadrant grid (center cross) so the matrix is visible even with no tiles
     final centerLine = Paint()
@@ -1015,7 +1015,7 @@ class _TreemapPainter extends CustomPainter {
       drawRect = _snapRect(drawRect.deflate(safeGap));
       // Single geometry: flat fill + 1dp stroke
       final rr = RRect.fromRectAndRadius(
-        drawRect.deflate(UiTokens.painterDeflateAA),
+        drawRect,
         Radius.circular(UiTokens.tileRadius),
       );
       final fillColor = tileFillColor;
@@ -1047,7 +1047,6 @@ class _TreemapPainter extends CustomPainter {
       final availableHeight = drawRect.height - 12; // padding top+bottom
       double currentY = drawRect.top + 6;
 
-  final titleSize = (debugTreemap ? 16.0 : 15.0) * textScale;
       final canShowTitle = debugTreemap || availableHeight > 18.0;
       final pointerInside = pointer != null && drawRect.contains(pointer!);
       final isSelected = selectedId != null && selectedId == tr.task.id;
@@ -1063,7 +1062,15 @@ class _TreemapPainter extends CustomPainter {
       if (showLabel && area > 12000 && currentY + 14 < drawRect.bottom - 6 && !debugTreemap) {
   final responsiveMetaSize = typography.metaFontSize(size).toDouble() * textScale;
         final meta = 'P${tr.task.priority} • ${tr.task.minutes}m';
-        final tp2 = _textPainter(meta, drawRect, responsiveMetaSize, FontWeight.w500, alpha: 0.95, textColor: onSurfaceVariant);
+        final tp2 = _textPainter(
+          meta,
+          drawRect,
+          responsiveMetaSize,
+          FontWeight.w500,
+          alpha: 0.95,
+          maxLines: 1,
+          textColor: onSurfaceVariant,
+        );
         tp2.paint(canvas, Offset(drawRect.left + 8, currentY));
         currentY += tp2.height + 2;
       }

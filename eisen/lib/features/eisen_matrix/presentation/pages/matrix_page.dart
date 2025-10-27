@@ -97,6 +97,12 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           themeMode: themeMode,
           minimal: minimal,
           onToggleMinimal: ctrl.toggleMinimal,
+          showWorkflowPlan: ref.watch(uiPrefsProvider).workflowPlanEnabled,
+          onOpenWorkflow: () {
+            final isEs = Localizations.localeOf(context).languageCode == 'es';
+            final msg = isEs ? 'Plan de trabajo (próximamente)' : 'Workflow plan (coming soon)';
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+          },
           onOpenStats: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StatsPage())),
           onOpenProfile: () => showModalBottomSheet(
             context: context,
@@ -580,7 +586,8 @@ class _BottomActionBar extends StatelessWidget {
     final entryLabel = isEs ? 'Entrada' : 'Entry';
     return SafeArea(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        // Reduce vertical padding to make the bar more compact on mobile
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
           border: Border(
@@ -593,9 +600,11 @@ class _BottomActionBar extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final hideMinimap = constraints.maxWidth < 560;
+            final isNarrow = constraints.maxWidth < 400;
 
             return SizedBox(
-              height: 56,
+              // More compact height on very narrow screens
+              height: isNarrow ? 44 : 52,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -604,11 +613,18 @@ class _BottomActionBar extends StatelessWidget {
                     button: true,
                     enabled: true,
                     label: entryLabel,
-                    child: FilledButton.icon(
-                      onPressed: onNew,
-                      icon: const Icon(Icons.add),
-                      label: Text(entryLabel),
-                    ),
+                    child: isNarrow
+                        // Icon-only CTA on very small widths
+                        ? IconButton(
+                            onPressed: onNew,
+                            tooltip: entryLabel,
+                            icon: const Icon(Icons.add),
+                          )
+                        : FilledButton.icon(
+                            onPressed: onNew,
+                            icon: const Icon(Icons.add),
+                            label: Text(entryLabel),
+                          ),
                   ),
 
                   // Minimap pinned to the right when there's space

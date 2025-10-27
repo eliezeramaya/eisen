@@ -13,5 +13,18 @@ class UiTokens {
   // Material 3 surface/outline helpers
   static Color fill(ColorScheme cs) => cs.surfaceContainerHigh;
   static Color stroke(ColorScheme cs) => cs.outlineVariant.withOpacity(borderOpacity);
+
+  // Gantt mode tokens
+  static const double laneHeight = 64;
+  static const double laneGap = 12;
+  static const double barRadius = 14;
+  static const double barStroke = 1;
+  static const double headerHeight = 56;
+  static const double pxPerDayDefault = 32; // intermediate scale
+
+  static Color bgDark = const Color(0xFF0E0F11);
+  static Color panelDark = const Color(0xFF141618);
+  static Color divider = Colors.white.withOpacity(.08);
+  static Color now = const Color(0xFF17D3B0);
 }
 
