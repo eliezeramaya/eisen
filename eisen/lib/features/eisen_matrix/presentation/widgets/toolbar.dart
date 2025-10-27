@@ -47,8 +47,10 @@ class _AppToolbarState extends State<AppToolbar> {
         ? (widget.themeMode == ThemeMode.dark ? 'Claro' : 'Oscuro')
         : (widget.themeMode == ThemeMode.dark ? 'Light' : 'Dark');
 
-    final width = MediaQuery.of(context).size.width;
+    final size = MediaQuery.of(context).size;
+    final width = size.width;
     final compactActions = width < 1100; // icons-only when narrow
+    final isWide = width >= 600; // show logo + name on wide screens
 
     Widget actionButton({required VoidCallback? onPressed, required IconData icon, required String label}) {
       return compactActions
@@ -85,6 +87,38 @@ class _AppToolbarState extends State<AppToolbar> {
             child: Row(
               children: [
                 const SizedBox(width: 12),
+                // Logo: isotipo solo en compacto, isotipo + nombre en pantallas anchas
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Icon(
+                          Icons.grid_view_rounded,
+                          size: 18,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      if (isWide) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          'eisen',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
                 // Search bar removed: filters are handled via chips in page body
                 if (widget.canExitZoom && widget.onExitZoom != null)
                   actionButton(onPressed: widget.onExitZoom, icon: Icons.fullscreen_exit, label: fullViewLabel),

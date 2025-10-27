@@ -14,6 +14,19 @@ class UiPrefsData {
   final double gamma; // 0.70..1.00
   final double minAreaNormalized; // 2e-5 .. 2e-4
   final double quadrantPadding; // 0.0 .. 0.02
+  // General · Language & Region
+  final String languageCode; // 'system' | 'en' | 'es' | ...
+  final String regionCode;   // 'system' | 'US' | 'MX' | ...
+  final String dateFormat;   // 'dd/MM/yyyy' | 'MM/dd/yyyy' | 'yyyy-MM-dd'
+  final bool use24h;         // true=24h, false=12h
+  // General · Notifications
+  final String dailyReminderTime; // 'HH:mm' 24h; '' = disabled
+  final bool endOfDaySummary;     // switch
+  final String endOfDayTime;      // 'HH:mm' or ''
+  final String pomodoroAlert;     // 'sound' | 'vibration' | 'silent'
+  final String notificationTone;  // 'default' | 'chime' | 'bell'
+  // Typography · User text scale (1..5). 3 = default
+  final int textScaleLevel;
   const UiPrefsData({
     this.themeMode = ThemeMode.system,
     this.compact = false,
@@ -23,6 +36,16 @@ class UiPrefsData {
     this.gamma = 1.0,
     this.minAreaNormalized = 0.00004,
     this.quadrantPadding = 0.012,
+    this.languageCode = 'system',
+    this.regionCode = 'system',
+    this.dateFormat = 'dd/MM/yyyy',
+    this.use24h = true,
+    this.dailyReminderTime = '',
+    this.endOfDaySummary = false,
+    this.endOfDayTime = '',
+    this.pomodoroAlert = 'sound',
+    this.notificationTone = 'default',
+    this.textScaleLevel = 3,
   });
 
   UiPrefsData copyWith({
@@ -34,6 +57,16 @@ class UiPrefsData {
     double? gamma,
     double? minAreaNormalized,
     double? quadrantPadding,
+    String? languageCode,
+    String? regionCode,
+    String? dateFormat,
+    bool? use24h,
+    String? dailyReminderTime,
+    bool? endOfDaySummary,
+    String? endOfDayTime,
+    String? pomodoroAlert,
+    String? notificationTone,
+    int? textScaleLevel,
   }) => UiPrefsData(
         themeMode: themeMode ?? this.themeMode,
         compact: compact ?? this.compact,
@@ -43,6 +76,16 @@ class UiPrefsData {
         gamma: gamma ?? this.gamma,
         minAreaNormalized: minAreaNormalized ?? this.minAreaNormalized,
         quadrantPadding: quadrantPadding ?? this.quadrantPadding,
+        languageCode: languageCode ?? this.languageCode,
+        regionCode: regionCode ?? this.regionCode,
+        dateFormat: dateFormat ?? this.dateFormat,
+        use24h: use24h ?? this.use24h,
+        dailyReminderTime: dailyReminderTime ?? this.dailyReminderTime,
+        endOfDaySummary: endOfDaySummary ?? this.endOfDaySummary,
+        endOfDayTime: endOfDayTime ?? this.endOfDayTime,
+        pomodoroAlert: pomodoroAlert ?? this.pomodoroAlert,
+        notificationTone: notificationTone ?? this.notificationTone,
+        textScaleLevel: textScaleLevel ?? this.textScaleLevel,
       );
 
   Map<String, Object?> toJson() => {
@@ -54,6 +97,16 @@ class UiPrefsData {
         'gamma': gamma,
         'minAreaNormalized': minAreaNormalized,
         'quadrantPadding': quadrantPadding,
+        'languageCode': languageCode,
+        'regionCode': regionCode,
+        'dateFormat': dateFormat,
+        'use24h': use24h,
+        'dailyReminderTime': dailyReminderTime,
+        'endOfDaySummary': endOfDaySummary,
+        'endOfDayTime': endOfDayTime,
+        'pomodoroAlert': pomodoroAlert,
+        'notificationTone': notificationTone,
+    'textScaleLevel': textScaleLevel,
       };
 
   static UiPrefsData fromJson(Map<String, Object?> json) {
@@ -76,6 +129,16 @@ class UiPrefsData {
       quadrantPadding: (json['quadrantPadding'] is num)
           ? (json['quadrantPadding'] as num).toDouble()
           : 0.012,
+      languageCode: (json['languageCode'] as String?) ?? 'system',
+      regionCode: (json['regionCode'] as String?) ?? 'system',
+      dateFormat: (json['dateFormat'] as String?) ?? 'dd/MM/yyyy',
+      use24h: (json['use24h'] as bool?) ?? true,
+      dailyReminderTime: (json['dailyReminderTime'] as String?) ?? '',
+      endOfDaySummary: (json['endOfDaySummary'] as bool?) ?? false,
+      endOfDayTime: (json['endOfDayTime'] as String?) ?? '',
+      pomodoroAlert: (json['pomodoroAlert'] as String?) ?? 'sound',
+      notificationTone: (json['notificationTone'] as String?) ?? 'default',
+      textScaleLevel: (json['textScaleLevel'] as int?) ?? 3,
     );
   }
 }
@@ -166,6 +229,53 @@ class UiPrefsController extends Notifier<UiPrefsData> {
       minAreaNormalized: minA,
       quadrantPadding: pad,
     );
+    await _save();
+  }
+
+  // Language & Region setters
+  Future<void> setLanguageCode(String code) async {
+    state = state.copyWith(languageCode: code);
+    await _save();
+  }
+  Future<void> setRegionCode(String code) async {
+    state = state.copyWith(regionCode: code);
+    await _save();
+  }
+  Future<void> setDateFormat(String fmt) async {
+    state = state.copyWith(dateFormat: fmt);
+    await _save();
+  }
+  Future<void> setUse24h(bool v) async {
+    state = state.copyWith(use24h: v);
+    await _save();
+  }
+
+  // Notifications setters
+  Future<void> setDailyReminderTime(String hhmm) async {
+    state = state.copyWith(dailyReminderTime: hhmm);
+    await _save();
+  }
+  Future<void> setEndOfDaySummary(bool v) async {
+    state = state.copyWith(endOfDaySummary: v);
+    await _save();
+  }
+  Future<void> setEndOfDayTime(String hhmm) async {
+    state = state.copyWith(endOfDayTime: hhmm);
+    await _save();
+  }
+  Future<void> setPomodoroAlert(String mode) async {
+    state = state.copyWith(pomodoroAlert: mode);
+    await _save();
+  }
+  Future<void> setNotificationTone(String tone) async {
+    state = state.copyWith(notificationTone: tone);
+    await _save();
+  }
+
+  // Text scale
+  Future<void> setTextScaleLevel(int level) async {
+    final v = level.clamp(1, 5);
+    state = state.copyWith(textScaleLevel: v);
     await _save();
   }
 }

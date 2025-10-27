@@ -4,14 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/app/app.dart';
 
 void main() {
-  testWidgets('Single FAB present and no duplicate New task button', (tester) async {
+  testWidgets('No FAB; single Entry button in bottom bar', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: EisenApp()));
     await tester.pump(const Duration(milliseconds: 200));
 
-    // One FloatingActionButton (extended)
-    expect(find.byType(FloatingActionButton), findsOneWidget);
+    // No FloatingActionButton present
+    expect(find.byType(FloatingActionButton), findsNothing);
 
-    // No visible duplicate "New task" button in the UI
-    expect(find.text('New task'), findsNothing);
+    // One Entry/Entrada button present in bottom bar
+    final entryEs = find.text('Entrada');
+    final entryEn = find.text('Entry');
+    expect(entryEs.evaluate().isNotEmpty || entryEn.evaluate().isNotEmpty, isTrue);
   });
 }

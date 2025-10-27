@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'sections/general_panel.dart';
 
 class SettingsContent extends StatelessWidget {
   final String section;
@@ -110,17 +112,15 @@ class SettingsContent extends StatelessWidget {
         return const _PrivacyPanel();
       case 'About':
         return const _AboutPanel();
+      case 'General':
+        return const GeneralPanel();
       default:
-        return const _GeneralPanel();
+        return const GeneralPanel();
     }
   }
 }
 
-class _GeneralPanel extends StatelessWidget {
-  const _GeneralPanel();
-  @override
-  Widget build(BuildContext context) => const Text('General settings');
-}
+// GeneralPanel UI moved to sections/general_panel.dart
 
 class _AppearancePanel extends StatelessWidget {
   final ThemeMode themeMode;

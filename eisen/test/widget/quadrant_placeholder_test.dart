@@ -9,7 +9,7 @@ void main() {
         home: Scaffold(
           body: const QuadrantEmptyPlaceholder(
             title: 'Q1 · Urgente e Importante',
-            hint: 'No tienes tareas aquí. Usa “Agregar tarea”.',
+            hint: 'No tienes tareas aquí. Usa “Entrada”.',
           ),
         ),
       ),
@@ -19,4 +19,3 @@ void main() {
     expect(find.textContaining('No tienes tareas'), findsOneWidget);
   });
 }
-

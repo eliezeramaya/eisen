@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/l10n/app_localizations.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
 import '../core/theme/app_theme.dart';
 import '../core/providers/locale_provider.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
@@ -10,6 +11,7 @@ import 'package:eisen/core/platform/platform_utils.dart';
 import 'package:eisen/core/intents/open_settings_intent.dart';
 import 'package:go_router/go_router.dart';
 import 'package:device_preview/device_preview.dart';
+import 'package:eisen/core/ui/text_scaling.dart';
 
 class EisenApp extends ConsumerWidget {
   const EisenApp({super.key});
@@ -26,9 +28,17 @@ class EisenApp extends ConsumerWidget {
     final darkTheme = minimal ? asMinimal(dark) : dark;
 
     return MaterialApp.router(
-      locale: userLocale ?? DevicePreview.locale(context),
       builder: (ctx, child) {
-        final wrapped = Shortcuts(
+        // Apply user text scaling on top of device scale with responsive clamps
+        final prefs = ref.watch(uiPrefsProvider);
+        final tsf = effectiveTextScaleFactor(ctx, prefs);
+        final mq = MediaQuery.of(ctx);
+        final scaledChild = MediaQuery(
+          data: mq.copyWith(textScaleFactor: tsf),
+          child: child ?? const SizedBox.shrink(),
+        );
+
+        final wrappedShortcuts = Shortcuts(
           shortcuts: {
             LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.comma): const OpenSettingsIntent(),
             LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.comma): const OpenSettingsIntent(),
@@ -45,10 +55,10 @@ class EisenApp extends ConsumerWidget {
                 },
               ),
             },
-            child: FocusTraversalGroup(child: child ?? const SizedBox.shrink()),
+            child: FocusTraversalGroup(child: scaledChild),
           ),
         );
-        return DevicePreview.appBuilder(ctx, wrapped);
+        return DevicePreview.appBuilder(ctx, wrappedShortcuts);
       },
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
@@ -56,8 +66,20 @@ class EisenApp extends ConsumerWidget {
       darkTheme: darkTheme,
       themeMode: themeMode,
       routerConfig: createRouter(),
+      locale: _resolveLocale(ref.watch(uiPrefsProvider)),
+      localeResolutionCallback: (device, supported) {
+        final forced = _resolveLocale(ref.read(uiPrefsProvider));
+        return forced ?? device;
+      },
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     );
   }
+}
+
+Locale? _resolveLocale(UiPrefsData prefs) {
+  if (prefs.languageCode == 'system') return null;
+  final lang = prefs.languageCode;
+  final region = prefs.regionCode == 'system' ? null : prefs.regionCode;
+  return Locale.fromSubtags(languageCode: lang, countryCode: region);
 }

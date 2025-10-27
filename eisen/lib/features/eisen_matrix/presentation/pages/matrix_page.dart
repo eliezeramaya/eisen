@@ -20,10 +20,10 @@ import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/quadrant_empty_placeholder.dart';
 import 'package:eisen/core/ui/ui_breakpoints.dart';
 import 'package:eisen/core/platform/platform_utils.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/core/ui/text_scaling.dart';
 import 'package:go_router/go_router.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/fab_add_task.dart';
-import 'package:eisen/features/onboarding/domain/onboarding_provider.dart';
-import 'package:eisen/features/onboarding/presentation/fab_coachmark.dart';
+// Removed FAB + coachmark imports; using single CTA in bottom bar
 
 
 class MatrixPage extends ConsumerStatefulWidget {
@@ -79,6 +79,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
     final screenWidth = screenSize.width;
     // Trigger recompute when size changes (orientation/resize)
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       if (_lastSize != screenSize) {
         _lastSize = screenSize;
         ref.read(matrixControllerProvider.notifier).notifyLayoutRecompute();
@@ -105,6 +106,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           ),
           onExitZoom: () {
             ctrl.setZoom(null);
+            ctrl.setPresentQuadrant(Quadrant.q2);
             ctrl.select(null);
             ctrl.setQuery('');
             ctrl.invalidateLayout();
@@ -193,6 +195,10 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                   final dynamicLayout = ctrl.computeLayout(viewport: size);
                                   final suggested = ctrl.suggestedTopSpots;
                                   final l10n = AppLocalizations.of(context);
+                                  // Compute user text scale; clamp tighter for treemap readability
+                                  final prefs = ref.watch(uiPrefsProvider);
+                                  final appTsf = effectiveTextScaleFactor(context, prefs);
+                                  final tileTsf = appTsf.clamp(0.95, 1.20);
                                   return clampTreemapTSF(
                                     context,
                                     child: Stack(
@@ -211,6 +217,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                           selectedId: selectedId,
                                           zoom: zoom,
                                           presentQuadrant: zoom ?? ref.read(matrixControllerProvider).presentQuadrant,
+                                          textScale: tileTsf,
                                           inlineEditId: _inlineEditId,
                                           onInlineSubmit: (id, title) {
                                             ctrl.updateTask(id, (t) => t.copyWith(title: title));
@@ -269,7 +276,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                           height: size.height / 2,
                                           child: const QuadrantEmptyPlaceholder(
                                             title: 'Q1 · Urgente e Importante',
-                                            hint: 'No tienes tareas aquí. Usa “Agregar tarea”.',
+                                            hint: 'No tienes tareas aquí. Usa “Entrada”.',
                                           ),
                                         ),
                                         Positioned(
@@ -313,7 +320,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                             height: size.height / 2,
                                             child: const QuadrantEmptyPlaceholder(
                                               title: 'Q1 · Urgente e Importante',
-                                              hint: 'No tienes tareas aquí. Usa “Agregar tarea”.',
+                                              hint: 'No tienes tareas aquí. Usa “Entrada”.',
                                             ),
                                           ),
                                         if (!tasks.any((t) => t.completedAt == null && t.quadrant == Quadrant.q2))
@@ -377,46 +384,61 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('¡Tarea completada!'), duration: Duration(milliseconds: 900)));
         },
       ),
-      bottomNavigationBar: (kIsWeb || isDesktop) ? _BottomActionBar(
-        onNew: () {
-          _openAddTaskSheet(context);
-        },
-        onNewInQuadrant: (q) {
-          final id = ctrl.createTask(quadrant: q);
-          ctrl.select(id);
-          setState(() => _inlineEditId = id);
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Tarea creada en ${q.name.toUpperCase()}'), duration: const Duration(seconds: 3)),
-          );
-        },
-        minimap: Minimap(
-          zoom: zoom,
-          minimal: minimal,
-          tasks: tasks,
-          onSelectQuadrant: (q) {
-            ctrl.setZoom(q);
-            ctrl.invalidateLayout();
-          },
-          onFullView: () {
-            ctrl.setZoom(null);
-            ctrl.select(null);
-            ctrl.setQuery('');
-            ctrl.invalidateLayout();
-          },
-        ),
-      ) : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endContained,
-      floatingActionButton: FabCoachmark(
-        show: ref.watch(onboardingProvider.select((s) => s.showFabCoachmark)),
-        child: FabAddTask(
-          visible: _fabVisible,
-          onPressed: () {
-            ref.read(onboardingProvider.notifier).dismissFabCoachmark();
-            _openAddTaskSheet(context);
-          },
-        ),
-      ),
+      bottomNavigationBar: screenWidth >= 600
+          ? _BottomActionBar(
+              onNew: () => _openAddTaskSheet(context),
+              onNewInQuadrant: (q) {
+                ctrl.setZoom(q);
+                _openAddTaskSheet(context);
+              },
+              minimap: Minimap(
+                zoom: zoom,
+                tasks: tasks,
+                onSelectQuadrant: (q) {
+                  ctrl.setZoom(q);
+                  ctrl.setPresentQuadrant(q);
+                  ctrl.invalidateLayout();
+                },
+                onFullView: () {
+                  ctrl.setZoom(null);
+                  ctrl.setPresentQuadrant(Quadrant.q2);
+                  ctrl.select(null);
+                  ctrl.setQuery('');
+                  ctrl.invalidateLayout();
+                },
+              ),
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: screenWidth < 600
+          ? SafeArea(
+              minimum: EdgeInsets.only(
+                right: 16,
+                bottom: MediaQuery.paddingOf(context).bottom + 8,
+              ),
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  final compact = screenWidth < 360;
+                  if (compact) {
+                    // Solo ícono en pantallas muy compactas
+                    return FloatingActionButton(
+                      heroTag: 'fab-entry',
+                      onPressed: () => _openAddTaskSheet(context),
+                      child: const Icon(Icons.add),
+                    );
+                  }
+                  // Botón extendido en pantallas normales
+                  return FloatingActionButton.extended(
+                    heroTag: 'fab-entry',
+                    icon: const Icon(Icons.add),
+                    label: const Text('Entry'),
+                    onPressed: () => _openAddTaskSheet(context),
+                    extendedIconLabelSpacing: 6,
+                  );
+                },
+              ),
+            )
+          : null,
     );
   }
 }
@@ -450,8 +472,28 @@ class _TopAxisLegends extends StatelessWidget {
       height: _kAxisHeaderHeight,
       child: Row(
         children: [
-          Expanded(child: Center(child: Text(l10n.axisUrgent, style: style))),
-          Expanded(child: Center(child: Text(l10n.axisNotUrgent, style: style))),
+          Expanded(
+            child: Center(
+              child: Text(
+                l10n.axisUrgent,
+                style: style,
+                maxLines: 1,
+                overflow: TextOverflow.fade,
+                softWrap: false,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: Text(
+                l10n.axisNotUrgent,
+                style: style,
+                maxLines: 1,
+                overflow: TextOverflow.fade,
+                softWrap: false,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -484,7 +526,16 @@ class _LeftAxisLegends extends StatelessWidget {
               child: Center(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: RotatedBox(quarterTurns: 3, child: Text(l10n.axisImportant, style: style)),
+                  child: RotatedBox(
+                    quarterTurns: 3,
+                    child: Text(
+                      l10n.axisImportant,
+                      style: style,
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -492,7 +543,16 @@ class _LeftAxisLegends extends StatelessWidget {
               child: Center(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: RotatedBox(quarterTurns: 3, child: Text(l10n.axisNotImportant, style: style)),
+                  child: RotatedBox(
+                    quarterTurns: 3,
+                    child: Text(
+                      l10n.axisNotImportant,
+                      style: style,
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                    ),
+                  ),
                 ),
               ),
             ),

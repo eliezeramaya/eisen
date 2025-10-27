@@ -79,6 +79,18 @@ class SettingsSheet extends ConsumerWidget {
               secondary: const Icon(Icons.density_medium, size: 22),
               title: Text(compact ? l10n.settingsDensityCompact : l10n.settingsDensityComfortable),
             ),
+            _SliderTile<int>(
+              sliderKey: const Key('slider_text_scale'),
+              label: 'Tamaño de texto',
+              value: prefs.textScaleLevel,
+              min: 1,
+              max: 5,
+              divisions: 4,
+              helper: 'Escala del texto en la aplicación (1–5).',
+              toDouble: (v) => v.toDouble(),
+              fromDouble: (d) => d.round().clamp(1, 5),
+              onChanged: (v) => ref.read(uiPrefsControllerProvider.notifier).setTextScaleLevel(v),
+            ),
             SwitchListTile(
               value: showAxisLegends,
               onChanged: (_) {

@@ -15,6 +15,8 @@ import 'package:eisen/features/eisen_matrix/domain/usecases/compute_layout_useca
 import 'package:eisen/features/eisen_matrix/domain/usecases/suggest_top_spots_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/compute_reorder_delta_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/layout_providers.dart';
+import 'package:eisen/features/eisen_matrix/domain/layout/layout_config.dart';
+import 'package:eisen/features/eisen_matrix/domain/layout/layout_config_provider.dart';
 
 /// Immutable state for the Eisenhower matrix.
 ///
@@ -108,6 +110,7 @@ class MatrixController extends Notifier<MatrixState> {
   final LayoutCache _cache = LayoutCache();
   final BanditService _bandit = BanditService();
   Set<String> _suggested = {};
+  LayoutConfig? _lastDynamicCfg;
 
   @override
   MatrixState build() {
@@ -190,7 +193,16 @@ class MatrixController extends Notifier<MatrixState> {
     _saveUi();
   }
 
-  void setZoom(Quadrant? q) => state = state.copyWith(zoom: q);
+  /// Sets zoomed quadrant and keeps presentation state in sync.
+  ///
+  /// When entering a quadrant (q != null), we also set presentQuadrant to q so
+  /// all consumers that rely on the presentation quadrant render the correct
+  /// content. When exiting zoom (q == null), we reset presentQuadrant to Q2 as
+  /// the default full-view focus.
+  void setZoom(Quadrant? q) {
+    final present = q ?? Quadrant.q2;
+    state = state.copyWith(zoom: q, presentQuadrant: present);
+  }
   void setPresentQuadrant(Quadrant q) => state = state.copyWith(presentQuadrant: q);
   void toggleCompact() {
     state = state.copyWith(compact: !state.compact);
@@ -311,6 +323,26 @@ class MatrixController extends Notifier<MatrixState> {
 
   /// Public API: Computes layout for given viewport.
   List<TreemapRect> computeLayout({Quadrant? only, Size? viewport}) {
+    // Responsive topK override based on viewport size
+    if (viewport != null && viewport.width > 0 && viewport.height > 0) {
+      final dynCfg = ref.read(layoutConfigForSizeProvider(viewport));
+      final prev = _lastDynamicCfg;
+      final changed = prev == null ||
+          prev.topKPerQuadrant != dynCfg.topKPerQuadrant ||
+          prev.gamma != dynCfg.gamma ||
+          prev.minAreaNormalized != dynCfg.minAreaNormalized ||
+          prev.quadrantPadding != dynCfg.quadrantPadding;
+      if (changed) {
+        _lastDynamicCfg = dynCfg;
+        _computeLayoutUseCase = ComputeLayoutUseCase(
+          cache: _cache,
+          bandit: _bandit,
+          hybridConfig: dynCfg,
+        );
+        // Ensure next execution uses new config
+        _computeLayoutUseCase.invalidate();
+      }
+    }
     return layout(only: only, viewport: viewport);
   }
 

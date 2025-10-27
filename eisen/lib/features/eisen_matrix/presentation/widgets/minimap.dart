@@ -106,7 +106,7 @@ class _MinimapPainter extends CustomPainter {
 
   // Prepare label painters helper
     final tp = (String text) => TextPainter(
-      text: TextSpan(style: TextStyle(color: minimal ? Colors.black : Colors.white, fontSize: 10, fontWeight: FontWeight.w600), text: text),
+      text: TextSpan(style: TextStyle(color: minimal ? const Color(0xFF424242) : Colors.white, fontSize: 10, fontWeight: FontWeight.w600), text: text),
           textDirection: TextDirection.ltr,
           maxLines: 1,
           ellipsis: '…',

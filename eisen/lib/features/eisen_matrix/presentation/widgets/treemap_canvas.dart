@@ -5,12 +5,14 @@ import 'package:flutter/semantics.dart';
 import 'package:eisen/core/theme/app_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:eisen/core/theme/animation_tokens.dart';
+import 'package:eisen/core/ui/ui_tokens.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/core/services/telemetry.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_debug.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart' show debugTreemap;
 import 'package:eisen/core/constants/layout_constants.dart';
+import 'package:eisen/core/ui/ui_typography.dart' as typography;
 
 class TreemapCanvas extends StatefulWidget {
   final List<Task> tasks;
@@ -29,6 +31,8 @@ class TreemapCanvas extends StatefulWidget {
   final bool minimal;
   final bool compact;
   final String? selectedId;
+  // User/app text scale multiplier applied to treemap labels
+  final double textScale;
 
   const TreemapCanvas({
     super.key,
@@ -48,6 +52,7 @@ class TreemapCanvas extends StatefulWidget {
     this.minimal = false,
     this.compact = false,
     this.selectedId,
+    this.textScale = 1.0,
   });
 
   @override
@@ -444,9 +449,11 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                     outros: _pendingOutros,
                     outrosVersion: _outrosVersion,
                     outlineColor: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.28),
-                    tileBorderColor: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.18),
+                    tileBorderColor: UiTokens.stroke(Theme.of(context).colorScheme),
                     onSurface: Theme.of(context).colorScheme.onSurface,
                     onSurfaceVariant: Theme.of(context).colorScheme.onSurfaceVariant,
+                    tileFillColor: UiTokens.fill(Theme.of(context).colorScheme),
+                    textScale: widget.textScale,
                   ),
                     isComplex: true,
                     willChange: true,
@@ -517,7 +524,8 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                         final borderColor = widget.minimal
                             ? Colors.black.withValues(alpha: 0.20)
                             : Colors.white.withValues(alpha: 0.18);
-                        final textColor = widget.minimal ? Colors.black : Colors.white;
+                        // Use dark gray text in minimal mode for better visibility on light surfaces
+                        final textColor = widget.minimal ? const Color(0xFF424242) : Colors.white;
                         return Container(
                           width: tileSize,
                           height: tileSize,
@@ -811,8 +819,10 @@ class _TreemapPainter extends CustomPainter {
   final int outrosVersion;
   final Color outlineColor;
   final Color tileBorderColor;
+  final Color tileFillColor;
   final Color onSurface;
   final Color onSurfaceVariant;
+  final double textScale;
   
   /// Tile path cache for performance optimization.
   /// 
@@ -852,12 +862,14 @@ class _TreemapPainter extends CustomPainter {
     required this.tileBorderColor,
     required this.onSurface,
     required this.onSurfaceVariant,
+    required this.tileFillColor,
+    this.textScale = 1.0,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..isAntiAlias = true;
-    const double gap = 4.0; // space between tiles to avoid clipped corners
+    final double gap = UiTokens.tileMargin; // uniform gap between tiles
 
     // Always draw subtle quadrant grid (center cross) so the matrix is visible even with no tiles
     final centerLine = Paint()
@@ -881,7 +893,7 @@ class _TreemapPainter extends CustomPainter {
         Offset(halfW + halfW / 2, halfH + halfH / 2),
       ];
       for (int i = 0; i < 4; i++) {
-        final tp = _textPainter(labels[i], Rect.fromCenter(center: centers[i], width: halfW, height: halfH), 16, FontWeight.w600, textColor: minimal ? Colors.black : Colors.white, maxLines: 3);
+  final tp = _textPainter(labels[i], Rect.fromCenter(center: centers[i], width: halfW, height: halfH), 16, FontWeight.w600, textColor: minimal ? const Color(0xFF424242) : Colors.white, maxLines: 3);
         tp.paint(canvas, Offset(centers[i].dx - tp.width / 2, centers[i].dy - tp.height / 2));
       }
     }
@@ -966,7 +978,7 @@ class _TreemapPainter extends CustomPainter {
       final r01 = Rect.lerp(r01From, r01To, curveT)!;
       final r0 = Rect.fromLTWH(r01.left * size.width, r01.top * size.height, r01.width * size.width, r01.height * size.height);
       final r = _snapRect(r0);
-      final color = minimal ? Colors.black : _byQuadrant(tr.task.quadrant);
+      // Flat design: do not color tiles by quadrant
 
       // If dragging this tile, render it "lifted"
       final bool isDragging = tr.task.id == draggingId;
@@ -992,54 +1004,30 @@ class _TreemapPainter extends CustomPainter {
           shift += mshift;
         }
         drawRect = scaled.shift(shift);
-        // No shadow in minimal mode
-        if (!minimal) {
-          canvas.drawShadow(
-              _getCachedPath(tr.task.id, drawRect, 12),
-              color.withValues(alpha: 0.45),
-              14,
-              false);
-        }
+        // No shadows in flat design
       } else {
         drawRect = r;
-        // No shadow in minimal mode
-        if (!minimal) {
-          canvas.drawShadow(
-              _getCachedPath(tr.task.id, drawRect, 12),
-              color.withValues(alpha: 0.3),
-              8,
-              false);
-        }
+        // No shadows in flat design
       }
       // Deflate to create a gutter around each tile so rounded borders are visible
       // Clamp gutter so we don't invert tiny rects, then snap to pixel grid to avoid gaps
       final safeGap = math.min(gap, math.max(0.0, math.min(drawRect.width, drawRect.height) * 0.5 - 0.5));
       drawRect = _snapRect(drawRect.deflate(safeGap));
-      // Fill + Border (guarded for debug vs. normal styling)
-      final rr = RRect.fromRectAndRadius(drawRect, const Radius.circular(12));
-      // Base alpha tuned for theme; scale by appear factor if this is a new tile
-      final baseAlpha = (debugTreemap && !minimal) ? 0.28 : (minimal ? 0.25 : 0.18);
-      final appearFactor = appearingIds.contains(tr.task.id) ? t.clamp(0.0, 1.0) : 1.0;
-      final fillAlpha = baseAlpha * appearFactor;
+      // Single geometry: flat fill + 1dp stroke
+      final rr = RRect.fromRectAndRadius(
+        drawRect.deflate(UiTokens.painterDeflateAA),
+        Radius.circular(UiTokens.tileRadius),
+      );
+      final fillColor = tileFillColor;
       paint
         ..style = PaintingStyle.fill
-        ..color = color.withValues(alpha: fillAlpha);
+        ..color = fillColor;
       canvas.drawRRect(rr, paint);
       paint
         ..style = PaintingStyle.stroke
         ..color = tileBorderColor
-        ..strokeWidth = 1.0;
+        ..strokeWidth = UiTokens.tileStroke;
       canvas.drawRRect(rr, paint);
-
-
-      if (isDragging) {
-        // Extra highlight ring when dragging
-        final ring = Paint()
-          ..style = PaintingStyle.stroke
-          ..color = color.withValues(alpha: 0.35)
-          ..strokeWidth = 2.0;
-        canvas.drawRRect(rr.deflate(1), ring);
-      }
       
       // If this is a stack tile, render a centered +N label and skip details
       if (tr.stackChildren.isNotEmpty) {
@@ -1059,55 +1047,44 @@ class _TreemapPainter extends CustomPainter {
       final availableHeight = drawRect.height - 12; // padding top+bottom
       double currentY = drawRect.top + 6;
 
-      final titleSize = debugTreemap ? 16.0 : 15.0;
+  final titleSize = (debugTreemap ? 16.0 : 15.0) * textScale;
       final canShowTitle = debugTreemap || availableHeight > 18.0;
       final pointerInside = pointer != null && drawRect.contains(pointer!);
       final isSelected = selectedId != null && selectedId == tr.task.id;
       final showLabel = !minimal || isDragging || pointerInside || isSelected;
-      // Subtle highlight on interaction for accessibility feedback
-      if (pointerInside || isDragging || isSelected) {
-        final overlayPaint = Paint()
-          ..style = PaintingStyle.fill
-          ..color = Colors.white.withValues(alpha: 0.08);
-        canvas.drawRRect(rr, overlayPaint);
-      }
       if (showLabel && canShowTitle) {
-        final tp = _textPainter(tr.task.title, drawRect, titleSize, FontWeight.w700, textColor: onSurface, maxLines: debugTreemap ? 3 : 1);
+  final responsiveTitleSize = (debugTreemap ? 16.0 : typography.titleFontSize(size).toDouble()) * textScale;
+        final tp = _textPainter(tr.task.title, drawRect, responsiveTitleSize, FontWeight.w700, textColor: onSurface, maxLines: debugTreemap ? 3 : 1);
         tp.paint(canvas, Offset(drawRect.left + 8, currentY));
         currentY += tp.height + 2;
       }
       
       // Priority and time (if medium+ size)
       if (showLabel && area > 12000 && currentY + 14 < drawRect.bottom - 6 && !debugTreemap) {
+  final responsiveMetaSize = typography.metaFontSize(size).toDouble() * textScale;
         final meta = 'P${tr.task.priority} • ${tr.task.minutes}m';
-        final tp2 = _textPainter(meta, drawRect, 12, FontWeight.w500, alpha: 0.95, textColor: onSurfaceVariant);
+        final tp2 = _textPainter(meta, drawRect, responsiveMetaSize, FontWeight.w500, alpha: 0.95, textColor: onSurfaceVariant);
         tp2.paint(canvas, Offset(drawRect.left + 8, currentY));
         currentY += tp2.height + 2;
       }
       
       // Notes preview (if large size and has notes)
       if (showLabel && area > 26000 && tr.task.notes != null && tr.task.notes!.isNotEmpty && currentY + 14 < drawRect.bottom - 6 && !debugTreemap) {
+  final responsiveNotesSize = typography.metaFontSize(size).toDouble() * textScale;
         final notesPreview = tr.task.notes!.length > 50 
             ? '${tr.task.notes!.substring(0, 50)}...' 
             : tr.task.notes!;
-        final tp3 = _textPainter(notesPreview, drawRect, 12, FontWeight.w400, alpha: minimal ? 0.9 : 0.85, maxLines: 2, textColor: minimal ? Colors.black : Colors.white);
+  final tp3 = _textPainter(notesPreview, drawRect, responsiveNotesSize, FontWeight.w400, alpha: minimal ? 0.9 : 0.85, maxLines: 2, textColor: minimal ? const Color(0xFF424242) : Colors.white);
         tp3.paint(canvas, Offset(drawRect.left + 8, currentY));
       }
 
-      // Quadrant color indicator: skip in minimal to reduce chroma
-      if (!minimal) {
-        paint
-          ..style = PaintingStyle.fill
-          ..color = color.withValues(alpha: 0.12);
-        final ind = Rect.fromLTWH(drawRect.right - 10, drawRect.top + 4, 6, 6);
-        canvas.drawRRect(RRect.fromRectAndRadius(ind, const Radius.circular(2)), paint);
-      }
+      // Removed quadrant color indicator for flat design
 
-      // Suggested by bandit badge (small star)
-      if (suggested?.contains(tr.task.id) == true) {
-        final star = _textPainter('★', drawRect, 12, FontWeight.w700, alpha: minimal ? 0.95 : 0.9, textColor: minimal ? Colors.black : Colors.white);
-        star.paint(canvas, Offset(drawRect.left + 6, drawRect.top + 4));
-      }
+      // Removed: Suggested by bandit badge (star) - flat design
+      // if (suggested?.contains(tr.task.id) == true) {
+      //   final star = _textPainter('★', drawRect, 12, FontWeight.w700, alpha: minimal ? 0.95 : 0.9, textColor: minimal ? Colors.black : Colors.white);
+      //   star.paint(canvas, Offset(drawRect.left + 6, drawRect.top + 4));
+      // }
 
     // Debug labels for each tile
     if (debugTreemap && !minimal) {
@@ -1197,7 +1174,9 @@ class _TreemapPainter extends CustomPainter {
         oldDelegate.outrosVersion != outrosVersion ||
         oldDelegate.outros.length != outros.length ||
         oldDelegate.appearingIds.length != appearingIds.length ||
-        oldDelegate.outlineColor != outlineColor;
+        oldDelegate.outlineColor != outlineColor ||
+        oldDelegate.tileBorderColor != tileBorderColor ||
+        oldDelegate.tileFillColor != tileFillColor;
 
     // Invalidate path cache on layout version or key visual changes.
     if (oldDelegate.layoutVersion != layoutVersion ||
