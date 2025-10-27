@@ -111,7 +111,11 @@ class _GanttChartState extends ConsumerState<GanttChart> {
                   child: RepaintBoundary(
                     child: CustomPaint(
                       size: Size(totalWidth, bodyHeight),
-                      painter: GanttPainter(projector: projector, now: DateTime.now()),
+                      painter: GanttPainter(
+                        projector: projector,
+                        now: DateTime.now(),
+                        spans: widget.spans,
+                      ),
                       isComplex: true,
                       willChange: false,
                     ),
