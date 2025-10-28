@@ -25,6 +25,17 @@ class SettingsContent extends StatelessWidget {
   final ValueChanged<double> onPaddingChanged;
   final bool previewEnabled;
   final ValueChanged<bool> onPreviewChanged;
+  // Gantt staged values & callbacks
+  final String ganttTimeScale; // 'days' | 'weeks' | 'months'
+  final bool ganttShowBadges;
+  final bool ganttCompactLanes;
+  final bool ganttWorkweekOnly;
+  final bool ganttShowTodayLine;
+  final ValueChanged<String> onGanttTimeScaleChanged;
+  final ValueChanged<bool> onGanttShowBadgesChanged;
+  final ValueChanged<bool> onGanttCompactLanesChanged;
+  final ValueChanged<bool> onGanttWorkweekOnlyChanged;
+  final ValueChanged<bool> onGanttShowTodayLineChanged;
 
   const SettingsContent({
     super.key,
@@ -48,6 +59,16 @@ class SettingsContent extends StatelessWidget {
     required this.onPaddingChanged,
     required this.previewEnabled,
     required this.onPreviewChanged,
+    required this.ganttTimeScale,
+    required this.ganttShowBadges,
+    required this.ganttCompactLanes,
+    required this.ganttWorkweekOnly,
+    required this.ganttShowTodayLine,
+    required this.onGanttTimeScaleChanged,
+    required this.onGanttShowBadgesChanged,
+    required this.onGanttCompactLanesChanged,
+    required this.onGanttWorkweekOnlyChanged,
+    required this.onGanttShowTodayLineChanged,
   });
 
   @override
@@ -106,6 +127,34 @@ class SettingsContent extends StatelessWidget {
         );
       case 'Accessibility':
         return const _AccessibilityPanel();
+      case 'Calendar/Gantt':
+        return _GanttPanel(
+          timeScale: ganttTimeScale,
+          showBadges: ganttShowBadges,
+          compactLanes: ganttCompactLanes,
+          workweekOnly: ganttWorkweekOnly,
+          showTodayLine: ganttShowTodayLine,
+          onTimeScale: (v) {
+            onGanttTimeScaleChanged(v);
+            onDirty(true);
+          },
+          onShowBadges: (v) {
+            onGanttShowBadgesChanged(v);
+            onDirty(true);
+          },
+          onCompactLanes: (v) {
+            onGanttCompactLanesChanged(v);
+            onDirty(true);
+          },
+          onWorkweekOnly: (v) {
+            onGanttWorkweekOnlyChanged(v);
+            onDirty(true);
+          },
+          onShowTodayLine: (v) {
+            onGanttShowTodayLineChanged(v);
+            onDirty(true);
+          },
+        );
       case 'Keyboard':
         return const _KeyboardPanel();
       case 'Data & Privacy':
@@ -315,6 +364,86 @@ class _LayoutPanel extends StatelessWidget {
         constraints: const BoxConstraints(minWidth: 64),
         child: Text(toDouble(value).toString(), textAlign: TextAlign.end, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
       ),
+    );
+  }
+}
+
+class _GanttPanel extends StatelessWidget {
+  final String timeScale; // 'days' | 'weeks' | 'months'
+  final bool showBadges;
+  final bool compactLanes;
+  final bool workweekOnly;
+  final bool showTodayLine;
+  final ValueChanged<String> onTimeScale;
+  final ValueChanged<bool> onShowBadges;
+  final ValueChanged<bool> onCompactLanes;
+  final ValueChanged<bool> onWorkweekOnly;
+  final ValueChanged<bool> onShowTodayLine;
+  const _GanttPanel({
+    required this.timeScale,
+    required this.showBadges,
+    required this.compactLanes,
+    required this.workweekOnly,
+    required this.showTodayLine,
+    required this.onTimeScale,
+    required this.onShowBadges,
+    required this.onCompactLanes,
+    required this.onWorkweekOnly,
+    required this.onShowTodayLine,
+  });
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    String label(String k) => switch (k) { 'days' => 'Días', 'weeks' => 'Semanas', 'months' => 'Meses', _ => 'Semanas' };
+    return ListView(
+      children: [
+        const ListTile(
+          leading: Icon(Icons.view_timeline),
+          title: Text('Calendar / Gantt'),
+          subtitle: Text('Escala de tiempo y visibilidad'),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'days', label: Text('Días')),
+              ButtonSegment(value: 'weeks', label: Text('Semanas')),
+              ButtonSegment(value: 'months', label: Text('Meses')),
+            ],
+            selected: {timeScale},
+            onSelectionChanged: (s) => onTimeScale(s.first),
+          ),
+        ),
+        const Divider(height: 24),
+        SwitchListTile(
+          value: showBadges,
+          onChanged: onShowBadges,
+          secondary: const Icon(Icons.loyalty_outlined),
+          title: const Text('Mostrar badges de duración'),
+          subtitle: const Text('Ej. 3d al extremo derecho de la barra'),
+        ),
+        SwitchListTile(
+          value: compactLanes,
+          onChanged: onCompactLanes,
+          secondary: const Icon(Icons.density_small),
+          title: const Text('Lanes compactos'),
+          subtitle: const Text('Reduce la altura y separación de lanes'),
+        ),
+        SwitchListTile(
+          value: workweekOnly,
+          onChanged: onWorkweekOnly,
+          secondary: const Icon(Icons.work_outline),
+          title: const Text('Solo semana laboral'),
+          subtitle: const Text('Oculta fines de semana en el header (visual)'),
+        ),
+        SwitchListTile(
+          value: showTodayLine,
+          onChanged: onShowTodayLine,
+          secondary: const Icon(Icons.today_outlined),
+          title: const Text('Mostrar línea de hoy'),
+          subtitle: const Text('Resalta el “Ahora” en el Gantt'),
+        ),
+      ],
     );
   }
 }

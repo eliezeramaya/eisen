@@ -21,6 +21,9 @@ class UiTokens {
   static const double barStroke = 1;
   static const double headerHeight = 56;
   static const double pxPerDayDefault = 32; // intermediate scale
+  // Zoom clamps for Gantt (Stage 4)
+  static const double pxPerDayMin = 18;
+  static const double pxPerDayMax = 64;
 
   static Color bgDark = const Color(0xFF0E0F11);
   static Color panelDark = const Color(0xFF141618);

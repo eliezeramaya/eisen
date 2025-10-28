@@ -29,6 +29,12 @@ class UiPrefsData {
   final bool workflowPlanEnabled;
   // Typography · User text scale (1..5). 3 = default
   final int textScaleLevel;
+  // Calendar/Gantt preferences
+  final String ganttTimeScale; // 'days' | 'weeks' | 'months'
+  final bool ganttShowBadges;
+  final bool ganttCompactLanes;
+  final bool ganttWorkweekOnly;
+  final bool ganttShowTodayLine;
   const UiPrefsData({
     this.themeMode = ThemeMode.system,
     this.compact = false,
@@ -49,6 +55,11 @@ class UiPrefsData {
     this.notificationTone = 'default',
     this.workflowPlanEnabled = false,
     this.textScaleLevel = 3,
+    this.ganttTimeScale = 'weeks',
+    this.ganttShowBadges = true,
+    this.ganttCompactLanes = false,
+    this.ganttWorkweekOnly = false,
+    this.ganttShowTodayLine = true,
   });
 
   UiPrefsData copyWith({
@@ -71,6 +82,11 @@ class UiPrefsData {
     String? notificationTone,
     bool? workflowPlanEnabled,
     int? textScaleLevel,
+    String? ganttTimeScale,
+    bool? ganttShowBadges,
+    bool? ganttCompactLanes,
+    bool? ganttWorkweekOnly,
+    bool? ganttShowTodayLine,
   }) => UiPrefsData(
         themeMode: themeMode ?? this.themeMode,
         compact: compact ?? this.compact,
@@ -91,6 +107,11 @@ class UiPrefsData {
         notificationTone: notificationTone ?? this.notificationTone,
         workflowPlanEnabled: workflowPlanEnabled ?? this.workflowPlanEnabled,
         textScaleLevel: textScaleLevel ?? this.textScaleLevel,
+        ganttTimeScale: ganttTimeScale ?? this.ganttTimeScale,
+        ganttShowBadges: ganttShowBadges ?? this.ganttShowBadges,
+        ganttCompactLanes: ganttCompactLanes ?? this.ganttCompactLanes,
+        ganttWorkweekOnly: ganttWorkweekOnly ?? this.ganttWorkweekOnly,
+        ganttShowTodayLine: ganttShowTodayLine ?? this.ganttShowTodayLine,
       );
 
   Map<String, Object?> toJson() => {
@@ -112,7 +133,12 @@ class UiPrefsData {
         'pomodoroAlert': pomodoroAlert,
         'notificationTone': notificationTone,
         'workflowPlanEnabled': workflowPlanEnabled,
-    'textScaleLevel': textScaleLevel,
+        'textScaleLevel': textScaleLevel,
+        'ganttTimeScale': ganttTimeScale,
+        'ganttShowBadges': ganttShowBadges,
+        'ganttCompactLanes': ganttCompactLanes,
+        'ganttWorkweekOnly': ganttWorkweekOnly,
+        'ganttShowTodayLine': ganttShowTodayLine,
       };
 
   static UiPrefsData fromJson(Map<String, Object?> json) {
@@ -146,6 +172,11 @@ class UiPrefsData {
       notificationTone: (json['notificationTone'] as String?) ?? 'default',
       workflowPlanEnabled: (json['workflowPlanEnabled'] as bool?) ?? false,
       textScaleLevel: (json['textScaleLevel'] as int?) ?? 3,
+      ganttTimeScale: (json['ganttTimeScale'] as String?) ?? 'weeks',
+      ganttShowBadges: (json['ganttShowBadges'] as bool?) ?? true,
+      ganttCompactLanes: (json['ganttCompactLanes'] as bool?) ?? false,
+      ganttWorkweekOnly: (json['ganttWorkweekOnly'] as bool?) ?? false,
+      ganttShowTodayLine: (json['ganttShowTodayLine'] as bool?) ?? true,
     );
   }
 }
@@ -287,6 +318,27 @@ class UiPrefsController extends Notifier<UiPrefsData> {
   Future<void> setTextScaleLevel(int level) async {
     final v = level.clamp(1, 5);
     state = state.copyWith(textScaleLevel: v);
+    await _save();
+  }
+
+  // Calendar/Gantt setters
+  Future<void> applyGanttPrefs({
+    required String timeScale, // 'days' | 'weeks' | 'months'
+    required bool showBadges,
+    required bool compactLanes,
+    required bool workweekOnly,
+    required bool showTodayLine,
+  }) async {
+    // sanitize
+    final allowed = {'days', 'weeks', 'months'};
+    final ts = allowed.contains(timeScale) ? timeScale : 'weeks';
+    state = state.copyWith(
+      ganttTimeScale: ts,
+      ganttShowBadges: showBadges,
+      ganttCompactLanes: compactLanes,
+      ganttWorkweekOnly: workweekOnly,
+      ganttShowTodayLine: showTodayLine,
+    );
     await _save();
   }
 }

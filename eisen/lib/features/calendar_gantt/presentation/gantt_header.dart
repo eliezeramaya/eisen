@@ -10,6 +10,7 @@ class GanttHeader extends StatelessWidget {
   final DateTime viewStart;
   final DateTime viewEnd;
   final double width;
+  final bool workweekOnly;
   const GanttHeader({
     super.key,
     required this.scale,
@@ -17,6 +18,7 @@ class GanttHeader extends StatelessWidget {
     required this.viewStart,
     required this.viewEnd,
     required this.width,
+    this.workweekOnly = false,
   });
 
   @override
@@ -24,7 +26,7 @@ class GanttHeader extends StatelessWidget {
     return RepaintBoundary(
       child: CustomPaint(
         size: Size(width, UiTokens.headerHeight),
-        painter: _GanttHeaderPainter(scale: scale, projector: projector, start: viewStart, end: viewEnd),
+  painter: _GanttHeaderPainter(scale: scale, projector: projector, start: viewStart, end: viewEnd, workweekOnly: workweekOnly),
         isComplex: true,
         willChange: false,
       ),
@@ -37,7 +39,8 @@ class _GanttHeaderPainter extends CustomPainter {
   final TimelineProjector projector;
   final DateTime start;
   final DateTime end;
-  _GanttHeaderPainter({required this.scale, required this.projector, required this.start, required this.end});
+  final bool workweekOnly;
+  _GanttHeaderPainter({required this.scale, required this.projector, required this.start, required this.end, required this.workweekOnly});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -62,17 +65,37 @@ class _GanttHeaderPainter extends CustomPainter {
       ..color = Colors.white.withOpacity(.08);
 
     DateTime cursor = _alignToScale(start, scale);
+    // Label density control to avoid overlaps when zoomed out
+    final pxPerDay = projector.pxPerDay;
+    int dayStep = 1;
+    if (scale == TimeScale.days) {
+      if (pxPerDay < 22) {
+        dayStep = 3;
+      } else if (pxPerDay < 28) {
+        dayStep = 2;
+      }
+    }
+    int dayCounter = 0;
     while (!cursor.isAfter(end)) {
       final x = projector.dx(cursor);
       // Tick
       canvas.drawLine(Offset(x, size.height - 16), Offset(x, 0), tick);
       // Label
-      final label = _labelFor(cursor, scale);
-      final tp = TextPainter(text: TextSpan(text: label, style: baseText), textDirection: TextDirection.ltr)
-        ..layout(maxWidth: 200);
-      tp.paint(canvas, Offset(x + 6, (size.height - tp.height) / 2));
+      if (!(workweekOnly && scale == TimeScale.days && (cursor.weekday == DateTime.saturday || cursor.weekday == DateTime.sunday))) {
+        bool draw = true;
+        if (scale == TimeScale.days) {
+          draw = (dayCounter % dayStep) == 0;
+        }
+        if (draw) {
+          final label = _labelFor(cursor, scale);
+          final tp = TextPainter(text: TextSpan(text: label, style: baseText), textDirection: TextDirection.ltr)
+            ..layout(maxWidth: 200);
+          tp.paint(canvas, Offset(x + 6, (size.height - tp.height) / 2));
+        }
+      }
       // Next
-      cursor = _increment(cursor, scale);
+      cursor = _increment(cursor, scale, dayStep: dayStep);
+      if (scale == TimeScale.days) dayCounter += dayStep;
     }
   }
 
@@ -80,9 +103,10 @@ class _GanttHeaderPainter extends CustomPainter {
   bool shouldRepaint(covariant _GanttHeaderPainter oldDelegate) {
     return oldDelegate.scale != scale ||
         oldDelegate.projector.pxPerDay != projector.pxPerDay ||
-        oldDelegate.projector.viewStart != projector.viewStart ||
+  oldDelegate.projector.viewStart != projector.viewStart ||
         oldDelegate.start != start ||
-        oldDelegate.end != end;
+  oldDelegate.end != end ||
+  oldDelegate.workweekOnly != workweekOnly;
   }
 
   static DateTime _alignToScale(DateTime t, TimeScale s) {
@@ -100,10 +124,10 @@ class _GanttHeaderPainter extends CustomPainter {
     }
   }
 
-  static DateTime _increment(DateTime t, TimeScale s) {
+  static DateTime _increment(DateTime t, TimeScale s, {int dayStep = 1}) {
     switch (s) {
       case TimeScale.days:
-        return t.add(const Duration(days: 1));
+        return t.add(Duration(days: dayStep));
       case TimeScale.weeks:
         return t.add(const Duration(days: 7));
       case TimeScale.months:

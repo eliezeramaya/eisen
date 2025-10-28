@@ -97,7 +97,9 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           themeMode: themeMode,
           minimal: minimal,
           onToggleMinimal: ctrl.toggleMinimal,
-          showWorkflowPlan: ref.watch(uiPrefsProvider).workflowPlanEnabled,
+          // Always show the Workflow button in the top menu (home screen)
+          // If the feature is disabled in Settings, clicking will prompt to enable it.
+          showWorkflowPlan: true,
           onOpenWorkflow: () {
             if (!ref.read(uiPrefsProvider).workflowPlanEnabled) {
               final isEs = Localizations.localeOf(context).languageCode == 'es';

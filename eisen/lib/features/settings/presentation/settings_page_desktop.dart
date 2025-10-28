@@ -26,6 +26,12 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
   double _stagedGamma = 1.0;
   double _stagedMinArea = 0.00004;
   double _stagedPadding = 0.012;
+  // Staged Gantt values
+  String _stagedGanttScale = 'weeks';
+  bool _stagedGanttBadges = true;
+  bool _stagedGanttCompact = false;
+  bool _stagedGanttWorkweek = false;
+  bool _stagedGanttToday = true;
 
   // Original snapshot for rollback
   ThemeMode? _origTheme;
@@ -56,6 +62,12 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       _stagedGamma = ui.gamma;
       _stagedMinArea = ui.minAreaNormalized;
       _stagedPadding = ui.quadrantPadding;
+  // Gantt prefs
+  _stagedGanttScale = ui.ganttTimeScale;
+  _stagedGanttBadges = ui.ganttShowBadges;
+  _stagedGanttCompact = ui.ganttCompactLanes;
+  _stagedGanttWorkweek = ui.ganttWorkweekOnly;
+  _stagedGanttToday = ui.ganttShowTodayLine;
       // Save originals
       _origTheme = _stagedTheme;
       _origCompact = _stagedCompact;
@@ -121,6 +133,17 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
                   onPaddingChanged: (v) => setState(() => _stagedPadding = v),
                   previewEnabled: _previewEnabled,
                   onPreviewChanged: (v) => setState(() => _previewEnabled = v),
+                  // Gantt staged
+                  ganttTimeScale: _stagedGanttScale,
+                  ganttShowBadges: _stagedGanttBadges,
+                  ganttCompactLanes: _stagedGanttCompact,
+                  ganttWorkweekOnly: _stagedGanttWorkweek,
+                  ganttShowTodayLine: _stagedGanttToday,
+                  onGanttTimeScaleChanged: (v) => setState(() => _stagedGanttScale = v),
+                  onGanttShowBadgesChanged: (v) => setState(() => _stagedGanttBadges = v),
+                  onGanttCompactLanesChanged: (v) => setState(() => _stagedGanttCompact = v),
+                  onGanttWorkweekOnlyChanged: (v) => setState(() => _stagedGanttWorkweek = v),
+                  onGanttShowTodayLineChanged: (v) => setState(() => _stagedGanttToday = v),
                 ),
               ),
             ),
@@ -206,6 +229,13 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
           minAreaNormalized: _stagedMinArea,
           quadrantPadding: _stagedPadding,
         )
+        .then((_) => uiCtl.applyGanttPrefs(
+              timeScale: _stagedGanttScale,
+              showBadges: _stagedGanttBadges,
+              compactLanes: _stagedGanttCompact,
+              workweekOnly: _stagedGanttWorkweek,
+              showTodayLine: _stagedGanttToday,
+            ))
         .whenComplete(() {
       ref.read(matrixControllerProvider.notifier).notifyLayoutRecompute();
       setState(() {
@@ -219,6 +249,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
         _origGamma = _stagedGamma;
         _origMinArea = _stagedMinArea;
         _origPadding = _stagedPadding;
+        // No originals stored for Gantt yet; not used in Cancel
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Settings applied')),
@@ -266,6 +297,7 @@ class _SettingsSidebar extends StatelessWidget {
       ('General', Icons.tune),
       ('Appearance', Icons.palette_outlined),
       ('Layout', Icons.grid_view_rounded),
+      ('Calendar/Gantt', Icons.view_timeline),
       ('Accessibility', Icons.accessibility_new),
       ('Keyboard', Icons.keyboard_alt_outlined),
       ('Data & Privacy', Icons.privacy_tip_outlined),

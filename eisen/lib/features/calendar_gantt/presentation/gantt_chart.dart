@@ -5,17 +5,23 @@ import 'package:eisen/features/calendar_gantt/domain/calendar_span.dart';
 import 'package:eisen/features/calendar_gantt/application/gantt_providers.dart';
 import 'package:eisen/features/calendar_gantt/presentation/gantt_header.dart';
 import 'package:eisen/features/calendar_gantt/presentation/gantt_painter.dart';
+import 'package:eisen/features/calendar_gantt/presentation/gantt_interaction_layer.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
 
 /// Gantt chart scaffold with synchronized header/body scroll and Now line.
 class GanttChart extends ConsumerStatefulWidget {
   final List<CalendarSpan> spans;
   final TimeScale scale;
   final DateTime viewStart;
+  final List<(DateTime, String)> milestones;
+  final void Function(CalendarSpan oldSpan, CalendarSpan updated)? onSpanChanged;
   const GanttChart({
     super.key,
     required this.spans,
     required this.scale,
     required this.viewStart,
+    this.milestones = const <(DateTime, String)>[],
+    this.onSpanChanged,
   });
 
   @override
@@ -56,6 +62,7 @@ class _GanttChartState extends ConsumerState<GanttChart> {
   @override
   Widget build(BuildContext context) {
     final projector = ref.watch(projectorProvider);
+    final ui = ref.watch(uiPrefsProvider);
     // View end: span max end + 7 days, or default window if empty
     DateTime viewEnd;
     if (widget.spans.isNotEmpty) {
@@ -74,7 +81,10 @@ class _GanttChartState extends ConsumerState<GanttChart> {
     for (final s in widget.spans) {
       if (s.lane >= laneCount) laneCount = s.lane + 1;
     }
-    final bodyHeight = (laneCount * UiTokens.laneHeight).toDouble();
+  // Effective lane metrics (compact lanes -> 0.8x)
+  final laneHeight = ui.ganttCompactLanes ? UiTokens.laneHeight * 0.8 : UiTokens.laneHeight;
+  final laneGap = ui.ganttCompactLanes ? UiTokens.laneGap * 0.8 : UiTokens.laneGap;
+  final bodyHeight = (laneCount * laneHeight).toDouble();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -85,47 +95,138 @@ class _GanttChartState extends ConsumerState<GanttChart> {
           child: SingleChildScrollView(
             controller: _hHeader,
             scrollDirection: Axis.horizontal,
-            child: GanttHeader(
-              scale: widget.scale,
-              projector: projector,
-              viewStart: widget.viewStart,
-              viewEnd: viewEnd,
-              width: totalWidth,
+            child: Stack(
+              children: [
+                // Header paint layer
+                GanttHeader(
+                  scale: widget.scale,
+                  projector: projector,
+                  viewStart: widget.viewStart,
+                  viewEnd: viewEnd,
+                  width: totalWidth,
+                  workweekOnly: ui.ganttWorkweekOnly,
+                ),
+                // "Now" chip overlay aligned with the Now line
+                Positioned(
+                  left: projector.dx(DateTime.now()) - 18,
+                  top: 6,
+                  child: const _NowChip(),
+                ),
+              ],
             ),
           ),
         ),
         const SizedBox(height: 1),
         // Body (both directions)
         Expanded(
-          child: Container(
-            color: UiTokens.bgDark,
-            child: Scrollbar(
-              controller: _vBody,
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                controller: _vBody,
-                scrollDirection: Axis.vertical,
-                child: SingleChildScrollView(
-                  controller: _hBody,
-                  scrollDirection: Axis.horizontal,
-                  child: RepaintBoundary(
-                    child: CustomPaint(
-                      size: Size(totalWidth, bodyHeight),
-                      painter: GanttPainter(
-                        projector: projector,
-                        now: DateTime.now(),
-                        spans: widget.spans,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final viewportWidth = constraints.maxWidth;
+              return Container(
+                color: UiTokens.bgDark,
+                child: Scrollbar(
+                  controller: _vBody,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _vBody,
+                    scrollDirection: Axis.vertical,
+                    child: SingleChildScrollView(
+                      controller: _hBody,
+                      scrollDirection: Axis.horizontal,
+                      child: Stack(
+                        children: [
+                          RepaintBoundary(
+                            child: CustomPaint(
+                              size: Size(totalWidth, bodyHeight),
+                              painter: GanttPainter(
+                                projector: projector,
+                                now: DateTime.now(),
+                                spans: widget.spans,
+                                hScroll: _hBody,
+                                viewportWidth: viewportWidth,
+                                showBadges: ui.ganttShowBadges,
+                                showTodayLine: ui.ganttShowTodayLine,
+                                laneHeight: laneHeight,
+                                laneGap: laneGap,
+                                milestones: widget.milestones,
+                              ),
+                              isComplex: true,
+                              willChange: false,
+                            ),
+                          ),
+                          // Interaction layer (hover tooltip, cursor, ctrl+wheel & pinch zoom)
+                          Positioned.fill(
+                            child: GanttInteractionLayer(
+                              spans: widget.spans,
+                              projector: projector,
+                              canvasSize: Size(totalWidth, bodyHeight),
+                              hScroll: _hBody,
+                              vScroll: _vBody,
+                              laneHeight: laneHeight,
+                              laneGap: laneGap,
+                              onSpanChanged: widget.onSpanChanged,
+                            ),
+                          ),
+                        ],
                       ),
-                      isComplex: true,
-                      willChange: false,
                     ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ],
     );
   }
+}
+
+class _NowChip extends StatelessWidget {
+  const _NowChip();
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Small caret
+        CustomPaint(
+          size: const Size(8, 6),
+          painter: _CaretPainter(color: UiTokens.now),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: UiTokens.now,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(color: UiTokens.now.withOpacity(.25), blurRadius: 8),
+            ],
+          ),
+          child: const Text(
+            'Now',
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700, fontSize: 11),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CaretPainter extends CustomPainter {
+  final Color color;
+  _CaretPainter({required this.color});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = color;
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas.drawPath(path, p);
+  }
+  @override
+  bool shouldRepaint(covariant _CaretPainter oldDelegate) => oldDelegate.color != color;
 }

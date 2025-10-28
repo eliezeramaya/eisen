@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/core/ui/ui_tokens.dart';
 import 'package:eisen/features/calendar_gantt/application/gantt_lanes.dart';
@@ -36,11 +35,29 @@ final calendarSpansProvider = Provider<List<CalendarSpan>>((ref) {
 });
 
 /// Projector with adjustable px-per-day; viewStart defaults to 2 weeks before now.
-final projectorProvider = StateProvider<TimelineProjector>((ref) {
-  final now = DateTime.now();
-  final viewStart = now.subtract(const Duration(days: 14));
-  return TimelineProjector(viewStart: viewStart, pxPerDay: UiTokens.pxPerDayDefault);
-});
+class ProjectorController extends Notifier<TimelineProjector> {
+  @override
+  TimelineProjector build() {
+    final now = DateTime.now();
+    final viewStart = now.subtract(const Duration(days: 14));
+    return TimelineProjector(viewStart: viewStart, pxPerDay: UiTokens.pxPerDayDefault);
+  }
+
+  void setPxPerDay(double v) {
+    final min = UiTokens.pxPerDayMin;
+    final max = UiTokens.pxPerDayMax;
+    final clamped = v.clamp(min, max).toDouble();
+    if ((clamped - state.pxPerDay).abs() < 0.001) return;
+    state = TimelineProjector(viewStart: state.viewStart, pxPerDay: clamped);
+  }
+
+  void setViewStart(DateTime vs) {
+    if (vs == state.viewStart) return;
+    state = TimelineProjector(viewStart: vs, pxPerDay: state.pxPerDay);
+  }
+}
+
+final projectorProvider = NotifierProvider<ProjectorController, TimelineProjector>(ProjectorController.new);
 
 /// Lanes assignment provider; stable greedy packing.
 final lanesProvider = Provider<List<CalendarSpan>>((ref) {
