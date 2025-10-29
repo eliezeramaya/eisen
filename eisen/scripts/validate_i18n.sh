@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 L10N_DIR="$PROJECT_DIR/l10n"
 
-echo "🌍 i18n Management Tool"
+echo "i18n Management Tool"
 echo "======================"
 echo ""
 
@@ -23,15 +23,15 @@ cd "$PROJECT_DIR"
 
 # Function to print colored output
 print_success() {
-    echo -e "${GREEN}✓${NC} $1"
+    echo -e "${GREEN}[OK]${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
+    echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
 print_error() {
-    echo -e "${RED}✗${NC} $1"
+    echo -e "${RED}[ERROR]${NC} $1"
 }
 
 # Step 1: Validate ARB files exist
@@ -96,7 +96,7 @@ print_success "Generated files verified"
 echo ""
 
 # Step 5: Show summary
-echo "📊 Summary"
+echo "Summary"
 echo "=========="
 
 EN_KEYS=$(grep -c '"' "$L10N_DIR/app_en.arb" || echo "0")

@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AddTaskSheet extends ConsumerStatefulWidget {
   const AddTaskSheet({super.key});
@@ -107,7 +107,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Tarea agregada ✅'),
+        content: const Text('Tarea agregada'),
         action: SnackBarAction(
           label: 'Deshacer',
           onPressed: () {

@@ -10,18 +10,18 @@
   <img src="https://img.shields.io/badge/Platform-Web%20%7C%20Mobile-lightgrey" alt="Platform"/>
 </p>
 
-## ✨ Highlights
+## Highlights
 
-- 🎯 **Custom Squarified Treemap** - No external treemap packages, optimized for Eisenhower layout
-- ⚡ **High Performance** - Path caching, incremental updates, sub-16ms layouts
-- 🎨 **Liquid-Glass Theme** - Material 3 with custom tokens and WCAG AA accessibility
-- 🧪 **Well Tested** - 40+ unit/widget tests, golden tests, CI/CD integration
-- 🌍 **i18n Ready** - English/Spanish with ARB validation
-- 🔐 **Privacy-First** - Opt-in telemetry with SHA-256 ID anonymization
-- ♿ **Accessible** - WCAG 2.1 Level AA, keyboard shortcuts, screen reader support
-- 📱 **Responsive** - Adaptive layouts for mobile, tablet, desktop, and web
+- **Custom Squarified Treemap** - No external treemap packages, optimized for Eisenhower layout
+- **High Performance** - Path caching, incremental updates, sub-16ms layouts
+- **Liquid-Glass Theme** - Material 3 with custom tokens and WCAG AA accessibility
+- **Well Tested** - 40+ unit/widget tests, golden tests, CI/CD integration
+- **i18n Ready** - English/Spanish with ARB validation
+- **Privacy-First** - Opt-in telemetry with SHA-256 ID anonymization
+- **Accessible** - WCAG 2.1 Level AA, keyboard shortcuts, screen reader support
+- **Responsive** - Adaptive layouts for mobile, tablet, desktop, and web
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -83,7 +83,7 @@ flutter build apk --release       # Android APK
 flutter build ios --release       # iOS (macOS only)
 ```
 
-## ⌨️ Atajos de Teclado / Keyboard Shortcuts
+## Atajos de Teclado / Keyboard Shortcuts
 
 | Acción | Atajo (Web/Desktop) |
 |---|---|
@@ -103,7 +103,7 @@ Notas:
 - En desktop, la navegación por teclado asume foco en el canvas/área de matriz.
 - En móvil, prioriza gestos: tap para seleccionar, doble tap para zoom.
 
-## 📐 Breakpoints (xs/sm/md/lg/xl)
+## Breakpoints (xs/sm/md/lg/xl)
 
 | Nombre | Ancho | Densidad recomendada | TextScale recomendada | Uso |
 |---|---|---|---|---|
@@ -118,7 +118,7 @@ Recomendaciones:
 - Targets táctiles mínimos: 48×48 px (móvil), ≥40×40 px (desktop).
 - En pantallas lg/xl, activar “Compact” si se muestran muchas tareas.
 
-## 🧪 Testing
+## Testing
 
 ### Run All Tests
 ```bash
@@ -206,7 +206,7 @@ open coverage/html/index.html  # macOS
 xdg-open coverage/html/index.html  # Linux
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 lib/
@@ -260,7 +260,7 @@ scripts/
 └── validate_i18n.sh       # i18n validation
 ```
 
-## 🎨 Architecture
+## Architecture
 
 ### Design Patterns
 
@@ -290,11 +290,11 @@ scripts/
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed architecture documentation.
 
-## 🌍 Internationalization
+## Internationalization
 
 ### Supported Languages
-- 🇬🇧 English (en)
-- 🇪🇸 Spanish (es)
+- English (en)
+- Spanish (es)
 
 ### Adding Translations
 
@@ -323,7 +323,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed architecture doc
 
 See [`l10n/README.md`](l10n/README.md) for complete i18n guide.
 
-## 🔐 Privacy & Security
+## Privacy & Security
 
 - **Local-first**: All data stored on device (SharedPreferences)
 - **Opt-in telemetry**: Disabled by default with consent dialog
@@ -333,7 +333,7 @@ See [`l10n/README.md`](l10n/README.md) for complete i18n guide.
 
 See [`docs/PRIVACY.md`](docs/PRIVACY.md) for full privacy policy.
 
-## 🛠️ Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -379,12 +379,12 @@ ext install Dart-Code.flutter
 
 ### Optimizations
 
-- ✅ Path caching in CustomPainter
-- ✅ Incremental layout updates
-- ✅ RepaintBoundary widgets
-- ✅ shouldRepaint optimization
-- ✅ Debounced search
-- ✅ Lazy loading for large lists
+- Path caching in CustomPainter
+- Incremental layout updates
+- RepaintBoundary widgets
+- shouldRepaint optimization
+- Debounced search
+- Lazy loading for large lists
 
 ## 🤝 Contributing
 
@@ -410,11 +410,11 @@ ext install Dart-Code.flutter
 ### CI/CD
 
 GitHub Actions runs on every push:
-- ✅ `flutter analyze`
-- ✅ `flutter test`
-- ✅ `flutter build web --release`
-- ✅ i18n validation
-- ✅ Golden test comparison (Linux)
+- `flutter analyze`
+- `flutter test`
+- `flutter build web --release`
+- i18n validation
+- Golden test comparison (Linux)
 
 ## 📚 Documentation
 
@@ -464,11 +464,11 @@ flutter test test/golden/ --update-goldens
 flutter test test/unit/domain/weight_monotonicity_test.dart -r expanded
 ```
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Flutter Team for the amazing framework
 - Riverpod community for state management patterns
@@ -477,4 +477,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**Built with ❤️ using Flutter**
+**Built with Flutter**

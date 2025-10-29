@@ -17,10 +17,10 @@ Eisen is designed with privacy-first principles. Your tasks and personal data ne
 - Local performance metrics (session-only)
 
 ### What We DON'T Store Remotely
-- ❌ Task content
-- ❌ Personal information
-- ❌ Location data
-- ❌ Device identifiers
+- Task content
+- Personal information
+- Location data
+- Device identifiers
 
 ## Telemetry & Analytics
 
@@ -30,10 +30,10 @@ Eisen is designed with privacy-first principles. Your tasks and personal data ne
 - You can opt-out anytime in Settings
 
 ### What Telemetry Collects (if enabled)
-- ✅ Performance metrics (layout render times, LCP)
-- ✅ Feature usage (quadrant interactions, zoom events)
-- ✅ Anonymous interaction counts
-- ✅ Aggregated statistics
+- Performance metrics (layout render times, LCP)
+- Feature usage (quadrant interactions, zoom events)
+- Anonymous interaction counts
+- Aggregated statistics
 
 ### ID Anonymization
 When telemetry is enabled, task IDs are **hashed with a salt** before logging:
@@ -63,23 +63,23 @@ Telemetry currently uses `dart:developer.log()` for local debugging.
 ## Compliance
 
 ### GDPR (EU)
-- ✅ Consent required before collection
-- ✅ Right to opt-out
-- ✅ Data minimization (only collect what's needed)
-- ✅ No personal data processing without consent
+- Consent required before collection
+- Right to opt-out
+- Data minimization (only collect what's needed)
+- No personal data processing without consent
 
 ### CCPA (California)
-- ✅ No sale of personal information
-- ✅ Clear disclosure of data practices
-- ✅ Opt-out mechanism available
+- No sale of personal information
+- Clear disclosure of data practices
+- Opt-out mechanism available
 
 ## Security Best Practices
 
 ### Current
-- ✅ Local-only data storage
-- ✅ No authentication (no accounts = no passwords to leak)
-- ✅ ID anonymization with SHA-256
-- ✅ Salt persistence for consistency
+- Local-only data storage
+- No authentication (no accounts = no passwords to leak)
+- ID anonymization with SHA-256
+- Salt persistence for consistency
 
 ### Future (if adding backend)
 - [ ] HTTPS-only API calls
