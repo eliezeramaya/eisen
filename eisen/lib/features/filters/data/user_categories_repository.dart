@@ -4,15 +4,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // kept for features that use category filters; not required by add task sheet
 import 'package:shared_preferences/shared_preferences.dart';
 
-final userCategoriesProvider = StateNotifierProvider<UserCategoriesController, List<String>>((ref) {
-  return UserCategoriesController(ref);
-});
+/// Active user-defined categories repository (persisted in SharedPreferences).
+final userCategoriesProvider =
+    NotifierProvider<UserCategoriesController, List<String>>(UserCategoriesController.new);
 
-class UserCategoriesController extends StateNotifier<List<String>> {
+class UserCategoriesController extends Notifier<List<String>> {
   static const _key = 'eisen.user_categories.v1';
-  final Ref read;
-  UserCategoriesController(this.read) : super(const []) {
+
+  @override
+  List<String> build() {
+    // Start with empty state and then load asynchronously.
     _load();
+    return const [];
   }
 
   Future<void> _load() async {

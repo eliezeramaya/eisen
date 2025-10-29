@@ -15,6 +15,7 @@ import 'package:eisen/features/eisen_matrix/presentation/widgets/inspector_drawe
 import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/task_editor_page.dart';
 import 'package:eisen/l10n/app_localizations.dart';
+import 'package:eisen/l10n/app_localizations_en.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/stats_page.dart';
 import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/quadrant_empty_placeholder.dart';
@@ -58,7 +59,17 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = Theme.of(context).extension<GlassTokens>()!;
+    final theme = Theme.of(context);
+    final tokens = theme.extension<GlassTokens>() ?? GlassTokens(
+      glassBg: theme.colorScheme.surface,
+      blur: 12,
+      radius: 16,
+      q1: Colors.transparent,
+      q2: Colors.transparent,
+      q3: Colors.transparent,
+      q4: Colors.transparent,
+      halo: Colors.transparent,
+    );
     final ctrl = ref.read(matrixControllerProvider.notifier);
     // Minimize rebuild noise via .select
     final zoom = ref.watch(matrixZoomProvider);
@@ -206,7 +217,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                   // Recompute incrementally based on current viewport
                                   final dynamicLayout = ctrl.computeLayout(viewport: size);
                                   final suggested = ctrl.suggestedTopSpots;
-                                  final l10n = AppLocalizations.of(context);
+                                  // Avoid hard l10n lookup here (not needed in this scope and can be null in tests)
                                   // Compute user text scale; clamp tighter for treemap readability
                                   final prefs = ref.watch(uiPrefsProvider);
                                   final appTsf = effectiveTextScaleFactor(context, prefs);
@@ -473,7 +484,7 @@ class _TopAxisLegends extends StatelessWidget {
   static const double _kAxisHeaderHeight = 40.0;
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+  final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
     final cs = Theme.of(context).colorScheme;
     final style = Theme.of(context).textTheme.labelLarge?.copyWith(
           color: cs.onSurfaceVariant,
@@ -517,7 +528,7 @@ class _LeftAxisLegends extends StatelessWidget {
   const _LeftAxisLegends({this.minimal = false});
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+  final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
     final cs = Theme.of(context).colorScheme;
     final style = Theme.of(context).textTheme.labelLarge?.copyWith(
           color: cs.onSurfaceVariant,
@@ -610,7 +621,7 @@ class _BottomActionBar extends StatelessWidget {
 
             return SizedBox(
               // More compact height on very narrow screens
-              height: isNarrow ? 44 : 52,
+              height: (MediaQuery.sizeOf(context).width < 400) ? 44 : 52,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -619,7 +630,7 @@ class _BottomActionBar extends StatelessWidget {
                     button: true,
                     enabled: true,
                     label: entryLabel,
-                    child: isNarrow
+                    child: (MediaQuery.sizeOf(context).width < 400)
                         // Icon-only CTA on very small widths
                         ? IconButton(
                             onPressed: onNew,

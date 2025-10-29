@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../data/user_categories_repository.dart';
+import '../../data/user_categories_repository.dart';
 import '../../filters_providers.dart';
 
 class CategoryFiltersBar extends ConsumerWidget {
-  final EdgeInsets padding;
   const CategoryFiltersBar({super.key, this.padding = const EdgeInsets.all(8)});
+  final EdgeInsets padding;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/l10n/app_localizations.dart';
+import 'package:eisen/l10n/app_localizations_en.dart';
 import 'package:eisen/core/providers/locale_provider.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 
@@ -28,7 +29,8 @@ class SettingsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
+  // Fall back to English localizations when not provided (e.g., in isolated widget tests)
+  final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
     final currentLocale = ref.watch(localeProvider);
     final prefs = ref.watch(uiPrefsControllerProvider);
     final cs = Theme.of(context).colorScheme;

@@ -14,7 +14,26 @@ void main() {
     expect(entryEs.evaluate().isNotEmpty || entryEn.evaluate().isNotEmpty, isTrue,
         reason: 'Expected Entry/Entrada button in bottom bar');
 
-    final target = entryEs.evaluate().isNotEmpty ? entryEs : entryEn;
+    // Try robust target selection: FilledButton with label, else IconButton tooltip, else semantics
+    Finder target;
+    final filledButton = find.byType(FilledButton);
+    if (filledButton.evaluate().isNotEmpty) {
+      target = filledButton.first;
+    } else {
+      final iconTooltipEs = find.byTooltip('Entrada');
+      final iconTooltipEn = find.byTooltip('Entry');
+      if (iconTooltipEs.evaluate().isNotEmpty) {
+        target = iconTooltipEs;
+      } else if (iconTooltipEn.evaluate().isNotEmpty) {
+        target = iconTooltipEn;
+      } else {
+        final entrySemEs = find.bySemanticsLabel('Entrada');
+        final entrySemEn = find.bySemanticsLabel('Entry');
+        target = entrySemEs.evaluate().isNotEmpty
+            ? entrySemEs.first
+            : (entrySemEn.evaluate().isNotEmpty ? entrySemEn.first : (entryEs.evaluate().isNotEmpty ? entryEs.first : entryEn.first));
+      }
+    }
     await tester.tap(target);
     await tester.pumpAndSettle();
 

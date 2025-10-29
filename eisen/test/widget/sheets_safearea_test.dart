@@ -10,7 +10,8 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: Scaffold(body: SizedBox.shrink()))));
 
     showModalBottomSheet(
-      context: tester.element(find.byType(SizedBox)),
+      // Use the Scaffold context to avoid ambiguous SizedBox lookups
+      context: tester.element(find.byType(Scaffold)),
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
@@ -24,7 +25,7 @@ void main() {
     expect(find.byType(SingleChildScrollView), findsOneWidget);
 
     // Close the sheet
-    Navigator.of(tester.element(find.byType(SizedBox))).pop();
+  Navigator.of(tester.element(find.byType(Scaffold))).pop();
     await tester.pumpAndSettle();
   });
 
@@ -32,7 +33,8 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: Scaffold(body: SizedBox.shrink()))));
 
     showModalBottomSheet(
-      context: tester.element(find.byType(SizedBox)),
+      // Use the Scaffold context to avoid ambiguous SizedBox lookups
+      context: tester.element(find.byType(Scaffold)),
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
@@ -49,7 +51,7 @@ void main() {
     expect(find.byType(SafeArea), findsWidgets);
     expect(find.byType(SingleChildScrollView), findsOneWidget);
 
-    Navigator.of(tester.element(find.byType(SizedBox))).pop();
+  Navigator.of(tester.element(find.byType(Scaffold))).pop();
     await tester.pumpAndSettle();
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/l10n/app_localizations.dart';
+import 'package:eisen/l10n/app_localizations_en.dart';
 
 class Minimap extends StatelessWidget {
   final Quadrant? zoom;
@@ -12,7 +13,7 @@ class Minimap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-  final l10n = AppLocalizations.of(context);
+  final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
   final doLabel = l10n.minimapDo;
   final decideLabel = l10n.minimapDecide;
   final delegateLabel = l10n.minimapDelegate;
