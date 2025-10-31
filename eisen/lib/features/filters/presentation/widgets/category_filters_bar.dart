@@ -61,7 +61,8 @@ class _ManageFiltersButton extends ConsumerWidget {
 class _ManageFiltersDialog extends ConsumerStatefulWidget {
   const _ManageFiltersDialog();
   @override
-  ConsumerState<_ManageFiltersDialog> createState() => _ManageFiltersDialogState();
+  ConsumerState<_ManageFiltersDialog> createState() =>
+      _ManageFiltersDialogState();
 }
 
 class _ManageFiltersDialogState extends ConsumerState<_ManageFiltersDialog> {
@@ -159,4 +160,3 @@ class _ManageFiltersDialogState extends ConsumerState<_ManageFiltersDialog> {
     );
   }
 }
-

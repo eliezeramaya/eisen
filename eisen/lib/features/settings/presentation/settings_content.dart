@@ -1,42 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'sections/general_panel.dart';
 
 class SettingsContent extends StatelessWidget {
-  final String section;
-  final ValueChanged<bool> onDirty;
-  // Staged appearance values
-  final ThemeMode themeMode;
-  final bool compact;
-  final bool minimal;
-  final bool showAxisLegends;
-  final ValueChanged<ThemeMode> onThemeChanged;
-  final ValueChanged<bool> onCompactChanged;
-  final ValueChanged<bool> onMinimalChanged;
-  final ValueChanged<bool> onAxisLegendsChanged;
-  // Staged layout values
-  final int topK;
-  final double gamma;
-  final double minAreaNormalized;
-  final double quadrantPadding;
-  final ValueChanged<int> onTopKChanged;
-  final ValueChanged<double> onGammaChanged;
-  final ValueChanged<double> onMinAreaChanged;
-  final ValueChanged<double> onPaddingChanged;
-  final bool previewEnabled;
-  final ValueChanged<bool> onPreviewChanged;
-  // Gantt staged values & callbacks
-  final String ganttTimeScale; // 'days' | 'weeks' | 'months'
-  final bool ganttShowBadges;
-  final bool ganttCompactLanes;
-  final bool ganttWorkweekOnly;
-  final bool ganttShowTodayLine;
-  final ValueChanged<String> onGanttTimeScaleChanged;
-  final ValueChanged<bool> onGanttShowBadgesChanged;
-  final ValueChanged<bool> onGanttCompactLanesChanged;
-  final ValueChanged<bool> onGanttWorkweekOnlyChanged;
-  final ValueChanged<bool> onGanttShowTodayLineChanged;
-
   const SettingsContent({
     super.key,
     required this.section,
@@ -70,6 +35,39 @@ class SettingsContent extends StatelessWidget {
     required this.onGanttWorkweekOnlyChanged,
     required this.onGanttShowTodayLineChanged,
   });
+  final String section;
+  final ValueChanged<bool> onDirty;
+  // Staged appearance values
+  final ThemeMode themeMode;
+  final bool compact;
+  final bool minimal;
+  final bool showAxisLegends;
+  final ValueChanged<ThemeMode> onThemeChanged;
+  final ValueChanged<bool> onCompactChanged;
+  final ValueChanged<bool> onMinimalChanged;
+  final ValueChanged<bool> onAxisLegendsChanged;
+  // Staged layout values
+  final int topK;
+  final double gamma;
+  final double minAreaNormalized;
+  final double quadrantPadding;
+  final ValueChanged<int> onTopKChanged;
+  final ValueChanged<double> onGammaChanged;
+  final ValueChanged<double> onMinAreaChanged;
+  final ValueChanged<double> onPaddingChanged;
+  final bool previewEnabled;
+  final ValueChanged<bool> onPreviewChanged;
+  // Gantt staged values & callbacks
+  final String ganttTimeScale; // 'days' | 'weeks' | 'months'
+  final bool ganttShowBadges;
+  final bool ganttCompactLanes;
+  final bool ganttWorkweekOnly;
+  final bool ganttShowTodayLine;
+  final ValueChanged<String> onGanttTimeScaleChanged;
+  final ValueChanged<bool> onGanttShowBadgesChanged;
+  final ValueChanged<bool> onGanttCompactLanesChanged;
+  final ValueChanged<bool> onGanttWorkweekOnlyChanged;
+  final ValueChanged<bool> onGanttShowTodayLineChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -120,10 +118,7 @@ class SettingsContent extends StatelessWidget {
             onDirty(true);
           },
           preview: previewEnabled,
-          onPreview: (v) {
-            onPreviewChanged(v);
-            // do not mark dirty; preview is visual only
-          },
+          onPreview: onPreviewChanged,
         );
       case 'Accessibility':
         return const _AccessibilityPanel();
@@ -172,14 +167,6 @@ class SettingsContent extends StatelessWidget {
 // GeneralPanel UI moved to sections/general_panel.dart
 
 class _AppearancePanel extends StatelessWidget {
-  final ThemeMode themeMode;
-  final bool compact;
-  final bool minimal;
-  final bool showAxisLegends;
-  final ValueChanged<ThemeMode> onThemeChanged;
-  final ValueChanged<bool> onCompactChanged;
-  final ValueChanged<bool> onMinimalChanged;
-  final ValueChanged<bool> onAxisLegendsChanged;
   const _AppearancePanel({
     required this.themeMode,
     required this.compact,
@@ -190,6 +177,14 @@ class _AppearancePanel extends StatelessWidget {
     required this.onMinimalChanged,
     required this.onAxisLegendsChanged,
   });
+  final ThemeMode themeMode;
+  final bool compact;
+  final bool minimal;
+  final bool showAxisLegends;
+  final ValueChanged<ThemeMode> onThemeChanged;
+  final ValueChanged<bool> onCompactChanged;
+  final ValueChanged<bool> onMinimalChanged;
+  final ValueChanged<bool> onAxisLegendsChanged;
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -203,9 +198,18 @@ class _AppearancePanel extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: SegmentedButton<ThemeMode>(
             segments: const [
-              ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode), label: Text('Light')),
-              ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode), label: Text('Dark')),
-              ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.settings_suggest), label: Text('System')),
+              ButtonSegment(
+                  value: ThemeMode.light,
+                  icon: Icon(Icons.light_mode),
+                  label: Text('Light')),
+              ButtonSegment(
+                  value: ThemeMode.dark,
+                  icon: Icon(Icons.dark_mode),
+                  label: Text('Dark')),
+              ButtonSegment(
+                  value: ThemeMode.system,
+                  icon: Icon(Icons.settings_suggest),
+                  label: Text('System')),
             ],
             selected: {themeMode},
             onSelectionChanged: (s) => onThemeChanged(s.first),
@@ -236,16 +240,6 @@ class _AppearancePanel extends StatelessWidget {
 }
 
 class _LayoutPanel extends StatelessWidget {
-  final int topK;
-  final double gamma;
-  final double minArea;
-  final double padding;
-  final ValueChanged<int> onTopK;
-  final ValueChanged<double> onGamma;
-  final ValueChanged<double> onMinArea;
-  final ValueChanged<double> onPadding;
-  final bool preview;
-  final ValueChanged<bool> onPreview;
   const _LayoutPanel({
     required this.topK,
     required this.gamma,
@@ -258,6 +252,16 @@ class _LayoutPanel extends StatelessWidget {
     required this.preview,
     required this.onPreview,
   });
+  final int topK;
+  final double gamma;
+  final double minArea;
+  final double padding;
+  final ValueChanged<int> onTopK;
+  final ValueChanged<double> onGamma;
+  final ValueChanged<double> onMinArea;
+  final ValueChanged<double> onPadding;
+  final bool preview;
+  final ValueChanged<bool> onPreview;
 
   @override
   Widget build(BuildContext context) {
@@ -344,13 +348,20 @@ class _LayoutPanel extends StatelessWidget {
         children: [
           Text(label),
           const SizedBox(width: 6),
-          Tooltip(message: helper, child: Icon(Icons.help_outline, size: 16, color: cs.onSurfaceVariant)),
+          Tooltip(
+              message: helper,
+              child: Icon(Icons.help_outline,
+                  size: 16, color: cs.onSurfaceVariant)),
         ],
       ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(helper, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+          Text(helper,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelSmall
+                  ?.copyWith(color: cs.onSurfaceVariant)),
           Slider(
             value: toDouble(value),
             min: min,
@@ -362,23 +373,18 @@ class _LayoutPanel extends StatelessWidget {
       ),
       trailing: ConstrainedBox(
         constraints: const BoxConstraints(minWidth: 64),
-        child: Text(toDouble(value).toString(), textAlign: TextAlign.end, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+        child: Text(toDouble(value).toString(),
+            textAlign: TextAlign.end,
+            style: Theme.of(context)
+                .textTheme
+                .labelSmall
+                ?.copyWith(color: cs.onSurfaceVariant)),
       ),
     );
   }
 }
 
 class _GanttPanel extends StatelessWidget {
-  final String timeScale; // 'days' | 'weeks' | 'months'
-  final bool showBadges;
-  final bool compactLanes;
-  final bool workweekOnly;
-  final bool showTodayLine;
-  final ValueChanged<String> onTimeScale;
-  final ValueChanged<bool> onShowBadges;
-  final ValueChanged<bool> onCompactLanes;
-  final ValueChanged<bool> onWorkweekOnly;
-  final ValueChanged<bool> onShowTodayLine;
   const _GanttPanel({
     required this.timeScale,
     required this.showBadges,
@@ -391,10 +397,25 @@ class _GanttPanel extends StatelessWidget {
     required this.onWorkweekOnly,
     required this.onShowTodayLine,
   });
+  final String timeScale; // 'days' | 'weeks' | 'months'
+  final bool showBadges;
+  final bool compactLanes;
+  final bool workweekOnly;
+  final bool showTodayLine;
+  final ValueChanged<String> onTimeScale;
+  final ValueChanged<bool> onShowBadges;
+  final ValueChanged<bool> onCompactLanes;
+  final ValueChanged<bool> onWorkweekOnly;
+  final ValueChanged<bool> onShowTodayLine;
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    String label(String k) => switch (k) { 'days' => 'Días', 'weeks' => 'Semanas', 'months' => 'Meses', _ => 'Semanas' };
+    String label(String k) => switch (k) {
+          'days' => 'Días',
+          'weeks' => 'Semanas',
+          'months' => 'Meses',
+          _ => 'Semanas'
+        };
     return ListView(
       children: [
         const ListTile(
@@ -457,9 +478,11 @@ class _AccessibilityPanel extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(8),
       children: [
-        Text('Accessibility', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+        Text('Accessibility',
+            style: t.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Text('Ajustes de legibilidad y navegación por teclado', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+        Text('Ajustes de legibilidad y navegación por teclado',
+            style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
         const SizedBox(height: 16),
         _bullet('High contrast mode'),
         _bullet('Text scaling (100–150%)'),
@@ -479,18 +502,29 @@ class _KeyboardPanel extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(8),
       children: [
-        Text('Keyboard', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+        Text('Keyboard',
+            style: t.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Text('Atajos de teclado más usados', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+        Text('Atajos de teclado más usados',
+            style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
         const SizedBox(height: 12),
         DataTable(columns: const [
           DataColumn(label: Text('Acción')),
           DataColumn(label: Text('Atajo')),
         ], rows: const [
-          DataRow(cells: [DataCell(Text('Abrir Settings')), DataCell(Text('Ctrl + , / ⌘ + ,'))]),
+          DataRow(cells: [
+            DataCell(Text('Abrir Settings')),
+            DataCell(Text('Ctrl + , / ⌘ + ,'))
+          ]),
           DataRow(cells: [DataCell(Text('Nueva tarea')), DataCell(Text('N'))]),
-          DataRow(cells: [DataCell(Text('Cambiar tema')), DataCell(Text('Ctrl + T'))]),
-          DataRow(cells: [DataCell(Text('Mostrar estadísticas')), DataCell(Text('Ctrl + Shift + S'))]),
+          DataRow(cells: [
+            DataCell(Text('Cambiar tema')),
+            DataCell(Text('Ctrl + T'))
+          ]),
+          DataRow(cells: [
+            DataCell(Text('Mostrar estadísticas')),
+            DataCell(Text('Ctrl + Shift + S'))
+          ]),
         ]),
       ],
     );
@@ -506,9 +540,11 @@ class _PrivacyPanel extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(8),
       children: [
-        Text('Data & Privacy', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+        Text('Data & Privacy',
+            style: t.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Text('Importación/exportación y telemetría', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+        Text('Importación/exportación y telemetría',
+            style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
         const SizedBox(height: 16),
         _bullet('Export tasks (JSON/CSV)'),
         _bullet('Import from file'),
@@ -528,9 +564,11 @@ class _AboutPanel extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(8),
       children: [
-        Text('About', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+        Text('About',
+            style: t.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Text('Versión y créditos', style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+        Text('Versión y créditos',
+            style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
         const SizedBox(height: 12),
         const Text('Eisen – Productivity Matrix'),
         const SizedBox(height: 8),
@@ -544,7 +582,11 @@ class _AboutPanel extends StatelessWidget {
 
 Widget _bullet(String text) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(children: [const Icon(Icons.circle, size: 6), const SizedBox(width: 8), Text(text)]),
+      child: Row(children: [
+        const Icon(Icons.circle, size: 6),
+        const SizedBox(width: 8),
+        Text(text)
+      ]),
     );
 
 // LivePreviewPane moved to its own file: settings/presentation/live_preview_pane.dart

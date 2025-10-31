@@ -4,16 +4,19 @@ sealed class Result<T> {
 }
 
 class Ok<T> extends Result<T> {
-  final T value;
   const Ok(this.value);
+  final T value;
   @override
-  R when<R>({required R Function(T p1) ok, required R Function(Object p1) err}) => ok(value);
+  R when<R>(
+          {required R Function(T p1) ok, required R Function(Object p1) err}) =>
+      ok(value);
 }
 
 class Err<T> extends Result<T> {
-  final Object error;
   const Err(this.error);
+  final Object error;
   @override
-  R when<R>({required R Function(T p1) ok, required R Function(Object p1) err}) => err(error);
+  R when<R>(
+          {required R Function(T p1) ok, required R Function(Object p1) err}) =>
+      err(error);
 }
-

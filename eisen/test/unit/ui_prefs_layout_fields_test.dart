@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('UiPrefsData layout fields roundtrip', () {
@@ -17,4 +17,3 @@ void main() {
     expect(b.quadrantPadding, closeTo(0.015, 0.0001));
   });
 }
-

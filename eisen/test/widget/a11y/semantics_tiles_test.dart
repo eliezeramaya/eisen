@@ -1,6 +1,6 @@
+import 'package:eisen/features/eisen_matrix/presentation/widgets/task_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/task_tile.dart';
 
 /// Accessibility tests for interactive widgets.
 ///
@@ -24,13 +24,13 @@ void main() {
       );
 
       final semanticsNode = tester.getSemantics(find.byType(TaskTile));
-      
+
       expect(
         semanticsNode.label,
         contains('Test Task'),
         reason: 'Semantic label should include task title',
       );
-      
+
       expect(
         semanticsNode.label,
         contains('Priority 5'),
@@ -57,7 +57,8 @@ void main() {
         matching: find.byType(Focus),
       );
       expect(focusWidget, findsAtLeastNWidgets(1),
-          reason: 'TaskTile should have a Focus widget for keyboard navigation');
+          reason:
+              'TaskTile should have a Focus widget for keyboard navigation');
     });
 
     testWidgets('TaskTile shows focus indicator when focused', (tester) async {
@@ -83,7 +84,7 @@ void main() {
 
       // Request focus
       await tester.pump();
-      
+
       // Focus indicator should be present in widget tree
       expect(find.byType(TaskTile), findsOneWidget);
     });
@@ -178,8 +179,7 @@ void main() {
           reason: 'Body content should be rendered');
     });
 
-    testWidgets('Semantic labels are present in semantic tree',
-        (tester) async {
+    testWidgets('Semantic labels are present in semantic tree', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(

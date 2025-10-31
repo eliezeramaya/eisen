@@ -1,22 +1,22 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:eisen/features/eisen_matrix/domain/entities.dart';
-import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
-import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
-import 'package:eisen/features/eisen_matrix/data/local_repo.dart';
 import 'package:eisen/core/services/storage_prefs.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
-import 'package:eisen/features/eisen_matrix/domain/usecases/create_task_usecase.dart';
-import 'package:eisen/features/eisen_matrix/domain/usecases/update_task_usecase.dart';
-import 'package:eisen/features/eisen_matrix/domain/usecases/delete_task_usecase.dart';
-import 'package:eisen/features/eisen_matrix/domain/usecases/compute_layout_usecase.dart';
-import 'package:eisen/features/eisen_matrix/domain/usecases/suggest_top_spots_usecase.dart';
-import 'package:eisen/features/eisen_matrix/domain/usecases/compute_reorder_delta_usecase.dart';
-import 'package:eisen/features/eisen_matrix/domain/layout/layout_providers.dart';
+import 'package:eisen/features/eisen_matrix/data/local_repo.dart';
+import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/layout_config.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/layout_config_provider.dart';
+import 'package:eisen/features/eisen_matrix/domain/layout/layout_providers.dart';
+import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
+import 'package:eisen/features/eisen_matrix/domain/usecases/compute_layout_usecase.dart';
+import 'package:eisen/features/eisen_matrix/domain/usecases/compute_reorder_delta_usecase.dart';
+import 'package:eisen/features/eisen_matrix/domain/usecases/create_task_usecase.dart';
+import 'package:eisen/features/eisen_matrix/domain/usecases/delete_task_usecase.dart';
+import 'package:eisen/features/eisen_matrix/domain/usecases/suggest_top_spots_usecase.dart';
+import 'package:eisen/features/eisen_matrix/domain/usecases/update_task_usecase.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Immutable state for the Eisenhower matrix.
 ///
@@ -31,19 +31,6 @@ import 'package:eisen/features/eisen_matrix/domain/layout/layout_config_provider
 /// - [minimal]: Minimal UI mode (hide extra chrome)
 /// - [version]: Increments on mutations to help .select detect changes
 class MatrixState {
-  final List<Task> tasks;
-  final String? selectedId;
-  final Quadrant? zoom;
-  final Quadrant? presentQuadrant;
-  final ThemeMode themeMode;
-  final String query;
-  final bool compact;
-  final bool showAxisLegends;
-  final bool minimal;
-  final int version; // increments on task list mutations to help .select
-  // Increments when layout configuration changes to force recompute/refresh
-  final int layoutVersion;
-
   const MatrixState({
     required this.tasks,
     this.selectedId,
@@ -57,6 +44,18 @@ class MatrixState {
     this.presentQuadrant,
     this.layoutVersion = 0,
   });
+  final List<Task> tasks;
+  final String? selectedId;
+  final Quadrant? zoom;
+  final Quadrant? presentQuadrant;
+  final ThemeMode themeMode;
+  final String query;
+  final bool compact;
+  final bool showAxisLegends;
+  final bool minimal;
+  final int version; // increments on task list mutations to help .select
+  // Increments when layout configuration changes to force recompute/refresh
+  final int layoutVersion;
 
   MatrixState copyWith({
     List<Task>? tasks,
@@ -98,7 +97,7 @@ class MatrixState {
 class MatrixController extends Notifier<MatrixState> {
   late final MatrixRepository _repo;
   late final UiPrefs _ui;
-  
+
   // Use cases
   late final CreateTaskUseCase _createTaskUseCase;
   late final UpdateTaskUseCase _updateTaskUseCase;
@@ -106,7 +105,7 @@ class MatrixController extends Notifier<MatrixState> {
   late ComputeLayoutUseCase _computeLayoutUseCase;
   late final SuggestTopSpotsUseCase _suggestTopSpotsUseCase;
   late final ComputeReorderDeltaUseCase _computeReorderDeltaUseCase;
-  
+
   final LayoutCache _cache = LayoutCache();
   final BanditService _bandit = BanditService();
   Set<String> _suggested = {};
@@ -116,25 +115,26 @@ class MatrixController extends Notifier<MatrixState> {
   MatrixState build() {
     _repo = LocalPrefsMatrixRepository(StoragePrefs());
     _ui = UiPrefs();
-    
+
     // Initialize use cases
     _createTaskUseCase = CreateTaskUseCase();
     _updateTaskUseCase = UpdateTaskUseCase();
     _deleteTaskUseCase = DeleteTaskUseCase();
     final cfg = ref.read(layoutConfigProvider);
-    _computeLayoutUseCase = ComputeLayoutUseCase(cache: _cache, bandit: _bandit, hybridConfig: cfg);
+    _computeLayoutUseCase =
+        ComputeLayoutUseCase(cache: _cache, bandit: _bandit, hybridConfig: cfg);
 
     // Listen to UI prefs for layout-related changes and bump layoutVersion + reconfigure
     ref.listen<UiPrefsData>(uiPrefsProvider, (prev, next) {
       if (prev == null) return;
-      final changed =
-          prev.topKPerQuadrant != next.topKPerQuadrant ||
+      final changed = prev.topKPerQuadrant != next.topKPerQuadrant ||
           prev.gamma != next.gamma ||
           prev.minAreaNormalized != next.minAreaNormalized ||
           prev.quadrantPadding != next.quadrantPadding;
       if (changed) {
         final newCfg = ref.read(layoutConfigProvider);
-        _computeLayoutUseCase = ComputeLayoutUseCase(cache: _cache, bandit: _bandit, hybridConfig: newCfg);
+        _computeLayoutUseCase = ComputeLayoutUseCase(
+            cache: _cache, bandit: _bandit, hybridConfig: newCfg);
         // Invalidate all quadrants to ensure fresh layout with new config
         _computeLayoutUseCase.invalidate();
         // Bump layout version to notify UI
@@ -143,7 +143,7 @@ class MatrixController extends Notifier<MatrixState> {
     });
     _suggestTopSpotsUseCase = SuggestTopSpotsUseCase(_bandit);
     _computeReorderDeltaUseCase = ComputeReorderDeltaUseCase(_cache);
-    
+
     return const MatrixState(tasks: [], presentQuadrant: Quadrant.q2);
   }
 
@@ -151,7 +151,7 @@ class MatrixController extends Notifier<MatrixState> {
     final loaded = await _repo.load();
     // Check if there are any active (non-completed) tasks
     final activeTasks = loaded.where((t) => t.completedAt == null).toList();
-    
+
     if (activeTasks.isEmpty) {
       // No active tasks - load demo data
       final demo = _demoTasks();
@@ -203,15 +203,19 @@ class MatrixController extends Notifier<MatrixState> {
     final present = q ?? Quadrant.q2;
     state = state.copyWith(zoom: q, presentQuadrant: present);
   }
-  void setPresentQuadrant(Quadrant q) => state = state.copyWith(presentQuadrant: q);
+
+  void setPresentQuadrant(Quadrant q) =>
+      state = state.copyWith(presentQuadrant: q);
   void toggleCompact() {
     state = state.copyWith(compact: !state.compact);
     _saveUi();
   }
+
   void toggleMinimal() {
     state = state.copyWith(minimal: !state.minimal);
     _saveUi();
   }
+
   void setQuery(String q) => state = state.copyWith(query: q);
   void toggleAxisLegends() {
     state = state.copyWith(showAxisLegends: !state.showAxisLegends);
@@ -230,19 +234,20 @@ class MatrixController extends Notifier<MatrixState> {
     await _ui.save(data);
   }
 
-  String createTask({Quadrant quadrant = Quadrant.q2, String title = 'New Task'}) {
+  String createTask(
+      {Quadrant quadrant = Quadrant.q2, String title = 'New Task'}) {
     final task = _createTaskUseCase.execute(quadrant: quadrant, title: title);
     final tasks = [...state.tasks, task];
-    
+
     state = state.copyWith(
       tasks: tasks,
       selectedId: task.id,
       version: state.version + 1,
     );
-    
+
     _computeLayoutUseCase.markDirty({quadrant});
     unawaited(persist());
-    
+
     return task.id;
   }
 
@@ -252,9 +257,9 @@ class MatrixController extends Notifier<MatrixState> {
     final prev = state.tasks[idx];
     final next = _updateTaskUseCase.execute(prev, updater);
     final tasks = state.tasks.map((t) => t.id == id ? next : t).toList();
-    
+
     state = state.copyWith(tasks: tasks, version: state.version + 1);
-    
+
     // Mark dirty quadrants
     final dirtyQuadrants = <Quadrant>{};
     if (prev.quadrant != next.quadrant) {
@@ -263,7 +268,7 @@ class MatrixController extends Notifier<MatrixState> {
       dirtyQuadrants.add(next.quadrant);
     }
     _computeLayoutUseCase.markDirty(dirtyQuadrants);
-    
+
     unawaited(persist());
   }
 
@@ -271,13 +276,13 @@ class MatrixController extends Notifier<MatrixState> {
     final idx = state.tasks.indexWhere((t) => t.id == id);
     final prev = idx == -1 ? null : state.tasks[idx];
     final tasks = state.tasks.where((t) => t.id != id).toList();
-    
+
     state = state.copyWith(
       tasks: tasks,
       selectedId: state.selectedId == id ? null : state.selectedId,
       version: state.version + 1,
     );
-    
+
     if (prev != null) {
       _computeLayoutUseCase.markDirty({prev.quadrant});
       _deleteTaskUseCase.cleanupCache(id, _cache);
@@ -285,11 +290,12 @@ class MatrixController extends Notifier<MatrixState> {
       // If prev missing, conservatively invalidate all
       _computeLayoutUseCase.invalidate();
     }
-    
+
     unawaited(persist());
   }
 
-  void moveTaskToQuadrant(String id, Quadrant q) => updateTask(id, (t) => t.copyWith(quadrant: q));
+  void moveTaskToQuadrant(String id, Quadrant q) =>
+      updateTask(id, (t) => t.copyWith(quadrant: q));
 
   void markTaskDone(String id) {
     updateTask(id, (t) => t.copyWith(completedAt: DateTime.now()));
@@ -298,9 +304,7 @@ class MatrixController extends Notifier<MatrixState> {
   /// Computes the treemap layout with filtering and delegates to use case.
   List<TreemapRect> layout({Quadrant? only, Size? viewport}) {
     // Filter out completed tasks
-    final filtered = state.tasks
-        .where((t) => t.completedAt == null)
-        .toList();
+    final filtered = state.tasks.where((t) => t.completedAt == null).toList();
 
     final layout = _computeLayoutUseCase.execute(
       tasks: filtered,
@@ -312,7 +316,7 @@ class MatrixController extends Notifier<MatrixState> {
 
     // Update suggestions and compute metrics
     _suggested = _suggestTopSpotsUseCase.execute(layout);
-    
+
     final taskById = {for (final t in state.tasks) t.id: t};
     _computeReorderDeltaUseCase.execute(layout, taskById);
 
@@ -563,9 +567,13 @@ class MatrixController extends Notifier<MatrixState> {
   }
 }
 
-final matrixControllerProvider = NotifierProvider<MatrixController, MatrixState>(() => MatrixController());
+final matrixControllerProvider =
+    NotifierProvider<MatrixController, MatrixState>(MatrixController.new);
 
 // Example of selective providers to minimize rebuilds where used
-final matrixVersionProvider = Provider<int>((ref) => ref.watch(matrixControllerProvider.select((s) => s.version)));
-final matrixZoomProvider = Provider<Quadrant?>((ref) => ref.watch(matrixControllerProvider.select((s) => s.zoom)));
-final matrixTasksProvider = Provider<List<Task>>((ref) => ref.watch(matrixControllerProvider.select((s) => s.tasks)));
+final matrixVersionProvider = Provider<int>(
+    (ref) => ref.watch(matrixControllerProvider.select((s) => s.version)));
+final matrixZoomProvider = Provider<Quadrant?>(
+    (ref) => ref.watch(matrixControllerProvider.select((s) => s.zoom)));
+final matrixTasksProvider = Provider<List<Task>>(
+    (ref) => ref.watch(matrixControllerProvider.select((s) => s.tasks)));

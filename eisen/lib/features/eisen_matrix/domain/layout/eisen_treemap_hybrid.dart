@@ -1,18 +1,20 @@
 import 'dart:math' as math;
 import 'dart:ui';
-import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+
 import 'package:eisen/features/eisen_matrix/domain/layout/layout_config.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/treemap_squarify.dart';
+import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart'
+    show TreemapRect;
 import 'package:eisen/features/eisen_matrix/domain/weight.dart';
-import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart' show TreemapRect;
 
 class EisenTreemapHybrid {
-  final LayoutConfig cfg;
   const EisenTreemapHybrid(this.cfg);
+  final LayoutConfig cfg;
 
   /// Returns TreemapRects across all quadrants. If [only] is provided, lays out
   /// only that quadrant in the full [0..1] area.
-  List<TreemapRect> layout(List<Task> tasks, {Quadrant? only, double? minArea01}) {
+  List<TreemapRect> layout(List<Task> tasks,
+      {Quadrant? only, double? minArea01}) {
     final out = <TreemapRect>[];
 
     final byQ = <Quadrant, List<Task>>{for (final q in Quadrant.values) q: []};
@@ -52,7 +54,8 @@ class EisenTreemapHybrid {
       final weights = list
           .map((t) => _smooth(importanceWeight(t), cfg.gamma))
           .toList(growable: false);
-      final idx = List.generate(list.length, (i) => i)..sort((a, b) => weights[b].compareTo(weights[a]));
+      final idx = List.generate(list.length, (i) => i)
+        ..sort((a, b) => weights[b].compareTo(weights[a]));
 
       final k = math.min(cfg.topKPerQuadrant, idx.length);
       final topIdx = idx.sublist(0, k);
@@ -69,7 +72,8 @@ class EisenTreemapHybrid {
       final rects = squarify(sequence, padded);
       assert(() {
         // ignore: avoid_print
-        print('[hybrid] q=${q.name} list=${list.length} top=${topIdx.length} rest=${restIdx.length} seq=${sequence.length} rects=${rects.length}');
+        print(
+            '[hybrid] q=${q.name} list=${list.length} top=${topIdx.length} rest=${restIdx.length} seq=${sequence.length} rects=${rects.length}');
         return true;
       }());
       final outMin = minArea01 ?? cfg.minAreaNormalized;

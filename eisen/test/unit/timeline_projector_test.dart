@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/features/calendar_gantt/application/gantt_projection.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('TimelineProjector', () {
@@ -17,7 +17,8 @@ void main() {
       for (final t in ts) {
         final x = p.dx(t);
         final back = p.timeAt(x);
-        expect((back.millisecondsSinceEpoch - t.millisecondsSinceEpoch).abs(), lessThanOrEqualTo(1));
+        expect((back.millisecondsSinceEpoch - t.millisecondsSinceEpoch).abs(),
+            lessThanOrEqualTo(1));
       }
     });
 

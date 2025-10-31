@@ -1,6 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'layout_config.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'layout_config.dart';
 
 final layoutConfigProvider = Provider<LayoutConfig>((ref) {
   final prefs = ref.watch(uiPrefsProvider);

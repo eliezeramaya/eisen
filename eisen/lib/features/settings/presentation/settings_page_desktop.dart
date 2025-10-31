@@ -1,16 +1,17 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/features/settings/presentation/live_preview_pane.dart';
 import 'package:eisen/features/settings/presentation/section_bus.dart';
 import 'package:eisen/features/settings/presentation/settings_content.dart';
 import 'package:eisen/features/settings/presentation/settings_search.dart';
-import 'package:eisen/features/settings/presentation/live_preview_pane.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SettingsPageDesktop extends ConsumerStatefulWidget {
   const SettingsPageDesktop({super.key});
   @override
-  ConsumerState<SettingsPageDesktop> createState() => _SettingsPageDesktopState();
+  ConsumerState<SettingsPageDesktop> createState() =>
+      _SettingsPageDesktopState();
 }
 
 class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
@@ -62,12 +63,12 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       _stagedGamma = ui.gamma;
       _stagedMinArea = ui.minAreaNormalized;
       _stagedPadding = ui.quadrantPadding;
-  // Gantt prefs
-  _stagedGanttScale = ui.ganttTimeScale;
-  _stagedGanttBadges = ui.ganttShowBadges;
-  _stagedGanttCompact = ui.ganttCompactLanes;
-  _stagedGanttWorkweek = ui.ganttWorkweekOnly;
-  _stagedGanttToday = ui.ganttShowTodayLine;
+      // Gantt prefs
+      _stagedGanttScale = ui.ganttTimeScale;
+      _stagedGanttBadges = ui.ganttShowBadges;
+      _stagedGanttCompact = ui.ganttCompactLanes;
+      _stagedGanttWorkweek = ui.ganttWorkweekOnly;
+      _stagedGanttToday = ui.ganttShowTodayLine;
       // Save originals
       _origTheme = _stagedTheme;
       _origCompact = _stagedCompact;
@@ -96,7 +97,8 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
               icon: const Icon(Icons.search),
               onPressed: () => showSearch(
                 context: context,
-                delegate: SettingsSearchDelegate(onJumpTo: (s) => setState(() => _section = s)),
+                delegate: SettingsSearchDelegate(
+                    onJumpTo: (s) => setState(() => _section = s)),
               ),
             ),
           ],
@@ -106,9 +108,12 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
             Container(
               width: 240,
               color: cs.surfaceContainerHigh,
-              child: _SettingsSidebar(selected: _section, onSelect: (s) => setState(() => _section = s)),
+              child: _SettingsSidebar(
+                  selected: _section,
+                  onSelect: (s) => setState(() => _section = s)),
             ),
-            Container(width: 1, color: cs.outlineVariant.withValues(alpha: 0.28)),
+            Container(
+                width: 1, color: cs.outlineVariant.withValues(alpha: 0.28)),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
@@ -139,11 +144,16 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
                   ganttCompactLanes: _stagedGanttCompact,
                   ganttWorkweekOnly: _stagedGanttWorkweek,
                   ganttShowTodayLine: _stagedGanttToday,
-                  onGanttTimeScaleChanged: (v) => setState(() => _stagedGanttScale = v),
-                  onGanttShowBadgesChanged: (v) => setState(() => _stagedGanttBadges = v),
-                  onGanttCompactLanesChanged: (v) => setState(() => _stagedGanttCompact = v),
-                  onGanttWorkweekOnlyChanged: (v) => setState(() => _stagedGanttWorkweek = v),
-                  onGanttShowTodayLineChanged: (v) => setState(() => _stagedGanttToday = v),
+                  onGanttTimeScaleChanged: (v) =>
+                      setState(() => _stagedGanttScale = v),
+                  onGanttShowBadgesChanged: (v) =>
+                      setState(() => _stagedGanttBadges = v),
+                  onGanttCompactLanesChanged: (v) =>
+                      setState(() => _stagedGanttCompact = v),
+                  onGanttWorkweekOnlyChanged: (v) =>
+                      setState(() => _stagedGanttWorkweek = v),
+                  onGanttShowTodayLineChanged: (v) =>
+                      setState(() => _stagedGanttToday = v),
                 ),
               ),
             ),
@@ -211,7 +221,8 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
     final ctrl = ref.read(matrixControllerProvider.notifier);
     // ThemeMode: cycle toggle until desired (max 3 steps)
     int guard = 0;
-    while (ref.read(matrixControllerProvider).themeMode != _stagedTheme && guard < 3) {
+    while (ref.read(matrixControllerProvider).themeMode != _stagedTheme &&
+        guard < 3) {
       ctrl.toggleTheme();
       guard++;
     }
@@ -288,9 +299,9 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
 }
 
 class _SettingsSidebar extends StatelessWidget {
+  const _SettingsSidebar({required this.selected, required this.onSelect});
   final String selected;
   final ValueChanged<String> onSelect;
-  const _SettingsSidebar({super.key, required this.selected, required this.onSelect});
   @override
   Widget build(BuildContext context) {
     const items = <(String, IconData)>[
@@ -314,7 +325,8 @@ class _SettingsSidebar extends StatelessWidget {
             leading: Icon(icon),
             title: Text(label),
             selected: sel,
-            selectedTileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            selectedTileColor:
+                Theme.of(context).colorScheme.surfaceContainerHighest,
             onTap: () => onSelect(label),
           );
         },

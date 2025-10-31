@@ -1,8 +1,8 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eisen/core/services/storage_prefs.dart';
 import 'package:eisen/features/eisen_matrix/data/local_repo.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -19,8 +19,10 @@ void main() {
     expect(loaded, isEmpty);
 
     final tasks = [
-      const Task(id: '1', title: 'A', quadrant: Quadrant.q2, priority: 5, minutes: 30),
-      const Task(id: '2', title: 'B', quadrant: Quadrant.q1, priority: 7, minutes: 45),
+      const Task(
+          id: '1', title: 'A', quadrant: Quadrant.q2, priority: 5, minutes: 30),
+      const Task(
+          id: '2', title: 'B', quadrant: Quadrant.q1, priority: 7, minutes: 45),
     ];
 
     await repo.save(tasks);

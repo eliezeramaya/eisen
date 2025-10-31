@@ -68,19 +68,20 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                   SegmentedButton<Quadrant>(
                     segments: [
                       for (final q in Quadrant.values)
-                        ButtonSegment(value: q, label: Text(q.name.toUpperCase())),
+                        ButtonSegment(
+                            value: q, label: Text(q.name.toUpperCase())),
                     ],
                     selected: {_quadrant},
-                    onSelectionChanged: (s) => setState(() => _quadrant = s.first),
+                    onSelectionChanged: (s) =>
+                        setState(() => _quadrant = s.first),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _categoryCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Categoría (opcional)'
-                ),
+                decoration:
+                    const InputDecoration(labelText: 'Categoría (opcional)'),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(

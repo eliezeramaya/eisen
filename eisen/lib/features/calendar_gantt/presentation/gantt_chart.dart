@@ -1,20 +1,15 @@
+import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/core/ui/ui_tokens.dart';
+import 'package:eisen/features/calendar_gantt/application/gantt_providers.dart';
+import 'package:eisen/features/calendar_gantt/domain/calendar_span.dart';
+import 'package:eisen/features/calendar_gantt/presentation/gantt_header.dart';
+import 'package:eisen/features/calendar_gantt/presentation/gantt_interaction_layer.dart';
+import 'package:eisen/features/calendar_gantt/presentation/gantt_painter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:eisen/core/ui/ui_tokens.dart';
-import 'package:eisen/features/calendar_gantt/domain/calendar_span.dart';
-import 'package:eisen/features/calendar_gantt/application/gantt_providers.dart';
-import 'package:eisen/features/calendar_gantt/presentation/gantt_header.dart';
-import 'package:eisen/features/calendar_gantt/presentation/gantt_painter.dart';
-import 'package:eisen/features/calendar_gantt/presentation/gantt_interaction_layer.dart';
-import 'package:eisen/core/services/ui_prefs.dart';
 
 /// Gantt chart scaffold with synchronized header/body scroll and Now line.
 class GanttChart extends ConsumerStatefulWidget {
-  final List<CalendarSpan> spans;
-  final TimeScale scale;
-  final DateTime viewStart;
-  final List<(DateTime, String)> milestones;
-  final void Function(CalendarSpan oldSpan, CalendarSpan updated)? onSpanChanged;
   const GanttChart({
     super.key,
     required this.spans,
@@ -23,6 +18,12 @@ class GanttChart extends ConsumerStatefulWidget {
     this.milestones = const <(DateTime, String)>[],
     this.onSpanChanged,
   });
+  final List<CalendarSpan> spans;
+  final TimeScale scale;
+  final DateTime viewStart;
+  final List<(DateTime, String)> milestones;
+  final void Function(CalendarSpan oldSpan, CalendarSpan updated)?
+      onSpanChanged;
 
   @override
   ConsumerState<GanttChart> createState() => _GanttChartState();
@@ -74,17 +75,20 @@ class _GanttChartState extends ConsumerState<GanttChart> {
     } else {
       viewEnd = widget.viewStart.add(const Duration(days: 60));
     }
-    final totalWidth = projector.widthBetween(widget.viewStart, viewEnd).clamp(600.0, 50000.0);
+    final totalWidth =
+        projector.widthBetween(widget.viewStart, viewEnd).clamp(600.0, 50000.0);
 
     // Lane count from spans (lane >= 0)
     int laneCount = 1;
     for (final s in widget.spans) {
       if (s.lane >= laneCount) laneCount = s.lane + 1;
     }
-  // Effective lane metrics (compact lanes -> 0.8x)
-  final laneHeight = ui.ganttCompactLanes ? UiTokens.laneHeight * 0.8 : UiTokens.laneHeight;
-  final laneGap = ui.ganttCompactLanes ? UiTokens.laneGap * 0.8 : UiTokens.laneGap;
-  final bodyHeight = (laneCount * laneHeight).toDouble();
+    // Effective lane metrics (compact lanes -> 0.8x)
+    final laneHeight =
+        ui.ganttCompactLanes ? UiTokens.laneHeight * 0.8 : UiTokens.laneHeight;
+    final laneGap =
+        ui.ganttCompactLanes ? UiTokens.laneGap * 0.8 : UiTokens.laneGap;
+    final bodyHeight = (laneCount * laneHeight).toDouble();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,7 +210,8 @@ class _NowChip extends StatelessWidget {
           ),
           child: const Text(
             'Now',
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700, fontSize: 11),
+            style: TextStyle(
+                color: Colors.black, fontWeight: FontWeight.w700, fontSize: 11),
           ),
         ),
       ],
@@ -215,8 +220,8 @@ class _NowChip extends StatelessWidget {
 }
 
 class _CaretPainter extends CustomPainter {
-  final Color color;
   _CaretPainter({required this.color});
+  final Color color;
   @override
   void paint(Canvas canvas, Size size) {
     final p = Paint()..color = color;
@@ -227,6 +232,8 @@ class _CaretPainter extends CustomPainter {
       ..close();
     canvas.drawPath(path, p);
   }
+
   @override
-  bool shouldRepaint(covariant _CaretPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _CaretPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

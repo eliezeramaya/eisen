@@ -1,17 +1,18 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/features/calendar_gantt/application/gantt_lanes.dart';
 import 'package:eisen/features/calendar_gantt/demo/gantt_demo_data.dart';
 import 'package:eisen/features/calendar_gantt/domain/calendar_span.dart';
 import 'package:eisen/features/calendar_gantt/presentation/gantt_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Gantt goldens (dark)', () {
-    Future<void> _pumpChart(WidgetTester tester, {required TimeScale scale, required String name}) async {
+    Future<void> pumpChart(WidgetTester tester,
+        {required TimeScale scale, required String name}) async {
       final spans = assignLanes(demoSpans());
       final viewStart = DateTime(2025, 2, 10);
 
@@ -38,15 +39,16 @@ void main() {
     }
 
     testGoldens('gantt_day_scale', (tester) async {
-      await _pumpChart(tester, scale: TimeScale.days, name: 'gantt_day_scale');
+      await pumpChart(tester, scale: TimeScale.days, name: 'gantt_day_scale');
     });
 
     testGoldens('gantt_week_scale', (tester) async {
-      await _pumpChart(tester, scale: TimeScale.weeks, name: 'gantt_week_scale');
+      await pumpChart(tester, scale: TimeScale.weeks, name: 'gantt_week_scale');
     });
 
     testGoldens('gantt_month_scale', (tester) async {
-      await _pumpChart(tester, scale: TimeScale.months, name: 'gantt_month_scale');
+      await pumpChart(tester,
+          scale: TimeScale.months, name: 'gantt_month_scale');
     });
   });
 }

@@ -1,3 +1,4 @@
+import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:flutter/material.dart';
 
 class ZenCompletionDialog extends StatelessWidget {
@@ -6,19 +7,24 @@ class ZenCompletionDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.white,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl + AppSpacing.xs, // 32 + 8 = 40
+        vertical: AppSpacing.lg,
+      ),
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            Text('Momento Zen', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-            SizedBox(height: 12),
-            Text('Cada animación es una respiración;\ncada color, una emoción;\ncada tarea completada, un instante de calma.', textAlign: TextAlign.center),
+          children: [
+            Text('Momento Zen', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: AppSpacing.sm),
+            const Text(
+              'Cada animación es una respiración;\ncada color, una emoción;\ncada tarea completada, un instante de calma.',
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
     );
   }
 }
-

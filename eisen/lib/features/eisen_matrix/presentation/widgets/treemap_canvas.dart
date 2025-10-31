@@ -1,38 +1,21 @@
-import 'dart:ui' as ui show lerpDouble;
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
-import 'package:eisen/core/theme/app_theme.dart';
-import 'package:flutter/services.dart';
+import 'dart:ui' as ui show lerpDouble;
+
+import 'package:eisen/core/constants/layout_constants.dart';
+import 'package:eisen/core/responsive/layout_tokens.dart';
+import 'package:eisen/core/services/telemetry.dart';
 import 'package:eisen/core/theme/animation_tokens.dart';
+import 'package:eisen/core/theme/app_theme.dart';
 import 'package:eisen/core/ui/ui_tokens.dart';
+import 'package:eisen/core/ui/ui_typography.dart' as typography;
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
-import 'package:eisen/core/services/telemetry.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_debug.dart';
-import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart' show debugTreemap;
-import 'package:eisen/core/constants/layout_constants.dart';
-import 'package:eisen/core/ui/ui_typography.dart' as typography;
+import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 
 class TreemapCanvas extends StatefulWidget {
-  final List<Task> tasks;
-  final List<TreemapRect> layout;
-  final Set<String>? suggestedIds;
-  final Quadrant? presentQuadrant;
-  final void Function(String? id)? onTap;
-  final void Function(String id, Quadrant q)? onDropToQuadrant;
-  final void Function(Quadrant q)? onDoubleTapQuadrant;
-  final Quadrant? zoom;
-  final void Function(String id)? onEditTask;
-  final void Function(String id)? onMarkDone;
-  final String? inlineEditId;
-  final void Function(String id, String title)? onInlineSubmit;
-  final void Function(String id)? onInlineCancel;
-  final bool minimal;
-  final bool compact;
-  final String? selectedId;
-  // User/app text scale multiplier applied to treemap labels
-  final double textScale;
 
   const TreemapCanvas({
     super.key,
@@ -54,6 +37,24 @@ class TreemapCanvas extends StatefulWidget {
     this.selectedId,
     this.textScale = 1.0,
   });
+  final List<Task> tasks;
+  final List<TreemapRect> layout;
+  final Set<String>? suggestedIds;
+  final Quadrant? presentQuadrant;
+  final void Function(String? id)? onTap;
+  final void Function(String id, Quadrant q)? onDropToQuadrant;
+  final void Function(Quadrant q)? onDoubleTapQuadrant;
+  final Quadrant? zoom;
+  final void Function(String id)? onEditTask;
+  final void Function(String id)? onMarkDone;
+  final String? inlineEditId;
+  final void Function(String id, String title)? onInlineSubmit;
+  final void Function(String id)? onInlineCancel;
+  final bool minimal;
+  final bool compact;
+  final String? selectedId;
+  // User/app text scale multiplier applied to treemap labels
+  final double textScale;
 
   @override
   State<TreemapCanvas> createState() => _TreemapCanvasState();
@@ -316,7 +317,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
             final r = _px(r01, size);
             if (r.width >= LayoutConstants.minTileSize && r.height >= LayoutConstants.minTileSize) {
               overlay.add(Positioned(
-                key: ValueKey('tile_${id}'),
+                key: ValueKey('tile_$id'),
                 left: r.left,
                 top: r.top,
                 width: r.width,
@@ -640,7 +641,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
               return ListTile(
                 title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                 subtitle: Text('P${t.priority} • ${t.minutes}m${t.due != null ? ' • due' : ''}'),
-                trailing: Wrap(spacing: 8, children: [
+                trailing: Wrap(spacing: AppSpacing.xs, children: [
                   IconButton(
                     tooltip: '+15m',
                     icon: const Icon(Icons.add_alarm),
@@ -679,7 +680,7 @@ extension on _TreemapCanvasState {
     final id = widget.inlineEditId!;
     final r01 = _nextRects01[id] ?? _prevRects01[id];
     if (r01 == null) return const SizedBox.shrink();
-    final rect = _px(r01, size).deflate(6);
+    final rect = _px(r01, size).deflate(AppSpacing.xs * 0.75); // 6px
 
     return Positioned(
       left: rect.left,
@@ -688,13 +689,13 @@ extension on _TreemapCanvasState {
       height: 56,
       child: Material(
         color: Colors.black.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
           child: Row(
             children: [
               const Icon(Icons.edit, size: 16, color: Colors.white70),
-              const SizedBox(width: 6),
+              SizedBox(width: AppSpacing.xs * 0.75), // 6px
               Expanded(
                 child: TextField(
                   controller: _inlineController,
@@ -719,9 +720,14 @@ extension on _TreemapCanvasState {
                 visualDensity: VisualDensity.compact,
                 onPressed: () => widget.onInlineCancel?.call(id),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: AppSpacing.xxs),
               FilledButton(
-                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                style: FilledButton.styleFrom(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm - AppSpacing.xxs / 2, // 12 - 2 = 10
+                    vertical: AppSpacing.xs, // 8
+                  ),
+                ),
                 onPressed: () {
                   final value = _inlineController.text.trim();
                   if (value.isEmpty) {
@@ -741,8 +747,8 @@ extension on _TreemapCanvasState {
 }
 
 class _EditDot extends StatelessWidget {
-  final VoidCallback onPressed;
   const _EditDot({required this.onPressed});
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -769,9 +775,9 @@ class _EditDot extends StatelessWidget {
 }
 
 class _CheckDot extends StatelessWidget {
+  const _CheckDot({required this.onPressed, required this.minimal});
   final VoidCallback onPressed;
   final bool minimal;
-  const _CheckDot({required this.onPressed, required this.minimal});
 
   @override
   Widget build(BuildContext context) {
@@ -798,6 +804,33 @@ class _CheckDot extends StatelessWidget {
 }
 
 class _TreemapPainter extends CustomPainter {
+  _TreemapPainter(
+    this.layout, {
+    this.draggingId,
+    this.pointer,
+    this.hoverQuadrant,
+    this.presentQuadrant,
+    this.zoom,
+    required this.prevRects01,
+    required this.nextRects01,
+    required this.t,
+    required this.tokens,
+    required this.minimal,
+    this.pulseQuadrant,
+    this.pulseT = 0.0,
+    this.suggested,
+    required this.layoutVersion,
+    this.selectedId,
+    this.appearingIds = const <String>{},
+    this.outros = const <String, _OutroState>{},
+    this.outrosVersion = 0,
+    required this.outlineColor,
+    required this.tileBorderColor,
+    required this.onSurface,
+    required this.onSurfaceVariant,
+    required this.tileFillColor,
+    this.textScale = 1.0,
+  });
   final List<TreemapRect> layout;
   final String? draggingId;
   final Offset? pointer;
@@ -838,33 +871,6 @@ class _TreemapPainter extends CustomPainter {
   /// Cache invalidation: Automatic via key = '${task.id}_${rect.hashCode}'
   /// When rect changes, new key is generated and old entry is orphaned.
   static final Map<String, Path> _pathCache = {};
-  _TreemapPainter(
-    this.layout, {
-    this.draggingId,
-    this.pointer,
-    this.hoverQuadrant,
-    this.presentQuadrant,
-    this.zoom,
-    required this.prevRects01,
-    required this.nextRects01,
-    required this.t,
-    required this.tokens,
-    required this.minimal,
-    this.pulseQuadrant,
-    this.pulseT = 0.0,
-    this.suggested,
-    required this.layoutVersion,
-    this.selectedId,
-    this.appearingIds = const <String>{},
-    this.outros = const <String, _OutroState>{},
-    this.outrosVersion = 0,
-    required this.outlineColor,
-    required this.tileBorderColor,
-    required this.onSurface,
-    required this.onSurfaceVariant,
-    required this.tileFillColor,
-    this.textScale = 1.0,
-  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1347,11 +1353,11 @@ class _TreemapPainter extends CustomPainter {
 }
 
 class _OutroState {
+  _OutroState({required this.rect, required this.quadrant, required this.startedAt, required this.duration});
   final Rect rect; // normalized 0..1
   final Quadrant? quadrant;
   final DateTime startedAt;
   final Duration duration;
-  _OutroState({required this.rect, required this.quadrant, required this.startedAt, required this.duration});
   double progress(DateTime now) {
     final dt = now.difference(startedAt).inMilliseconds;
     final total = duration.inMilliseconds;

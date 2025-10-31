@@ -1,6 +1,6 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('BanditService stability and reproducibility', () {
@@ -174,12 +174,12 @@ void main() {
 
       // All tasks should have ranks
       expect(ranks.length, sampleTasks.length);
-      
+
       // All ranks should be unique
       final rankValues = ranks.values.toSet();
       expect(rankValues.length, sampleTasks.length,
           reason: 'Each task should have a unique rank');
-      
+
       // Ranks should be in valid range [0, n-1]
       for (final rank in rankValues) {
         expect(rank >= 0, isTrue);
@@ -190,7 +190,7 @@ void main() {
     test('seed is publicly accessible for debugging', () {
       final bandit = BanditService(seed: 123);
       expect(bandit.seed, 123);
-      
+
       final defaultBandit = BanditService();
       expect(defaultBandit.seed, 42, reason: 'Default seed should be 42');
     });
@@ -199,7 +199,7 @@ void main() {
       // Verify that creating new BanditService instances with same seed
       // produces stable results across multiple invocations
       final results = <Map<String, int>>[];
-      
+
       for (var i = 0; i < 5; i++) {
         final bandit = BanditService(seed: 99);
         final ranks = bandit.tieBreakRanks(sampleTasks, Quadrant.q1);

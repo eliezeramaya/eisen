@@ -9,12 +9,7 @@ enum GanttKind { research, analysis, design, dev, qa, sync, feedback }
 /// Represents a scheduled span (task window) in the Gantt timeline.
 @immutable
 class CalendarSpan {
-  final String id; // taskId
-  final String title;
-  final DateTime start; // inclusive
-  final DateTime end; // exclusive
-  final GanttKind kind; // style bucket
-  final int lane; // computed by lane assignment, -1 means unassigned
+  // computed by lane assignment, -1 means unassigned
 
   const CalendarSpan({
     required this.id,
@@ -24,6 +19,12 @@ class CalendarSpan {
     required this.kind,
     this.lane = -1,
   });
+  final String id; // taskId
+  final String title;
+  final DateTime start; // inclusive
+  final DateTime end; // exclusive
+  final GanttKind kind; // style bucket
+  final int lane;
 
   CalendarSpan copyWith({
     String? id,

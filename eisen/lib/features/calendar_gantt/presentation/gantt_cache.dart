@@ -1,16 +1,15 @@
-import 'dart:collection';
 import 'package:flutter/material.dart';
 
 class _LruMap<K, V> {
-  final int capacity;
-  final _map = LinkedHashMap<K, V>();
   _LruMap({required this.capacity});
+  final int capacity;
+  final _map = <K, V>{};
 
   V? get(K key) {
     final v = _map.remove(key);
     if (v != null) _map[key] = v; // reinsert to mark as most-recent
     return v;
-    }
+  }
 
   void set(K key, V value) {
     if (_map.containsKey(key)) {
@@ -26,12 +25,6 @@ class _LruMap<K, V> {
 
 // Geometry cache key
 class GeometryKey {
-  final String id;
-  final int viewStartMs;
-  final int startMs;
-  final int endMs;
-  final double pxPerDay;
-  final int lane;
   const GeometryKey({
     required this.id,
     required this.viewStartMs,
@@ -40,6 +33,12 @@ class GeometryKey {
     required this.pxPerDay,
     required this.lane,
   });
+  final String id;
+  final int viewStartMs;
+  final int startMs;
+  final int endMs;
+  final double pxPerDay;
+  final int lane;
   @override
   bool operator ==(Object other) =>
       other is GeometryKey &&
@@ -50,16 +49,21 @@ class GeometryKey {
       (other.pxPerDay - pxPerDay).abs() < 1e-6 &&
       other.lane == lane;
   @override
-  int get hashCode => Object.hash(id, viewStartMs, startMs, endMs, (pxPerDay * 1000).round(), lane);
+  int get hashCode => Object.hash(
+      id, viewStartMs, startMs, endMs, (pxPerDay * 1000).round(), lane);
 }
 
 // Text painter cache key
 class TextKey {
+  const TextKey(
+      {required this.text,
+      required this.fontSize,
+      required this.maxWidth,
+      required this.colorValue});
   final String text;
   final double fontSize;
   final double maxWidth;
   final int colorValue;
-  const TextKey({required this.text, required this.fontSize, required this.maxWidth, required this.colorValue});
   @override
   bool operator ==(Object other) =>
       other is TextKey &&
@@ -68,7 +72,8 @@ class TextKey {
       (other.maxWidth - maxWidth).abs() < 0.5 &&
       other.colorValue == colorValue;
   @override
-  int get hashCode => Object.hash(text, (fontSize * 1000).round(), maxWidth.round(), colorValue);
+  int get hashCode => Object.hash(
+      text, (fontSize * 1000).round(), maxWidth.round(), colorValue);
 }
 
 class GanttCaches {

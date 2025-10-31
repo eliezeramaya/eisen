@@ -1,6 +1,6 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/core/a11y/semantics.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Accessibility compliance', () {
@@ -8,10 +8,11 @@ void main() {
       // Note: Quadrant colors are used with alpha blending (0.18-0.28) overlays
       // on glassBg, not directly on plain backgrounds. Tests verify the concept
       // works with reference colors.
-      
+
       test('white on black meets AAA contrast (reference)', () {
         final passes = A11y.meetsContrastAA(Colors.white, Colors.black);
-        expect(passes, isTrue, reason: 'White on black is 21:1 (maximum contrast)');
+        expect(passes, isTrue,
+            reason: 'White on black is 21:1 (maximum contrast)');
       });
 
       test('low contrast fails AA (reference)', () {
@@ -20,9 +21,10 @@ void main() {
           const Color(0xFFCCCCCC),
           const Color(0xFFDDDDDD),
         );
-        expect(passes, isFalse, reason: 'Similar grays should fail AA contrast');
+        expect(passes, isFalse,
+            reason: 'Similar grays should fail AA contrast');
       });
-      
+
       test('contrast validator works for typical text on light bg', () {
         // Dark gray text on white
         final passes = A11y.meetsContrastAA(
@@ -31,7 +33,7 @@ void main() {
         );
         expect(passes, isTrue, reason: 'Dark gray on white meets AA');
       });
-      
+
       test('contrast validator works for typical text on dark bg', () {
         // Light text on dark blue
         final passes = A11y.meetsContrastAA(
@@ -66,13 +68,15 @@ void main() {
         );
 
         // Find all ConstrainedBox widgets and get the one from touchTarget
-        final constrainedBoxes = tester.widgetList<ConstrainedBox>(find.byType(ConstrainedBox));
-        
+        final constrainedBoxes =
+            tester.widgetList<ConstrainedBox>(find.byType(ConstrainedBox));
+
         // Look for our touchTarget's ConstrainedBox (the one with 44x44 constraints)
         final touchTargetBox = constrainedBoxes.firstWhere(
-          (box) => box.constraints.minWidth == 44 && box.constraints.minHeight == 44,
+          (box) =>
+              box.constraints.minWidth == 44 && box.constraints.minHeight == 44,
         );
-        
+
         expect(touchTargetBox.constraints.minWidth, 44);
         expect(touchTargetBox.constraints.minHeight, 44);
       });
@@ -116,7 +120,8 @@ void main() {
 
         expect(label, contains('Group of 5 tasks'));
         expect(label, contains('Q3'));
-        expect(label, isNot(contains('Ignored for stacks')), reason: 'Stack label should not include title');
+        expect(label, isNot(contains('Ignored for stacks')),
+            reason: 'Stack label should not include title');
       });
     });
 

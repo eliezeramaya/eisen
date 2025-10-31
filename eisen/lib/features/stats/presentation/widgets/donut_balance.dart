@@ -1,11 +1,12 @@
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
+
 import 'package:eisen/features/stats/domain/models.dart';
+import 'package:flutter/material.dart';
 
 /// Donut chart for Q1..Q4 without external deps.
 class DonutBalance extends StatelessWidget {
-  final BalanceBreakdown? balance;
   const DonutBalance({super.key, this.balance});
+  final BalanceBreakdown? balance;
 
   @override
   Widget build(BuildContext context) {
@@ -19,8 +20,8 @@ class DonutBalance extends StatelessWidget {
 }
 
 class _DonutPainter extends CustomPainter {
-  final BalanceBreakdown? b;
   _DonutPainter(this.b);
+  final BalanceBreakdown? b;
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
@@ -61,7 +62,8 @@ class _DonutPainter extends CustomPainter {
     for (int i = 0; i < 4; i++) {
       final sweep = (values[i] / total) * 2 * math.pi;
       if (sweep <= 0) continue;
-      canvas.drawArc(Rect.fromCircle(center: center, radius: r), start, sweep, false, paints[i]);
+      canvas.drawArc(Rect.fromCircle(center: center, radius: r), start, sweep,
+          false, paints[i]);
       start += sweep;
     }
   }
@@ -69,4 +71,3 @@ class _DonutPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _DonutPainter oldDelegate) => oldDelegate.b != b;
 }
-

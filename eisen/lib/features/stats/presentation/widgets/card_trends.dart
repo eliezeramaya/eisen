@@ -3,8 +3,8 @@ import '../../domain/models.dart';
 import 'sparkline.dart';
 
 class CardTrends extends StatelessWidget {
-  final List<TrendPoint>? trend;
   const CardTrends({super.key, this.trend});
+  final List<TrendPoint>? trend;
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +15,8 @@ class CardTrends extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Tendencias', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const Text('Tendencias',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Sparkline(trend: trend),
           ],
@@ -24,4 +25,3 @@ class CardTrends extends StatelessWidget {
     );
   }
 }
-

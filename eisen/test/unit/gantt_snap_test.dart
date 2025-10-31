@@ -1,6 +1,6 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/features/calendar_gantt/application/gantt_snap.dart';
 import 'package:eisen/features/calendar_gantt/domain/calendar_span.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('snap utilities', () {

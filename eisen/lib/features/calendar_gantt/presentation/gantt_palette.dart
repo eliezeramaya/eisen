@@ -1,17 +1,17 @@
-import 'package:flutter/material.dart';
 import 'package:eisen/features/calendar_gantt/domain/calendar_span.dart';
+import 'package:flutter/material.dart';
 
 class GanttPalette {
-  final Color gradStart;
-  final Color gradEnd;
-  final Color badgeBg;
-  final Color text;
   const GanttPalette({
     required this.gradStart,
     required this.gradEnd,
     required this.badgeBg,
     required this.text,
   });
+  final Color gradStart;
+  final Color gradEnd;
+  final Color badgeBg;
+  final Color text;
 }
 
 GanttPalette paletteFor(GanttKind k) {

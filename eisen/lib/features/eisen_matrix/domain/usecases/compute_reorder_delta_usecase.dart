@@ -1,15 +1,14 @@
+import 'package:eisen/core/services/telemetry.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
-import 'package:eisen/core/services/telemetry.dart';
 
 /// Use case for computing top-3 reorder delta for telemetry.
 ///
 /// Tracks how much the top 3 largest tiles per quadrant change between
 /// layout computations (used for measuring layout stability).
 class ComputeReorderDeltaUseCase {
-  final LayoutCache _cache;
-
   ComputeReorderDeltaUseCase(this._cache);
+  final LayoutCache _cache;
 
   /// Computes the symmetric difference in top-3 tiles vs previous layout.
   ///
@@ -32,12 +31,10 @@ class ComputeReorderDeltaUseCase {
         final t = allTasks[id];
         return t != null && t.quadrant == q;
       }).toList();
-      
-      ids.sort((a, b) => 
-        (_cache.lastRank[a] ?? (1 << 30))
-            .compareTo(_cache.lastRank[b] ?? (1 << 30))
-      );
-      
+
+      ids.sort((a, b) => (_cache.lastRank[a] ?? (1 << 30))
+          .compareTo(_cache.lastRank[b] ?? (1 << 30)));
+
       prevByQ[q] = ids.take(3).toList();
     }
 
@@ -46,14 +43,12 @@ class ComputeReorderDeltaUseCase {
       final items = layout
           .where((e) => e.task.quadrant == q && e.stackChildren.isEmpty)
           .toList();
-      
+
       if (items.isEmpty) continue;
-      
-      items.sort((a, b) => 
-        (b.rect01.width * b.rect01.height)
-            .compareTo(a.rect01.width * a.rect01.height)
-      );
-      
+
+      items.sort((a, b) => (b.rect01.width * b.rect01.height)
+          .compareTo(a.rect01.width * a.rect01.height));
+
       currByQ[q] = items.map((e) => e.task.id).take(3).toList();
     }
 

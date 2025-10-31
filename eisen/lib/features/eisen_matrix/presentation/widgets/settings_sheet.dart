@@ -1,20 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:eisen/core/providers/locale_provider.dart';
+import 'package:eisen/core/responsive/layout_tokens.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/l10n/app_localizations_en.dart';
-import 'package:eisen/core/providers/locale_provider.dart';
-import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SettingsSheet extends ConsumerWidget {
-  final VoidCallback onToggleTheme;
-  final VoidCallback onToggleDensity;
-  final bool compact;
-  final bool showAxisLegends;
-  final VoidCallback onToggleAxisLegends;
-  final VoidCallback? onResetToDemo;
-  final bool? minimal;
-  final VoidCallback? onToggleMinimal;
-  
   const SettingsSheet({
     super.key,
     required this.onToggleTheme,
@@ -26,16 +18,26 @@ class SettingsSheet extends ConsumerWidget {
     this.minimal,
     this.onToggleMinimal,
   });
+  final VoidCallback onToggleTheme;
+  final VoidCallback onToggleDensity;
+  final bool compact;
+  final bool showAxisLegends;
+  final VoidCallback onToggleAxisLegends;
+  final VoidCallback? onResetToDemo;
+  final bool? minimal;
+  final VoidCallback? onToggleMinimal;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-  // Fall back to English localizations when not provided (e.g., in isolated widget tests)
-  final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
+    // Fall back to English localizations when not provided (e.g., in isolated widget tests)
+    final l10n =
+        Localizations.of<AppLocalizations>(context, AppLocalizations) ??
+            AppLocalizationsEn();
     final currentLocale = ref.watch(localeProvider);
     final prefs = ref.watch(uiPrefsControllerProvider);
     final cs = Theme.of(context).colorScheme;
-    final bottomPad = MediaQuery.paddingOf(context).bottom + 16;
-    
+    final bottomPad = MediaQuery.paddingOf(context).bottom + AppSpacing.md;
+
     return Container(
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
@@ -44,7 +46,7 @@ class SettingsSheet extends ConsumerWidget {
       child: SafeArea(
         top: false,
         child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPad),
+          padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, bottomPad),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,11 +54,12 @@ class SettingsSheet extends ConsumerWidget {
               Row(
                 children: [
                   const Icon(Icons.settings, size: 22),
-                  const SizedBox(width: 8),
-                  Text(l10n.settingsTitle, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(l10n.settingsTitle,
+                      style: Theme.of(context).textTheme.titleMedium),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.sm),
               const ListTile(
                 leading: Icon(Icons.palette_outlined, size: 22),
                 minLeadingWidth: 32,
@@ -73,140 +76,149 @@ class SettingsSheet extends ConsumerWidget {
                 },
               ),
               SwitchListTile(
-              value: compact,
-              onChanged: (_) {
-                onToggleDensity();
-                Navigator.of(context).pop();
-              },
-              secondary: const Icon(Icons.density_medium, size: 22),
-              title: Text(compact ? l10n.settingsDensityCompact : l10n.settingsDensityComfortable),
-            ),
-            _SliderTile<int>(
-              sliderKey: const Key('slider_text_scale'),
-              label: 'Tamaño de texto',
-              value: prefs.textScaleLevel,
-              min: 1,
-              max: 5,
-              divisions: 4,
-              helper: 'Escala del texto en la aplicación (1–5).',
-              toDouble: (v) => v.toDouble(),
-              fromDouble: (d) => d.round().clamp(1, 5),
-              onChanged: (v) => ref.read(uiPrefsControllerProvider.notifier).setTextScaleLevel(v),
-            ),
-            SwitchListTile(
-              value: showAxisLegends,
-              onChanged: (_) {
-                onToggleAxisLegends();
-                Navigator.of(context).pop();
-              },
-              secondary: const Icon(Icons.label_outline, size: 22),
-              title: Text(l10n.settingsShowAxisLegends),
-            ),
-            if (minimal != null && onToggleMinimal != null)
-              SwitchListTile(
-                value: minimal!,
+                value: compact,
                 onChanged: (_) {
-                  onToggleMinimal!();
+                  onToggleDensity();
                   Navigator.of(context).pop();
                 },
-                secondary: const Icon(Icons.filter_b_and_w, size: 22),
-                title: Text(l10n.settingsMinimalMode),
+                secondary: const Icon(Icons.density_medium, size: 22),
+                title: Text(compact
+                    ? l10n.settingsDensityCompact
+                    : l10n.settingsDensityComfortable),
               ),
-            ListTile(
-              leading: const Icon(Icons.language, size: 22),
-              minLeadingWidth: 32,
-              title: Text(l10n.settingsLanguage),
-              subtitle: Text(_getLanguageLabel(currentLocale, l10n)),
-              onTap: () => _showLanguageDialog(context, ref, l10n),
-            ),
-            const Divider(height: 24),
-            const ListTile(
-              leading: Icon(Icons.grid_view_rounded, size: 22),
-              minLeadingWidth: 32,
-              title: Text('Treemap · Layout'),
-              subtitle: Text('Ajusta proporcionalidad y densidad visual'),
-            ),
-            _SliderTile<int>(
-              sliderKey: const Key('slider_topk'),
-              label: 'Top-K por cuadrante',
-              value: prefs.topKPerQuadrant,
-              min: 5,
-              max: 60,
-              divisions: 55,
-              helper: 'Más alto = más tareas visibles, menos “+N”.',
-              toDouble: (v) => v.toDouble(),
-              fromDouble: (d) => d.round(),
-              onChanged: (v) => ref.read(uiPrefsControllerProvider.notifier).setTopK(v),
-            ),
-            _SliderTile<double>(
-              sliderKey: const Key('slider_gamma'),
-              label: 'Gamma (suavizado de pesos)',
-              value: prefs.gamma,
-              min: 0.70,
-              max: 1.00,
-              divisions: 30,
-              helper: '0.70 reduce dominantes; 1.00 = lineal.',
-              toDouble: (v) => v,
-              fromDouble: (d) => double.parse(d.toStringAsFixed(2)),
-              onChanged: (v) => ref.read(uiPrefsControllerProvider.notifier).setGamma(v),
-            ),
-            _SliderTile<double>(
-              sliderKey: const Key('slider_min_area'),
-              label: 'Área mínima normalizada',
-              value: prefs.minAreaNormalized,
-              min: 0.00002,
-              max: 0.00020,
-              divisions: 20,
-              helper: 'Más alto = menos micro-tiles, más “+N”.',
-              toDouble: (v) => v,
-              fromDouble: (d) => double.parse(d.toStringAsExponential(5)),
-              onChanged: (v) => ref.read(uiPrefsControllerProvider.notifier).setMinArea(v),
-            ),
-            _SliderTile<double>(
-              sliderKey: const Key('slider_padding'),
-              label: 'Padding interno de cuadrante',
-              value: prefs.quadrantPadding,
-              min: 0.0,
-              max: 0.02,
-              divisions: 20,
-              helper: 'Separación interna para legibilidad.',
-              toDouble: (v) => v,
-              fromDouble: (d) => double.parse(d.toStringAsFixed(3)),
-              onChanged: (v) => ref.read(uiPrefsControllerProvider.notifier).setPadding(v),
-            ),
-            if (onResetToDemo != null) ...[
-              const Divider(height: 24),
+              _SliderTile<int>(
+                sliderKey: const Key('slider_text_scale'),
+                label: 'Tamaño de texto',
+                value: prefs.textScaleLevel,
+                min: 1,
+                max: 5,
+                divisions: 4,
+                helper: 'Escala del texto en la aplicación (1–5).',
+                toDouble: (v) => v.toDouble(),
+                fromDouble: (d) => d.round().clamp(1, 5),
+                onChanged: (v) => ref
+                    .read(uiPrefsControllerProvider.notifier)
+                    .setTextScaleLevel(v),
+              ),
+              SwitchListTile(
+                value: showAxisLegends,
+                onChanged: (_) {
+                  onToggleAxisLegends();
+                  Navigator.of(context).pop();
+                },
+                secondary: const Icon(Icons.label_outline, size: 22),
+                title: Text(l10n.settingsShowAxisLegends),
+              ),
+              if (minimal != null && onToggleMinimal != null)
+                SwitchListTile(
+                  value: minimal!,
+                  onChanged: (_) {
+                    onToggleMinimal!();
+                    Navigator.of(context).pop();
+                  },
+                  secondary: const Icon(Icons.filter_b_and_w, size: 22),
+                  title: Text(l10n.settingsMinimalMode),
+                ),
               ListTile(
-                leading: const Icon(Icons.refresh, size: 22, color: Colors.orange),
+                leading: const Icon(Icons.language, size: 22),
                 minLeadingWidth: 32,
-                title: Text(l10n.settingsResetDemo),
-                subtitle: Text(l10n.settingsResetDemoSubtitle),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: Text(l10n.settingsResetDemoDialogTitle),
-                      content: Text(l10n.settingsResetDemoDialogContent),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          child: Text(l10n.settingsCancel),
-                        ),
-                        FilledButton(
-                          onPressed: () {
-                            Navigator.of(ctx).pop();
-                            onResetToDemo!();
-                          },
-                          child: Text(l10n.settingsRestore),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                title: Text(l10n.settingsLanguage),
+                subtitle: Text(_getLanguageLabel(currentLocale, l10n)),
+                onTap: () => _showLanguageDialog(context, ref, l10n),
               ),
-            ],
-              const SizedBox(height: 8),
+              const Divider(height: AppSpacing.lg),
+              const ListTile(
+                leading: Icon(Icons.grid_view_rounded, size: 22),
+                minLeadingWidth: 32,
+                title: Text('Treemap · Layout'),
+                subtitle: Text('Ajusta proporcionalidad y densidad visual'),
+              ),
+              _SliderTile<int>(
+                sliderKey: const Key('slider_topk'),
+                label: 'Top-K por cuadrante',
+                value: prefs.topKPerQuadrant,
+                min: 5,
+                max: 60,
+                divisions: 55,
+                helper: 'Más alto = más tareas visibles, menos “+N”.',
+                toDouble: (v) => v.toDouble(),
+                fromDouble: (d) => d.round(),
+                onChanged: (v) =>
+                    ref.read(uiPrefsControllerProvider.notifier).setTopK(v),
+              ),
+              _SliderTile<double>(
+                sliderKey: const Key('slider_gamma'),
+                label: 'Gamma (suavizado de pesos)',
+                value: prefs.gamma,
+                min: 0.70,
+                max: 1.00,
+                divisions: 30,
+                helper: '0.70 reduce dominantes; 1.00 = lineal.',
+                toDouble: (v) => v,
+                fromDouble: (d) => double.parse(d.toStringAsFixed(2)),
+                onChanged: (v) =>
+                    ref.read(uiPrefsControllerProvider.notifier).setGamma(v),
+              ),
+              _SliderTile<double>(
+                sliderKey: const Key('slider_min_area'),
+                label: 'Área mínima normalizada',
+                value: prefs.minAreaNormalized,
+                min: 0.00002,
+                max: 0.00020,
+                divisions: 20,
+                helper: 'Más alto = menos micro-tiles, más “+N”.',
+                toDouble: (v) => v,
+                fromDouble: (d) => double.parse(d.toStringAsExponential(5)),
+                onChanged: (v) =>
+                    ref.read(uiPrefsControllerProvider.notifier).setMinArea(v),
+              ),
+              _SliderTile<double>(
+                sliderKey: const Key('slider_padding'),
+                label: 'Padding interno de cuadrante',
+                value: prefs.quadrantPadding,
+                min: 0.0,
+                max: 0.02,
+                divisions: 20,
+                helper: 'Separación interna para legibilidad.',
+                toDouble: (v) => v,
+                fromDouble: (d) => double.parse(d.toStringAsFixed(3)),
+                onChanged: (v) =>
+                    ref.read(uiPrefsControllerProvider.notifier).setPadding(v),
+              ),
+              if (onResetToDemo != null) ...[
+                const Divider(height: 24),
+                ListTile(
+                  leading:
+                      const Icon(Icons.refresh, size: 22, color: Colors.orange),
+                  minLeadingWidth: 32,
+                  title: Text(l10n.settingsResetDemo),
+                  subtitle: Text(l10n.settingsResetDemoSubtitle),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: Text(l10n.settingsResetDemoDialogTitle),
+                        content: Text(l10n.settingsResetDemoDialogContent),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: Text(l10n.settingsCancel),
+                          ),
+                          FilledButton(
+                            onPressed: () {
+                              Navigator.of(ctx).pop();
+                              onResetToDemo!();
+                            },
+                            child: Text(l10n.settingsRestore),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+              const SizedBox(height: AppSpacing.xs),
             ],
           ),
         ),
@@ -226,9 +238,10 @@ class SettingsSheet extends ConsumerWidget {
     }
   }
 
-  void _showLanguageDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  void _showLanguageDialog(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final currentLocale = ref.read(localeProvider);
-    
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -275,17 +288,6 @@ class SettingsSheet extends ConsumerWidget {
 
 // Generic slider tile helper, kept private to this file
 class _SliderTile<T extends num> extends StatelessWidget {
-  final String label;
-  final T value;
-  final double min;
-  final double max;
-  final int divisions;
-  final String helper;
-  final double Function(T) toDouble;
-  final T Function(double) fromDouble;
-  final ValueChanged<T> onChanged;
-  final Key? sliderKey;
-
   const _SliderTile({
     required this.label,
     required this.value,
@@ -298,6 +300,16 @@ class _SliderTile<T extends num> extends StatelessWidget {
     required this.onChanged,
     this.sliderKey,
   });
+  final String label;
+  final T value;
+  final double min;
+  final double max;
+  final int divisions;
+  final String helper;
+  final double Function(T) toDouble;
+  final T Function(double) fromDouble;
+  final ValueChanged<T> onChanged;
+  final Key? sliderKey;
 
   @override
   Widget build(BuildContext context) {
@@ -306,7 +318,7 @@ class _SliderTile<T extends num> extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           title: Text(label),
           subtitle: Slider(
             key: sliderKey,
@@ -319,7 +331,7 @@ class _SliderTile<T extends num> extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
           child: Text(helper, style: Theme.of(context).textTheme.bodySmall),
         ),
       ],

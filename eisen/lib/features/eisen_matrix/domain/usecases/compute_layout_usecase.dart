@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
+import 'package:eisen/core/constants/layout_constants.dart';
+import 'package:eisen/core/services/telemetry.dart';
+import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/layout/eisen_treemap_hybrid.dart';
+import 'package:eisen/features/eisen_matrix/domain/layout/layout_config.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:flutter/foundation.dart';
-import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
-import 'package:eisen/core/services/telemetry.dart';
-import 'package:eisen/core/constants/layout_constants.dart';
-import 'package:eisen/features/eisen_matrix/domain/layout/layout_config.dart';
-import 'package:eisen/features/eisen_matrix/domain/layout/eisen_treemap_hybrid.dart';
+import 'package:flutter/material.dart';
 
 /// Use case for computing the treemap layout with incremental updates.
 ///
@@ -16,17 +16,6 @@ import 'package:eisen/features/eisen_matrix/domain/layout/eisen_treemap_hybrid.d
 /// - Viewport-aware: Calculates minimum tile area based on screen size
 /// - Stable: Uses EMA smoothing and bandit tie-breaking
 class ComputeLayoutUseCase {
-  final LayoutCache _cache;
-  final BanditService _bandit;
-  final LayoutConfig? _hybridCfg;
-  
-  // Memoization state
-  int _lastHash = 0;
-  List<TreemapRect> _lastLayout = const [];
-  Set<Quadrant> _dirtyQuadrants = {};
-  Quadrant? _lastZoom;
-  Size? _lastViewport;
-
   ComputeLayoutUseCase({
     required LayoutCache cache,
     required BanditService bandit,
@@ -34,6 +23,16 @@ class ComputeLayoutUseCase {
   })  : _cache = cache,
         _bandit = bandit,
         _hybridCfg = hybridConfig;
+  final LayoutCache _cache;
+  final BanditService _bandit;
+  final LayoutConfig? _hybridCfg;
+
+  // Memoization state
+  int _lastHash = 0;
+  List<TreemapRect> _lastLayout = const [];
+  Set<Quadrant> _dirtyQuadrants = {};
+  Quadrant? _lastZoom;
+  Size? _lastViewport;
 
   /// Computes the treemap layout for given [tasks].
   ///
@@ -54,30 +53,31 @@ class ComputeLayoutUseCase {
     // DEBUG: surface runtime info to logs to help diagnose empty-layout issues
     if (kDebugMode) {
       try {
-        debugPrint('ComputeLayoutUseCase.execute: tasks=${tasks.length} zoom=${zoom?.name} viewport=${viewport?.width}x${viewport?.height}');
+        debugPrint(
+            'ComputeLayoutUseCase.execute: tasks=${tasks.length} zoom=${zoom?.name} viewport=${viewport?.width}x${viewport?.height}');
       } catch (_) {}
     }
     // Compute hash to detect changes
-    int hash = Object.hashAllUnordered(tasks.map((t) => t.id)) ^ 
-               tasks.length ^ 
-               (zoom?.index ?? -1);
-    
+    int hash = Object.hashAllUnordered(tasks.map((t) => t.id)) ^
+        tasks.length ^
+        (zoom?.index ?? -1);
+
     // Calculate minimum area from viewport
     double? minArea01;
     if (viewport != null && viewport.width > 0 && viewport.height > 0) {
       // Adjust minimum interactive tile area depending on density mode
       final baseMinPx = LayoutConstants.minTileAreaPx; // centralized constant
-      final densityFactor = compactDensity ? 0.7 : 1.0; // smaller threshold in compact mode
+      final densityFactor =
+          compactDensity ? 0.7 : 1.0; // smaller threshold in compact mode
       final minPx = baseMinPx * densityFactor;
       final totalPx = viewport.width * viewport.height;
       minArea01 = (minPx / totalPx).clamp(0.0, 1.0);
       hash ^= viewport.width.round();
-      hash ^= (viewport.height.round() << 16);
+      hash ^= viewport.height.round() << 16;
     }
 
-    final viewportChanged = _lastViewport == null || 
-                           viewport == null || 
-                           _lastViewport != viewport;
+    final viewportChanged =
+        _lastViewport == null || viewport == null || _lastViewport != viewport;
     final zoomChanged = _lastZoom != zoom;
 
     // Add explicit quadrant to dirty set if requested
@@ -86,9 +86,9 @@ class ComputeLayoutUseCase {
     }
 
     // Return cached if nothing changed
-    if (_dirtyQuadrants.isEmpty && 
-        !zoomChanged && 
-        !viewportChanged && 
+    if (_dirtyQuadrants.isEmpty &&
+        !zoomChanged &&
+        !viewportChanged &&
         _lastHash == hash) {
       return _lastLayout;
     }
@@ -96,19 +96,26 @@ class ComputeLayoutUseCase {
     // Hybrid engine bypasses incremental logic for simplicity and consistency
     if (_hybridCfg != null) {
       // Merge prefs-configured minimum area with viewport-derived threshold: take the max
-      final cfgMin = _hybridCfg!.minAreaNormalized;
-      final effMin = (minArea01 == null) ? cfgMin : (minArea01 > cfgMin ? minArea01 : cfgMin);
+      final cfgMin = _hybridCfg.minAreaNormalized;
+      final effMin = (minArea01 == null)
+          ? cfgMin
+          : (minArea01 > cfgMin ? minArea01 : cfgMin);
       if (zoom != null) {
-        return _computeHybrid(tasks, only: zoom, minArea01: effMin, hash: hash, viewport: viewport);
+        return _computeHybrid(tasks,
+            only: zoom, minArea01: effMin, hash: hash, viewport: viewport);
       }
-      return _computeHybrid(tasks, minArea01: effMin, hash: hash, viewport: viewport);
+      return _computeHybrid(tasks,
+          minArea01: effMin, hash: hash, viewport: viewport);
     }
 
     // Original engine paths
     if (zoom != null) {
       return _computeZoomedLayout(tasks, zoom, minArea01, hash, viewport);
     }
-    if (_lastLayout.isEmpty || viewportChanged || zoomChanged || _dirtyQuadrants.length >= 4) {
+    if (_lastLayout.isEmpty ||
+        viewportChanged ||
+        zoomChanged ||
+        _dirtyQuadrants.length >= 4) {
       return _computeFullLayout(tasks, minArea01, hash, viewport);
     }
     return _computeIncrementalLayout(tasks, minArea01, hash, viewport);
@@ -144,7 +151,7 @@ class ComputeLayoutUseCase {
   ) {
     const rect = Rect.fromLTWH(0, 0, 1, 1);
     final tasksInQ = tasks.where((t) => t.quadrant == zoom).toList();
-    
+
     final sw = Stopwatch()..start();
     final layout = layoutQuadrantStable(
       tasksInQ,
@@ -156,19 +163,20 @@ class ComputeLayoutUseCase {
     );
     if (kDebugMode) {
       try {
-        debugPrint('ComputeLayoutUseCase._computeZoomedLayout: quadrant=${zoom.name} tasksInQ=${tasksInQ.length} minArea01=$minArea01 layout=${layout.length}');
+        debugPrint(
+            'ComputeLayoutUseCase._computeZoomedLayout: quadrant=${zoom.name} tasksInQ=${tasksInQ.length} minArea01=$minArea01 layout=${layout.length}');
       } catch (_) {}
     }
     sw.stop();
-    
+
     Telemetry.layoutTime(zoom.name, sw.elapsedMicroseconds / 1000.0);
-    
+
     _lastLayout = layout;
     _lastHash = hash;
     _lastZoom = zoom;
     _lastViewport = viewport;
     _dirtyQuadrants.clear();
-    
+
     return layout;
   }
 
@@ -188,19 +196,20 @@ class ComputeLayoutUseCase {
     );
     if (kDebugMode) {
       try {
-        debugPrint('ComputeLayoutUseCase._computeFullLayout: tasks=${tasks.length} minArea01=$minArea01 layout=${layout.length}');
+        debugPrint(
+            'ComputeLayoutUseCase._computeFullLayout: tasks=${tasks.length} minArea01=$minArea01 layout=${layout.length}');
       } catch (_) {}
     }
     sw.stop();
-    
+
     Telemetry.layoutTime(null, sw.elapsedMicroseconds / 1000.0);
-    
+
     _lastLayout = layout;
     _lastHash = hash;
     _lastZoom = null;
     _lastViewport = viewport;
     _dirtyQuadrants.clear();
-    
+
     return layout;
   }
 
@@ -244,9 +253,8 @@ class ComputeLayoutUseCase {
 
     // Keep clean quadrants
     for (final q in keepQuadrants) {
-      final kept = prevByQ[q]!
-          .where((tr) => existingIds.contains(tr.task.id))
-          .toList();
+      final kept =
+          prevByQ[q]!.where((tr) => existingIds.contains(tr.task.id)).toList();
       merged.addAll(kept);
     }
 
@@ -262,7 +270,7 @@ class ComputeLayoutUseCase {
         minTileArea01: minArea01,
       );
       sw.stop();
-      
+
       Telemetry.layoutTime(q.name, sw.elapsedMicroseconds / 1000.0);
       merged.addAll(part);
     }

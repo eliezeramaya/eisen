@@ -1,12 +1,13 @@
-import 'package:flutter/material.dart';
+import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:flutter/material.dart';
 
 class InspectorDrawer extends StatefulWidget {
+  const InspectorDrawer({super.key, required this.task, required this.onChanged, required this.onDelete, this.onComplete});
   final Task task;
   final ValueChanged<Task> onChanged;
   final VoidCallback onDelete;
   final VoidCallback? onComplete;
-  const InspectorDrawer({super.key, required this.task, required this.onChanged, required this.onDelete, this.onComplete});
 
   @override
   State<InspectorDrawer> createState() => _InspectorDrawerState();
@@ -34,16 +35,16 @@ class _InspectorDrawerState extends State<InspectorDrawer> {
     return Drawer(
       child: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             Text('Inspector', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _title,
               decoration: const InputDecoration(labelText: 'Title'),
               onChanged: (_) => _emit(),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
                 const Text('Priority'),
@@ -68,13 +69,13 @@ class _InspectorDrawerState extends State<InspectorDrawer> {
               decoration: const InputDecoration(labelText: 'Minutes'),
               onChanged: (_) => _emit(),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _category,
               decoration: const InputDecoration(labelText: 'Category'),
               onChanged: (_) => _emit(),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
             DropdownButtonFormField<Quadrant>(
               initialValue: _quadrant,
               decoration: const InputDecoration(labelText: 'Quadrant'),
@@ -88,7 +89,7 @@ class _InspectorDrawerState extends State<InspectorDrawer> {
                 }
               },
             ),
-            const Divider(height: 24),
+            const Divider(height: AppSpacing.lg),
             Row(
               children: [
                 Expanded(
@@ -98,7 +99,7 @@ class _InspectorDrawerState extends State<InspectorDrawer> {
                     label: const Text('Completar'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: widget.onDelete,

@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// Tests for Task entity equality using Equatable.
 ///
@@ -132,8 +132,7 @@ void main() {
 
       expect(identical(task, task), isTrue,
           reason: 'Same instance should be identical');
-      expect(task == task, isTrue,
-          reason: 'Task should equal itself');
+      expect(task == task, isTrue, reason: 'Task should equal itself');
     });
 
     test('equatable handles empty tags correctly', () {
@@ -206,13 +205,33 @@ void main() {
   group('Task Equality - Render Stability', () {
     test('stable task list prevents unnecessary rebuilds', () {
       final tasks1 = [
-        Task(id: 't1', title: 'A', quadrant: Quadrant.q1, priority: 5, minutes: 30),
-        Task(id: 't2', title: 'B', quadrant: Quadrant.q2, priority: 3, minutes: 20),
+        Task(
+            id: 't1',
+            title: 'A',
+            quadrant: Quadrant.q1,
+            priority: 5,
+            minutes: 30),
+        Task(
+            id: 't2',
+            title: 'B',
+            quadrant: Quadrant.q2,
+            priority: 3,
+            minutes: 20),
       ];
 
       final tasks2 = [
-        Task(id: 't1', title: 'A', quadrant: Quadrant.q1, priority: 5, minutes: 30),
-        Task(id: 't2', title: 'B', quadrant: Quadrant.q2, priority: 3, minutes: 20),
+        Task(
+            id: 't1',
+            title: 'A',
+            quadrant: Quadrant.q1,
+            priority: 5,
+            minutes: 30),
+        Task(
+            id: 't2',
+            title: 'B',
+            quadrant: Quadrant.q2,
+            priority: 3,
+            minutes: 20),
       ];
 
       // Element-wise equality
@@ -224,18 +243,39 @@ void main() {
           tasks1.asMap().entries.every((e) => e.value == tasks2[e.key]);
 
       expect(listsEqual, isTrue,
-          reason: 'Lists with equal tasks should be considered equal for render optimization');
+          reason:
+              'Lists with equal tasks should be considered equal for render optimization');
     });
 
     test('changed task in list is detected', () {
       final tasks1 = [
-        Task(id: 't1', title: 'A', quadrant: Quadrant.q1, priority: 5, minutes: 30),
-        Task(id: 't2', title: 'B', quadrant: Quadrant.q2, priority: 3, minutes: 20),
+        Task(
+            id: 't1',
+            title: 'A',
+            quadrant: Quadrant.q1,
+            priority: 5,
+            minutes: 30),
+        Task(
+            id: 't2',
+            title: 'B',
+            quadrant: Quadrant.q2,
+            priority: 3,
+            minutes: 20),
       ];
 
       final tasks2 = [
-        Task(id: 't1', title: 'A', quadrant: Quadrant.q1, priority: 5, minutes: 30),
-        Task(id: 't2', title: 'B MODIFIED', quadrant: Quadrant.q2, priority: 3, minutes: 20),
+        Task(
+            id: 't1',
+            title: 'A',
+            quadrant: Quadrant.q1,
+            priority: 5,
+            minutes: 30),
+        Task(
+            id: 't2',
+            title: 'B MODIFIED',
+            quadrant: Quadrant.q2,
+            priority: 3,
+            minutes: 20),
       ];
 
       // Element-wise check detects change

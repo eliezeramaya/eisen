@@ -1,12 +1,12 @@
+import 'package:eisen/core/responsive/layout_tokens.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
-import 'package:eisen/features/eisen_matrix/domain/entities.dart';
-import 'package:eisen/l10n/app_localizations.dart';
 
 class TaskEditorPage extends ConsumerStatefulWidget {
-  final Task task;
   const TaskEditorPage({super.key, required this.task});
+  final Task task;
 
   @override
   ConsumerState<TaskEditorPage> createState() => _TaskEditorPageState();
@@ -60,7 +60,7 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -69,7 +69,7 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
                 decoration: const InputDecoration(labelText: 'Title'),
                 textInputAction: TextInputAction.next,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
                   const Text('Priority'),
@@ -90,7 +90,7 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Minutes'),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.xs),
               DropdownButtonFormField<Quadrant>(
                 initialValue: _quadrant,
                 decoration: const InputDecoration(labelText: 'Quadrant'),
@@ -99,20 +99,20 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
                     .toList(),
                 onChanged: (q) => setState(() => _quadrant = q ?? _quadrant),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               // Categories selector
               _CategoriesSelector(
                 selected: _categories,
                 onChanged: (sel) => setState(() => _categories = sel),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                 controller: _notes,
                 decoration: InputDecoration(labelText: detailsLabel),
                 minLines: 4,
                 maxLines: 10,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               Row(
                 children: [
                   OutlinedButton.icon(
@@ -120,7 +120,7 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
                     icon: const Icon(Icons.close),
                     label: const Text('Cancel'),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.sm),
                   FilledButton.icon(
                     onPressed: () {
                       final updated = _buildTask();
@@ -153,9 +153,9 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
 }
 
 class _CategoriesSelector extends ConsumerWidget {
+  const _CategoriesSelector({required this.selected, required this.onChanged});
   final List<String> selected;
   final ValueChanged<List<String>> onChanged;
-  const _CategoriesSelector({required this.selected, required this.onChanged});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -163,7 +163,7 @@ class _CategoriesSelector extends ConsumerWidget {
     return Row(
       children: [
         const Icon(Icons.label_outline, size: 18),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.xs),
         Text(Theme.of(context).brightness == Brightness.dark
             ? 'Categories coming soon'
             : 'Categorías próximamente'),

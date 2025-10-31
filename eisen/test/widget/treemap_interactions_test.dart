@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/app/app.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// Integration tests for treemap interactions.
 ///
@@ -51,8 +51,7 @@ void main() {
 
       expect(state.tasks, isA<List<Task>>(),
           reason: 'State should have a tasks list');
-      expect(state.version, 0,
-          reason: 'Initial version should be 0');
+      expect(state.version, 0, reason: 'Initial version should be 0');
     });
 
     testWidgets('Selecting a task updates controller state', (tester) async {
@@ -209,9 +208,8 @@ void main() {
       if (initialState.tasks.isNotEmpty) {
         final task = initialState.tasks.first;
         final originalQuadrant = task.quadrant;
-        final newQuadrant = originalQuadrant == Quadrant.q1
-            ? Quadrant.q2
-            : Quadrant.q1;
+        final newQuadrant =
+            originalQuadrant == Quadrant.q1 ? Quadrant.q2 : Quadrant.q1;
 
         controller.moveTaskToQuadrant(task.id, newQuadrant);
         await tester.pump();
@@ -322,7 +320,7 @@ void main() {
       // Compute layout with no viewport specified
       final rects = controller.computeLayout();
 
-    expect(rects, isA<List<TreemapRect>>(),
+      expect(rects, isA<List<TreemapRect>>(),
           reason: 'Layout should return a list of rectangles');
     });
 
@@ -347,7 +345,7 @@ void main() {
         // Compute layout for Q1 only
         final q1Rects = controller.computeLayout(only: Quadrant.q1);
 
-    expect(q1Rects, isA<List<TreemapRect>>(),
+        expect(q1Rects, isA<List<TreemapRect>>(),
             reason: 'Filtered layout should return rectangles');
       }
     });

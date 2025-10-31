@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:eisen/core/theme/animation_tokens.dart';
+import 'package:flutter/material.dart';
 
 /// Streak bar — visualizes daysActive (0..7) with calm capsules.
 class StreakBar extends StatelessWidget {
-  final int daysActive; // 0..7
+  // 0..7
   const StreakBar({super.key, required this.daysActive});
+  final int daysActive;
 
   @override
   Widget build(BuildContext context) {
@@ -21,11 +22,12 @@ class StreakBar extends StatelessWidget {
           decoration: BoxDecoration(
             color: active ? const Color(0xFFF4996E) : const Color(0x339CA3AF),
             borderRadius: BorderRadius.circular(16),
-            boxShadow: active ? [const BoxShadow(color: Color(0x22F4996E), blurRadius: 8)] : null,
+            boxShadow: active
+                ? [const BoxShadow(color: Color(0x22F4996E), blurRadius: 8)]
+                : null,
           ),
         );
       }),
     );
   }
 }
-

@@ -1,16 +1,41 @@
 import 'dart:math' as math;
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('squarified layout yields acceptable aspect ratios', () {
     // Diverse tasks across all quadrants
     final tasks = <Task>[
-      for (int i = 0; i < 8; i++) Task(id: 'q1_$i', title: 'q1_$i', quadrant: Quadrant.q1, priority: 4 + i % 6, minutes: 15 + 5 * i),
-      for (int i = 0; i < 6; i++) Task(id: 'q2_$i', title: 'q2_$i', quadrant: Quadrant.q2, priority: 5 + i % 5, minutes: 20 + 7 * i),
-      for (int i = 0; i < 7; i++) Task(id: 'q3_$i', title: 'q3_$i', quadrant: Quadrant.q3, priority: 3 + i % 6, minutes: 10 + 9 * i),
-      for (int i = 0; i < 9; i++) Task(id: 'q4_$i', title: 'q4_$i', quadrant: Quadrant.q4, priority: 2 + i % 7, minutes: 8 + 4 * i),
+      for (int i = 0; i < 8; i++)
+        Task(
+            id: 'q1_$i',
+            title: 'q1_$i',
+            quadrant: Quadrant.q1,
+            priority: 4 + i % 6,
+            minutes: 15 + 5 * i),
+      for (int i = 0; i < 6; i++)
+        Task(
+            id: 'q2_$i',
+            title: 'q2_$i',
+            quadrant: Quadrant.q2,
+            priority: 5 + i % 5,
+            minutes: 20 + 7 * i),
+      for (int i = 0; i < 7; i++)
+        Task(
+            id: 'q3_$i',
+            title: 'q3_$i',
+            quadrant: Quadrant.q3,
+            priority: 3 + i % 6,
+            minutes: 10 + 9 * i),
+      for (int i = 0; i < 9; i++)
+        Task(
+            id: 'q4_$i',
+            title: 'q4_$i',
+            quadrant: Quadrant.q4,
+            priority: 2 + i % 7,
+            minutes: 8 + 4 * i),
     ];
 
     final layout = computeStableLayout(tasks);
@@ -30,4 +55,3 @@ void main() {
     expect(worst < 20.0, isTrue, reason: 'Worst ratio too high: $worst');
   });
 }
-

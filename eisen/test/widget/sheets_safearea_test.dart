@@ -1,13 +1,14 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet.dart';
 import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('AddTaskSheet uses SafeArea and is scroll controlled', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: Scaffold(body: SizedBox.shrink()))));
+  testWidgets('AddTaskSheet uses SafeArea and is scroll controlled',
+      (tester) async {
+    await tester.pumpWidget(const ProviderScope(
+        child: MaterialApp(home: Scaffold(body: SizedBox.shrink()))));
 
     showModalBottomSheet(
       // Use the Scaffold context to avoid ambiguous SizedBox lookups
@@ -25,12 +26,13 @@ void main() {
     expect(find.byType(SingleChildScrollView), findsOneWidget);
 
     // Close the sheet
-  Navigator.of(tester.element(find.byType(Scaffold))).pop();
+    Navigator.of(tester.element(find.byType(Scaffold))).pop();
     await tester.pumpAndSettle();
   });
 
   testWidgets('SettingsSheet uses SafeArea and scroll view', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: Scaffold(body: SizedBox.shrink()))));
+    await tester.pumpWidget(const ProviderScope(
+        child: MaterialApp(home: Scaffold(body: SizedBox.shrink()))));
 
     showModalBottomSheet(
       // Use the Scaffold context to avoid ambiguous SizedBox lookups
@@ -51,8 +53,7 @@ void main() {
     expect(find.byType(SafeArea), findsWidgets);
     expect(find.byType(SingleChildScrollView), findsOneWidget);
 
-  Navigator.of(tester.element(find.byType(Scaffold))).pop();
+    Navigator.of(tester.element(find.byType(Scaffold))).pop();
     await tester.pumpAndSettle();
   });
 }
-

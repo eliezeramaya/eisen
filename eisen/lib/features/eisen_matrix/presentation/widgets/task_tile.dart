@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:eisen/core/theme/ui_tokens.dart';
+import 'package:flutter/material.dart';
 
 /// A task tile widget with built-in accessibility support.
 /// 
@@ -8,10 +9,6 @@ import 'package:eisen/core/theme/ui_tokens.dart';
 /// - Focus indication for keyboard navigation
 /// - High contrast support
 class TaskTile extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final VoidCallback? onTap;
-  final bool selected;
   
   const TaskTile({
     super.key,
@@ -20,6 +17,10 @@ class TaskTile extends StatelessWidget {
     this.onTap,
     this.selected = false,
   });
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +32,7 @@ class TaskTile extends StatelessWidget {
       enabled: true,
       selected: selected,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.xs * 0.75), // 6px
         child: _HoverScale(
           child: Focus(
             child: Builder(
@@ -70,7 +71,10 @@ class TaskTile extends StatelessWidget {
                         title: Text(title, style: theme.textTheme.titleMedium),
                         subtitle: Text(subtitle, style: theme.textTheme.bodySmall),
                         dense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xxs,
+                        ),
                         selected: selected,
                       ),
                     ),
@@ -86,8 +90,8 @@ class TaskTile extends StatelessWidget {
 }
 
 class _HoverScale extends StatefulWidget {
-  final Widget child;
   const _HoverScale({required this.child});
+  final Widget child;
   @override
   State<_HoverScale> createState() => _HoverScaleState();
 }

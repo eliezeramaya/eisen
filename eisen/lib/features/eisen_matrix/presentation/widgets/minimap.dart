@@ -1,23 +1,33 @@
-import 'package:flutter/material.dart';
+import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/l10n/app_localizations_en.dart';
+import 'package:flutter/material.dart';
 
 class Minimap extends StatelessWidget {
+  // optional: heat density by weights
+  const Minimap(
+      {super.key,
+      required this.zoom,
+      this.onSelectQuadrant,
+      this.onFullView,
+      this.minimal = false,
+      this.tasks});
   final Quadrant? zoom;
   final void Function(Quadrant q)? onSelectQuadrant;
   final VoidCallback? onFullView;
   final bool minimal;
-  final List<Task>? tasks; // optional: heat density by weights
-  const Minimap({super.key, required this.zoom, this.onSelectQuadrant, this.onFullView, this.minimal = false, this.tasks});
+  final List<Task>? tasks;
 
   @override
   Widget build(BuildContext context) {
-  final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
-  final doLabel = l10n.minimapDo;
-  final decideLabel = l10n.minimapDecide;
-  final delegateLabel = l10n.minimapDelegate;
-  final deleteLabel = l10n.minimapDelete;
+    final l10n =
+        Localizations.of<AppLocalizations>(context, AppLocalizations) ??
+            AppLocalizationsEn();
+    final doLabel = l10n.minimapDo;
+    final decideLabel = l10n.minimapDecide;
+    final delegateLabel = l10n.minimapDelegate;
+    final deleteLabel = l10n.minimapDelete;
     return GestureDetector(
       onTapDown: (details) {
         final local = details.localPosition;
@@ -45,15 +55,19 @@ class Minimap extends StatelessWidget {
         }
       },
       child: Container(
-        padding: const EdgeInsets.all(6),
+        padding: EdgeInsets.all(AppSpacing.xs * 0.75), // 6px
         decoration: BoxDecoration(
-          color: minimal ? Colors.white.withValues(alpha: 0.85) : Colors.black.withValues(alpha: 0.25),
+          color: minimal
+              ? Colors.white.withValues(alpha: 0.85)
+              : Colors.black.withValues(alpha: 0.25),
           borderRadius: BorderRadius.circular(10),
           border: minimal ? Border.all(color: Colors.black54, width: 1) : null,
         ),
         child: CustomPaint(
           size: const Size(80, 80),
-          painter: _MinimapPainter(zoom, doLabel, decideLabel, delegateLabel, deleteLabel, minimal: minimal, tasks: tasks),
+          painter: _MinimapPainter(
+              zoom, doLabel, decideLabel, delegateLabel, deleteLabel,
+              minimal: minimal, tasks: tasks),
         ),
       ),
     );
@@ -61,6 +75,9 @@ class Minimap extends StatelessWidget {
 }
 
 class _MinimapPainter extends CustomPainter {
+  _MinimapPainter(this.zoom, this.doLabel, this.decideLabel, this.delegateLabel,
+      this.deleteLabel,
+      {this.minimal = false, this.tasks});
   final Quadrant? zoom;
   final String doLabel;
   final String decideLabel;
@@ -68,7 +85,6 @@ class _MinimapPainter extends CustomPainter {
   final String deleteLabel;
   final bool minimal;
   final List<Task>? tasks;
-  _MinimapPainter(this.zoom, this.doLabel, this.decideLabel, this.delegateLabel, this.deleteLabel, {this.minimal = false, this.tasks});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -91,10 +107,12 @@ class _MinimapPainter extends CustomPainter {
         final alpha = 0.06 + 0.16 * k;
         return base.withValues(alpha: alpha);
       }
+
       void fillQ(Quadrant q, Rect r) {
         final paint = Paint()..color = heat(sums[q] ?? 0);
         canvas.drawRect(r, paint);
       }
+
       fillQ(Quadrant.q1, cell);
       fillQ(Quadrant.q2, cell.shift(Offset(size.width / 2, 0)));
       fillQ(Quadrant.q3, cell.shift(Offset(0, size.height / 2)));
@@ -105,9 +123,14 @@ class _MinimapPainter extends CustomPainter {
     canvas.drawRect(cell.shift(Offset(0, size.height / 2)), p);
     canvas.drawRect(cell.shift(Offset(size.width / 2, size.height / 2)), p);
 
-  // Prepare label painters helper
-    final tp = (String text) => TextPainter(
-      text: TextSpan(style: TextStyle(color: minimal ? const Color(0xFF424242) : Colors.white, fontSize: 10, fontWeight: FontWeight.w600), text: text),
+    // Prepare label painters helper
+    TextPainter tp(String text) => TextPainter(
+          text: TextSpan(
+              style: TextStyle(
+                  color: minimal ? const Color(0xFF424242) : Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600),
+              text: text),
           textDirection: TextDirection.ltr,
           maxLines: 1,
           ellipsis: '…',
@@ -145,13 +168,14 @@ class _MinimapPainter extends CustomPainter {
       ..color = minimal ? Colors.black54 : Colors.white70;
     canvas.drawCircle(center, 4, centerPaint);
 
-  // Labels: Q1/Q2/Q3/Q4 (drawn above highlight)
-  drawLabel(cell, doLabel);
-  drawLabel(cell.shift(Offset(size.width / 2, 0)), decideLabel);
-  drawLabel(cell.shift(Offset(0, size.height / 2)), delegateLabel);
-  drawLabel(cell.shift(Offset(size.width / 2, size.height / 2)), deleteLabel);
+    // Labels: Q1/Q2/Q3/Q4 (drawn above highlight)
+    drawLabel(cell, doLabel);
+    drawLabel(cell.shift(Offset(size.width / 2, 0)), decideLabel);
+    drawLabel(cell.shift(Offset(0, size.height / 2)), delegateLabel);
+    drawLabel(cell.shift(Offset(size.width / 2, size.height / 2)), deleteLabel);
   }
 
   @override
-  bool shouldRepaint(covariant _MinimapPainter oldDelegate) => oldDelegate.zoom != zoom;
+  bool shouldRepaint(covariant _MinimapPainter oldDelegate) =>
+      oldDelegate.zoom != zoom;
 }

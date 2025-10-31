@@ -1,27 +1,30 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:eisen/l10n/app_localizations.dart';
-import 'package:eisen/core/services/ui_prefs.dart';
-import '../core/theme/app_theme.dart';
-import '../core/providers/locale_provider.dart';
-import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
-import 'router.dart';
-import 'package:flutter/services.dart';
-import 'package:eisen/core/platform/platform_utils.dart';
-import 'package:eisen/core/intents/open_settings_intent.dart';
-import 'package:go_router/go_router.dart';
 import 'package:device_preview/device_preview.dart';
+import 'package:eisen/core/intents/open_settings_intent.dart';
+import 'package:eisen/core/platform/platform_utils.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/ui/text_scaling.dart';
+import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../core/providers/locale_provider.dart';
+import '../core/theme/app_theme.dart';
+import 'router.dart';
 
 class EisenApp extends ConsumerWidget {
   const EisenApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(matrixControllerProvider.select((s) => s.themeMode));
-    final minimal = ref.watch(matrixControllerProvider.select((s) => s.minimal));
+    final themeMode =
+        ref.watch(matrixControllerProvider.select((s) => s.themeMode));
+    final minimal =
+        ref.watch(matrixControllerProvider.select((s) => s.minimal));
     final userLocale = ref.watch(localeProvider);
-    
+
     final light = buildAppTheme(Brightness.light);
     final dark = buildAppTheme(Brightness.dark);
     final theme = minimal ? asMinimal(light) : light;
@@ -34,14 +37,16 @@ class EisenApp extends ConsumerWidget {
         final tsf = effectiveTextScaleFactor(ctx, prefs);
         final mq = MediaQuery.of(ctx);
         final scaledChild = MediaQuery(
-          data: mq.copyWith(textScaleFactor: tsf),
+          data: mq.copyWith(textScaler: TextScaler.linear(tsf)),
           child: child ?? const SizedBox.shrink(),
         );
 
         final wrappedShortcuts = Shortcuts(
           shortcuts: {
-            LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.comma): const OpenSettingsIntent(),
-            LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.comma): const OpenSettingsIntent(),
+            LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.comma):
+                const OpenSettingsIntent(),
+            LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.comma):
+                const OpenSettingsIntent(),
           },
           child: Actions(
             actions: <Type, Action<Intent>>{

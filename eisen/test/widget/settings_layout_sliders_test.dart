@@ -1,16 +1,18 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/layout_providers.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet.dart';
 import 'package:eisen/l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Layout sliders update prefs and layout config + bump layoutVersion', (tester) async {
+  testWidgets(
+      'Layout sliders update prefs and layout config + bump layoutVersion',
+      (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
 
     // Simple host showing Settings and current cfg/layoutVersion
@@ -27,12 +29,14 @@ void main() {
                 children: [
                   // Force MatrixController to build and listen to uiPrefs
                   Consumer(builder: (context, ref, _) {
-                    final lv = ref.watch(matrixControllerProvider.select((s) => s.layoutVersion));
+                    final lv = ref.watch(matrixControllerProvider
+                        .select((s) => s.layoutVersion));
                     final cfg = ref.watch(layoutConfigProvider);
                     return Column(
                       children: [
                         Text('lv=$lv', key: const Key('lv')),
-                        Text('gamma=${cfg.gamma.toStringAsFixed(2)}', key: const Key('gamma')),
+                        Text('gamma=${cfg.gamma.toStringAsFixed(2)}',
+                            key: const Key('gamma')),
                       ],
                     );
                   }),

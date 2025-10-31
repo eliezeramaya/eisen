@@ -8,7 +8,10 @@ int streakDays(List<Task> tasks, DateTime now) {
   while (true) {
     final dayStart = cursor;
     final dayEnd = dayStart.add(const Duration(days: 1));
-    final has = tasks.any((t) => t.completedAt != null && t.completedAt!.isAfter(dayStart) && t.completedAt!.isBefore(dayEnd));
+    final has = tasks.any((t) =>
+        t.completedAt != null &&
+        t.completedAt!.isAfter(dayStart) &&
+        t.completedAt!.isBefore(dayEnd));
     if (has) {
       days += 1;
       cursor = cursor.subtract(const Duration(days: 1));
@@ -21,7 +24,12 @@ int streakDays(List<Task> tasks, DateTime now) {
 
 /// Share of Q2 tasks in the week [start..end).
 double weeklyQ2Share(List<Task> tasks, DateTime start, DateTime end) {
-  final inWeek = tasks.where((t) => (t.completedAt ?? t.createdAt ?? t.updatedAt ?? start).isAfter(start) && (t.completedAt ?? t.createdAt ?? end).isBefore(end)).toList();
+  final inWeek = tasks
+      .where((t) =>
+          (t.completedAt ?? t.createdAt ?? t.updatedAt ?? start)
+              .isAfter(start) &&
+          (t.completedAt ?? t.createdAt ?? end).isBefore(end))
+      .toList();
   if (inWeek.isEmpty) return 0;
   final q2 = inWeek.where((t) => t.quadrant == Quadrant.q2).length;
   return q2 / inWeek.length;
@@ -40,12 +48,16 @@ int dayFocusMinutes(List<Task> tasks, DateTime dayStart, DateTime dayEnd) {
 }
 
 /// Median hours between created and completed for tasks completed in [start..end).
-double weeklyLeadTimeMedianHours(List<Task> tasks, DateTime start, DateTime end) {
+double weeklyLeadTimeMedianHours(
+    List<Task> tasks, DateTime start, DateTime end) {
   final hs = <double>[];
   for (final t in tasks) {
     final cAt = t.completedAt;
     final crAt = t.createdAt;
-    if (cAt != null && crAt != null && cAt.isAfter(start) && cAt.isBefore(end)) {
+    if (cAt != null &&
+        crAt != null &&
+        cAt.isAfter(start) &&
+        cAt.isBefore(end)) {
       hs.add(cAt.difference(crAt).inMinutes / 60.0);
     }
   }
@@ -59,24 +71,32 @@ BalanceBreakdown weeklyBalance(List<Task> tasks, DateTime start, DateTime end) {
   int q1 = 0, q2 = 0, q3 = 0, q4 = 0;
   for (final t in tasks) {
     final stamp = t.completedAt ?? t.updatedAt ?? t.createdAt;
-    if (stamp == null || !stamp.isAfter(start) || !stamp.isBefore(end)) continue;
+    if (stamp == null || !stamp.isAfter(start) || !stamp.isBefore(end)) {
+      continue;
+    }
     switch (t.quadrant) {
       case Quadrant.q1:
-        q1++; break;
+        q1++;
+        break;
       case Quadrant.q2:
-        q2++; break;
+        q2++;
+        break;
       case Quadrant.q3:
-        q3++; break;
+        q3++;
+        break;
       case Quadrant.q4:
-        q4++; break;
+        q4++;
+        break;
     }
   }
   return BalanceBreakdown(q1, q2, q3, q4);
 }
 
-List<TrendPoint> focusTrend(List<Task> tasks, {required int days, required DateTime end}) {
+List<TrendPoint> focusTrend(List<Task> tasks,
+    {required int days, required DateTime end}) {
   final out = <TrendPoint>[];
-  DateTime cursorEnd = DateTime(end.year, end.month, end.day).add(const Duration(days: 1));
+  final DateTime cursorEnd =
+      DateTime(end.year, end.month, end.day).add(const Duration(days: 1));
   for (int i = 0; i < days; i++) {
     final dayEnd = cursorEnd.subtract(Duration(days: i));
     final dayStart = dayEnd.subtract(const Duration(days: 1));
@@ -85,4 +105,3 @@ List<TrendPoint> focusTrend(List<Task> tasks, {required int days, required DateT
   }
   return out.reversed.toList();
 }
-

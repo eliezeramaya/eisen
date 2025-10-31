@@ -1,16 +1,15 @@
+import 'package:eisen/core/services/telemetry.dart';
+import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
-import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
-import 'package:eisen/core/services/telemetry.dart';
 
 /// Use case for computing suggested "top spots" using bandit algorithm.
 ///
 /// For each quadrant, finds the largest tiles (within 95% of max area)
 /// and uses bandit tie-breaking to select the top candidate.
 class SuggestTopSpotsUseCase {
-  final BanditService _bandit;
-
   SuggestTopSpotsUseCase(this._bandit);
+  final BanditService _bandit;
 
   /// Computes suggested task IDs from the given [layout].
   ///

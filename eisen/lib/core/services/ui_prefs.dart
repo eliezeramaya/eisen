@@ -5,36 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UiPrefsData {
-  final ThemeMode themeMode;
-  final bool compact;
-  final bool showAxisLegends;
-  final bool minimal;
-  // Treemap layout settings
-  final int topKPerQuadrant; // 5..60
-  final double gamma; // 0.70..1.00
-  final double minAreaNormalized; // 2e-5 .. 2e-4
-  final double quadrantPadding; // 0.0 .. 0.02
-  // General · Language & Region
-  final String languageCode; // 'system' | 'en' | 'es' | ...
-  final String regionCode;   // 'system' | 'US' | 'MX' | ...
-  final String dateFormat;   // 'dd/MM/yyyy' | 'MM/dd/yyyy' | 'yyyy-MM-dd'
-  final bool use24h;         // true=24h, false=12h
-  // General · Notifications
-  final String dailyReminderTime; // 'HH:mm' 24h; '' = disabled
-  final bool endOfDaySummary;     // switch
-  final String endOfDayTime;      // 'HH:mm' or ''
-  final String pomodoroAlert;     // 'sound' | 'vibration' | 'silent'
-  final String notificationTone;  // 'default' | 'chime' | 'bell'
-  // Workflow plan (show Gantt-like CTA in toolbar)
-  final bool workflowPlanEnabled;
-  // Typography · User text scale (1..5). 3 = default
-  final int textScaleLevel;
-  // Calendar/Gantt preferences
-  final String ganttTimeScale; // 'days' | 'weeks' | 'months'
-  final bool ganttShowBadges;
-  final bool ganttCompactLanes;
-  final bool ganttWorkweekOnly;
-  final bool ganttShowTodayLine;
   const UiPrefsData({
     this.themeMode = ThemeMode.system,
     this.compact = false,
@@ -61,6 +31,36 @@ class UiPrefsData {
     this.ganttWorkweekOnly = false,
     this.ganttShowTodayLine = true,
   });
+  final ThemeMode themeMode;
+  final bool compact;
+  final bool showAxisLegends;
+  final bool minimal;
+  // Treemap layout settings
+  final int topKPerQuadrant; // 5..60
+  final double gamma; // 0.70..1.00
+  final double minAreaNormalized; // 2e-5 .. 2e-4
+  final double quadrantPadding; // 0.0 .. 0.02
+  // General · Language & Region
+  final String languageCode; // 'system' | 'en' | 'es' | ...
+  final String regionCode; // 'system' | 'US' | 'MX' | ...
+  final String dateFormat; // 'dd/MM/yyyy' | 'MM/dd/yyyy' | 'yyyy-MM-dd'
+  final bool use24h; // true=24h, false=12h
+  // General · Notifications
+  final String dailyReminderTime; // 'HH:mm' 24h; '' = disabled
+  final bool endOfDaySummary; // switch
+  final String endOfDayTime; // 'HH:mm' or ''
+  final String pomodoroAlert; // 'sound' | 'vibration' | 'silent'
+  final String notificationTone; // 'default' | 'chime' | 'bell'
+  // Workflow plan (show Gantt-like CTA in toolbar)
+  final bool workflowPlanEnabled;
+  // Typography · User text scale (1..5). 3 = default
+  final int textScaleLevel;
+  // Calendar/Gantt preferences
+  final String ganttTimeScale; // 'days' | 'weeks' | 'months'
+  final bool ganttShowBadges;
+  final bool ganttCompactLanes;
+  final bool ganttWorkweekOnly;
+  final bool ganttShowTodayLine;
 
   UiPrefsData copyWith({
     ThemeMode? themeMode,
@@ -87,7 +87,8 @@ class UiPrefsData {
     bool? ganttCompactLanes,
     bool? ganttWorkweekOnly,
     bool? ganttShowTodayLine,
-  }) => UiPrefsData(
+  }) =>
+      UiPrefsData(
         themeMode: themeMode ?? this.themeMode,
         compact: compact ?? this.compact,
         showAxisLegends: showAxisLegends ?? this.showAxisLegends,
@@ -275,14 +276,17 @@ class UiPrefsController extends Notifier<UiPrefsData> {
     state = state.copyWith(languageCode: code);
     await _save();
   }
+
   Future<void> setRegionCode(String code) async {
     state = state.copyWith(regionCode: code);
     await _save();
   }
+
   Future<void> setDateFormat(String fmt) async {
     state = state.copyWith(dateFormat: fmt);
     await _save();
   }
+
   Future<void> setUse24h(bool v) async {
     state = state.copyWith(use24h: v);
     await _save();
@@ -293,22 +297,27 @@ class UiPrefsController extends Notifier<UiPrefsData> {
     state = state.copyWith(dailyReminderTime: hhmm);
     await _save();
   }
+
   Future<void> setEndOfDaySummary(bool v) async {
     state = state.copyWith(endOfDaySummary: v);
     await _save();
   }
+
   Future<void> setEndOfDayTime(String hhmm) async {
     state = state.copyWith(endOfDayTime: hhmm);
     await _save();
   }
+
   Future<void> setPomodoroAlert(String mode) async {
     state = state.copyWith(pomodoroAlert: mode);
     await _save();
   }
+
   Future<void> setNotificationTone(String tone) async {
     state = state.copyWith(notificationTone: tone);
     await _save();
   }
+
   Future<void> setWorkflowPlanEnabled(bool v) async {
     state = state.copyWith(workflowPlanEnabled: v);
     await _save();
@@ -343,7 +352,9 @@ class UiPrefsController extends Notifier<UiPrefsData> {
   }
 }
 
-final uiPrefsControllerProvider = NotifierProvider<UiPrefsController, UiPrefsData>(UiPrefsController.new);
+final uiPrefsControllerProvider =
+    NotifierProvider<UiPrefsController, UiPrefsData>(UiPrefsController.new);
 
 // Convenience provider alias to watch prefs data
-final uiPrefsProvider = Provider<UiPrefsData>((ref) => ref.watch(uiPrefsControllerProvider));
+final uiPrefsProvider =
+    Provider<UiPrefsData>((ref) => ref.watch(uiPrefsControllerProvider));

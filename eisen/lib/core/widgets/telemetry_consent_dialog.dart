@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:eisen/core/services/telemetry_consent.dart';
+import 'package:flutter/material.dart';
 
 /// Privacy-focused consent dialog for telemetry.
 ///
@@ -97,11 +97,11 @@ class TelemetryConsentDialog extends StatelessWidget {
   /// Show consent dialog if needed (first launch).
   static Future<void> showIfNeeded(BuildContext context) async {
     final isFirstLaunch = await TelemetryConsent.initialize();
-    
+
     if (isFirstLaunch && context.mounted) {
       // Wait a bit for app to settle before showing dialog
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       if (context.mounted) {
         await showDialog(
           context: context,

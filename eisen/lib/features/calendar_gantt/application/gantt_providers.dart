@@ -1,10 +1,10 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/core/ui/ui_tokens.dart';
 import 'package:eisen/features/calendar_gantt/application/gantt_lanes.dart';
 import 'package:eisen/features/calendar_gantt/application/gantt_projection.dart';
 import 'package:eisen/features/calendar_gantt/domain/calendar_span.dart';
-import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart' show Task;
+import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Build CalendarSpan list from matrix tasks.
 ///
@@ -19,7 +19,8 @@ final calendarSpansProvider = Provider<List<CalendarSpan>>((ref) {
   for (final t in tasks) {
     final due = t.due;
     if (due == null) continue;
-    final end = DateTime(due.year, due.month, due.day).add(const Duration(days: 1)); // exclusive end
+    final end = DateTime(due.year, due.month, due.day)
+        .add(const Duration(days: 1)); // exclusive end
     final estDays = (t.minutes / 360.0).ceil().clamp(1, 14);
     final start = end.subtract(Duration(days: estDays));
     out.add(CalendarSpan(
@@ -40,7 +41,8 @@ class ProjectorController extends Notifier<TimelineProjector> {
   TimelineProjector build() {
     final now = DateTime.now();
     final viewStart = now.subtract(const Duration(days: 14));
-    return TimelineProjector(viewStart: viewStart, pxPerDay: UiTokens.pxPerDayDefault);
+    return TimelineProjector(
+        viewStart: viewStart, pxPerDay: UiTokens.pxPerDayDefault);
   }
 
   void setPxPerDay(double v) {
@@ -57,7 +59,9 @@ class ProjectorController extends Notifier<TimelineProjector> {
   }
 }
 
-final projectorProvider = NotifierProvider<ProjectorController, TimelineProjector>(ProjectorController.new);
+final projectorProvider =
+    NotifierProvider<ProjectorController, TimelineProjector>(
+        ProjectorController.new);
 
 /// Lanes assignment provider; stable greedy packing.
 final lanesProvider = Provider<List<CalendarSpan>>((ref) {

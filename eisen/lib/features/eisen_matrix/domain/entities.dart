@@ -25,28 +25,6 @@ extension QuadrantX on Quadrant {
 /// Uses [Equatable] for structural equality to avoid unnecessary rebuilds
 /// when task data hasn't meaningfully changed.
 class Task extends Equatable {
-  final String id;
-  final String title;
-  final Quadrant quadrant;
-  final int priority; // 1..10
-  final int minutes; // estimated minutes
-  final DateTime? due;
-  final List<String> tags;
-  /// Categorías definidas por el usuario para filtrado
-  final List<String> categories;
-  final String? notes;
-  final String? category;
-  // Volatile fields (not persisted): timestamps for freshness/analytics
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
-  final DateTime? completedAt;
-  // Volatile counters (not persisted): UX signals
-  final int replanCount; // how many times re-scheduled/replanned recently
-  final int snoozeCount; // how many times snoozed in recent window
-  // Optional user-normalized values in [0..1] (not persisted)
-  final double? normalizedPriority;
-  final double? normalizedMinutes;
-
   const Task({
     required this.id,
     required this.title,
@@ -66,6 +44,28 @@ class Task extends Equatable {
     this.normalizedPriority,
     this.normalizedMinutes,
   });
+  final String id;
+  final String title;
+  final Quadrant quadrant;
+  final int priority; // 1..10
+  final int minutes; // estimated minutes
+  final DateTime? due;
+  final List<String> tags;
+
+  /// Categorías definidas por el usuario para filtrado
+  final List<String> categories;
+  final String? notes;
+  final String? category;
+  // Volatile fields (not persisted): timestamps for freshness/analytics
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final DateTime? completedAt;
+  // Volatile counters (not persisted): UX signals
+  final int replanCount; // how many times re-scheduled/replanned recently
+  final int snoozeCount; // how many times snoozed in recent window
+  // Optional user-normalized values in [0..1] (not persisted)
+  final double? normalizedPriority;
+  final double? normalizedMinutes;
 
   Task copyWith({
     String? title,
@@ -116,8 +116,11 @@ class Task extends Equatable {
 
   /// Normalized [0..1] values. If user-provided normalized values exist,
   /// they are used; otherwise deterministic normalization is applied.
-  double get priorityNorm => (normalizedPriority ?? (priorityClamped - 1.0) / 9.0).clamp(0.0, 1.0);
-  double get minutesNorm => (normalizedMinutes ?? (minutesClamped - 5.0) / (240.0 - 5.0)).clamp(0.0, 1.0);
+  double get priorityNorm =>
+      (normalizedPriority ?? (priorityClamped - 1.0) / 9.0).clamp(0.0, 1.0);
+  double get minutesNorm =>
+      (normalizedMinutes ?? (minutesClamped - 5.0) / (240.0 - 5.0))
+          .clamp(0.0, 1.0);
 
   /// Equatable props for structural equality (prevents unnecessary rebuilds).
   /// All fields that affect rendering/business logic are included.
@@ -192,9 +195,8 @@ double weight(Task t) {
 
   // 0..1: a menor distancia a due, mayor
   final now = DateTime.now();
-  final daysToDue = t.due == null
-      ? double.infinity
-      : t.due!.difference(now).inHours / 24.0;
+  final daysToDue =
+      t.due == null ? double.infinity : t.due!.difference(now).inHours / 24.0;
   final dl = daysToDue.isFinite ? math.max(0.0, daysToDue) : double.infinity;
   final deadlineSoon = dl.isFinite ? math.exp(-0.7 * dl) : 0.0; // [0..1]
   final dueBoost = 1.0 + 0.25 * deadlineSoon; // monotone w.r.t. due proximity

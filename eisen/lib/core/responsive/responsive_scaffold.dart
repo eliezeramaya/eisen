@@ -7,14 +7,6 @@ import 'responsive_extensions.dart';
 /// - md: NavigationRail
 /// - lg/xl: Permanent Drawer/Sidebar
 class ResponsiveScaffold extends StatelessWidget {
-  final PreferredSizeWidget? appBar;
-  final Widget body;
-  final List<AppNavDestination> destinations;
-  final int currentIndex;
-  final ValueChanged<int> onDestinationSelected;
-  final Widget? floatingActionButton;
-  final Widget? endDrawer;
-
   const ResponsiveScaffold({
     super.key,
     this.appBar,
@@ -25,6 +17,13 @@ class ResponsiveScaffold extends StatelessWidget {
     this.floatingActionButton,
     this.endDrawer,
   });
+  final PreferredSizeWidget? appBar;
+  final Widget body;
+  final List<AppNavDestination> destinations;
+  final int currentIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final Widget? floatingActionButton;
+  final Widget? endDrawer;
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +88,8 @@ class ResponsiveScaffold extends StatelessWidget {
         selectedIndex: currentIndex,
         onDestinationSelected: onDestinationSelected,
         destinations: [
-          for (final d in destinations) NavigationDestination(icon: d.icon, label: d.label),
+          for (final d in destinations)
+            NavigationDestination(icon: d.icon, label: d.label),
         ],
       ),
       endDrawer: endDrawer,
@@ -99,7 +99,7 @@ class ResponsiveScaffold extends StatelessWidget {
 }
 
 class AppNavDestination {
+  const AppNavDestination({required this.icon, required this.label});
   final Widget icon;
   final String label;
-  const AppNavDestination({required this.icon, required this.label});
 }

@@ -6,7 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Active user-defined categories repository (persisted in SharedPreferences).
 final userCategoriesProvider =
-    NotifierProvider<UserCategoriesController, List<String>>(UserCategoriesController.new);
+    NotifierProvider<UserCategoriesController, List<String>>(
+        UserCategoriesController.new);
 
 class UserCategoriesController extends Notifier<List<String>> {
   static const _key = 'eisen.user_categories.v1';

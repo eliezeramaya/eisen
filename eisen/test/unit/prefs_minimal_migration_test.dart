@@ -1,7 +1,7 @@
+import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:eisen/core/services/ui_prefs.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -19,4 +19,3 @@ void main() {
     expect(loaded2.themeMode, ThemeMode.dark);
   });
 }
-

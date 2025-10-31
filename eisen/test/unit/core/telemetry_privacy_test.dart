@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/core/services/telemetry.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Telemetry Privacy', () {
@@ -21,7 +21,7 @@ void main() {
     test('telemetry can be disabled', () {
       Telemetry.setEnabled(true);
       expect(Telemetry.enabled, true);
-      
+
       Telemetry.setEnabled(false);
       expect(Telemetry.enabled, false);
     });
@@ -29,7 +29,7 @@ void main() {
     test('ID anonymization produces consistent hashes', () {
       // Note: _anonymizeId is private, so we test via public methods
       // In real implementation, we'd verify logs don't contain raw IDs
-      
+
       // This test verifies the concept - actual verification would need
       // log inspection or making _anonymizeId public/testable
       expect(true, true); // Placeholder - see implementation for actual hashing
@@ -37,7 +37,7 @@ void main() {
 
     test('telemetry methods are safe to call when disabled', () {
       Telemetry.setEnabled(false);
-      
+
       // These should not throw even when disabled
       expect(() => Telemetry.tileTap('task1'), returnsNormally);
       expect(() => Telemetry.tileDragStart('task2'), returnsNormally);
@@ -49,7 +49,8 @@ void main() {
       expect(() => Telemetry.layoutTime('q1', 15.5), returnsNormally);
       expect(() => Telemetry.top3ReorderDelta(2), returnsNormally);
       expect(() => Telemetry.taskDone('task5', isQ2: true), returnsNormally);
-      expect(() => Telemetry.taskSnooze('task6', Duration(hours: 1)), returnsNormally);
+      expect(() => Telemetry.taskSnooze('task6', Duration(hours: 1)),
+          returnsNormally);
     });
 
     test('salt initialization is required for hashing', () {
@@ -61,13 +62,13 @@ void main() {
     test('different salts produce different hashes for same ID', () {
       // This demonstrates that salt affects hashing
       // Actual implementation would hash 'salt:taskId'
-      
+
       Telemetry.initSalt('salt1');
       // Hash with salt1
-      
+
       Telemetry.initSalt('salt2');
       // Hash with salt2 would be different
-      
+
       expect(true, true); // Placeholder for concept verification
     });
   });
@@ -104,14 +105,14 @@ void main() {
       // - Quadrant names (public enums)
       // - Numeric counts/timings
       // - Durations
-      
+
       // No methods should accept:
       // - Task titles
       // - Task descriptions
       // - User names
       // - Email addresses
       // - Location data
-      
+
       expect(true, true); // Design verification passed
     });
 

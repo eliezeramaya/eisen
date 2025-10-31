@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// Regression tests for Quadrant properties.
 ///
@@ -73,14 +73,14 @@ void main() {
   group('Quadrant Properties - Matrix Combinations', () {
     test('each quadrant has unique urgent/important combination', () {
       final combinations = <String>{};
-      
+
       for (final q in Quadrant.values) {
         final combo = '${q.isUrgent ? "U" : "N"}${q.isImportant ? "I" : "N"}';
         expect(combinations.contains(combo), false,
             reason: 'Each quadrant should have unique urgent/important combo');
         combinations.add(combo);
       }
-      
+
       expect(combinations, {'UI', 'NI', 'UN', 'NN'},
           reason: 'Should have all 4 combinations: UI, NI, UN, NN');
     });
@@ -92,8 +92,7 @@ void main() {
     });
 
     test('exactly 2 quadrants are important', () {
-      final importantCount =
-          Quadrant.values.where((q) => q.isImportant).length;
+      final importantCount = Quadrant.values.where((q) => q.isImportant).length;
       expect(importantCount, 2,
           reason: 'Exactly 2 quadrants (Q1, Q2) should be important');
     });
@@ -137,7 +136,8 @@ void main() {
 
     test('Q4 semantics: Eliminate - Neither urgent nor important', () {
       expect(!Quadrant.q4.isUrgent && !Quadrant.q4.isImportant, true,
-          reason: 'Q4 tasks should be eliminated (neither urgent nor important)');
+          reason:
+              'Q4 tasks should be eliminated (neither urgent nor important)');
     });
   });
 }

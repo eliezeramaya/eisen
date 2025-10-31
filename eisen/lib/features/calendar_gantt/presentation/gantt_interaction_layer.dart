@@ -1,13 +1,14 @@
 import 'dart:math' as math;
+
+import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/features/calendar_gantt/application/gantt_projection.dart';
+import 'package:eisen/features/calendar_gantt/application/gantt_providers.dart';
+import 'package:eisen/features/calendar_gantt/application/gantt_snap.dart';
+import 'package:eisen/features/calendar_gantt/domain/calendar_span.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:eisen/features/calendar_gantt/application/gantt_projection.dart';
-import 'package:eisen/features/calendar_gantt/application/gantt_providers.dart';
-import 'package:eisen/features/calendar_gantt/domain/calendar_span.dart';
-import 'package:eisen/core/services/ui_prefs.dart';
-import 'package:eisen/features/calendar_gantt/application/gantt_snap.dart';
 
 /// Lightweight interaction layer for the Gantt body.
 /// - Hover hit-test to show a small tooltip with span title and dates (desktop)
@@ -15,14 +16,6 @@ import 'package:eisen/features/calendar_gantt/application/gantt_snap.dart';
 /// - Ctrl + mouse wheel zoom (desktop)
 /// - Pinch-to-zoom (touch)
 class GanttInteractionLayer extends ConsumerStatefulWidget {
-  final List<CalendarSpan> spans;
-  final TimelineProjector projector;
-  final Size canvasSize;
-  final ScrollController hScroll;
-  final ScrollController vScroll;
-  final double laneHeight;
-  final double laneGap;
-  final void Function(CalendarSpan oldSpan, CalendarSpan updated)? onSpanChanged;
   const GanttInteractionLayer({
     super.key,
     required this.spans,
@@ -34,9 +27,19 @@ class GanttInteractionLayer extends ConsumerStatefulWidget {
     required this.laneGap,
     this.onSpanChanged,
   });
+  final List<CalendarSpan> spans;
+  final TimelineProjector projector;
+  final Size canvasSize;
+  final ScrollController hScroll;
+  final ScrollController vScroll;
+  final double laneHeight;
+  final double laneGap;
+  final void Function(CalendarSpan oldSpan, CalendarSpan updated)?
+      onSpanChanged;
 
   @override
-  ConsumerState<GanttInteractionLayer> createState() => _GanttInteractionLayerState();
+  ConsumerState<GanttInteractionLayer> createState() =>
+      _GanttInteractionLayerState();
 }
 
 class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
@@ -87,7 +90,9 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
     }
     return rects;
   }
-  TimeScale _snapScale(WidgetRef ref) => timeScaleFromPrefs(ref.read(uiPrefsProvider).ganttTimeScale);
+
+  TimeScale _snapScale(WidgetRef ref) =>
+      timeScaleFromPrefs(ref.read(uiPrefsProvider).ganttTimeScale);
 
   // Snapping handled via gantt_snap.dart utilities
   CalendarSpan _withDates(CalendarSpan s, DateTime start, DateTime end) {
@@ -100,7 +105,8 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
     final rects = _computeRects();
     // Focus nodes lifecycle
     for (final entry in rects) {
-      _focusNodes.putIfAbsent(entry.$1.id, () => FocusNode(debugLabel: 'GanttBar:${entry.$1.id}'));
+      _focusNodes.putIfAbsent(
+          entry.$1.id, () => FocusNode(debugLabel: 'GanttBar:${entry.$1.id}'));
     }
     final ids = rects.map((e) => e.$1.id).toSet();
     _focusNodes.keys.where((k) => !ids.contains(k)).toList().forEach((k) {
@@ -113,8 +119,12 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
     final pos = _lastPos;
     final span = _hoverSpan;
     final rect = _hoverRect;
-    if (pos != null && span != null && rect != null && _dragMode == _DragMode.none) {
-      final tooltipChild = _TooltipCard(title: span.title, start: span.start, end: span.end);
+    if (pos != null &&
+        span != null &&
+        rect != null &&
+        _dragMode == _DragMode.none) {
+      final tooltipChild =
+          _TooltipCard(title: span.title, start: span.start, end: span.end);
       final maxX = widget.canvasSize.width - 8;
       final maxY = widget.canvasSize.height - 8;
       final dx = math.min(pos.dx + 12, maxX - 220);
@@ -124,14 +134,24 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
 
     // Handles and drag overlay
     Widget? handles;
-    if (_hoverRect != null && _hoverSpan != null && _dragMode == _DragMode.none) {
+    if (_hoverRect != null &&
+        _hoverSpan != null &&
+        _dragMode == _DragMode.none) {
       final r = _hoverRect!;
-      handles = Positioned(left: r.left - 8, top: r.center.dy - 8, child: _HandleDot(active: _handleHover == _HandleHover.left));
+      handles = Positioned(
+          left: r.left - 8,
+          top: r.center.dy - 8,
+          child: _HandleDot(active: _handleHover == _HandleHover.left));
     }
     Widget? handlesRight;
-    if (_hoverRect != null && _hoverSpan != null && _dragMode == _DragMode.none) {
+    if (_hoverRect != null &&
+        _hoverSpan != null &&
+        _dragMode == _DragMode.none) {
       final r = _hoverRect!;
-      handlesRight = Positioned(left: r.right - 8, top: r.center.dy - 8, child: _HandleDot(active: _handleHover == _HandleHover.right));
+      handlesRight = Positioned(
+          left: r.right - 8,
+          top: r.center.dy - 8,
+          child: _HandleDot(active: _handleHover == _HandleHover.right));
     }
     Widget? dragOverlay;
     if (_dragPreviewRect != null) {
@@ -145,7 +165,8 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+            border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3), width: 1),
           ),
         ),
       );
@@ -164,12 +185,18 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
         },
         child: Actions(
           actions: <Type, Action<Intent>>{
-            _GoRightIntent: CallbackAction<_GoRightIntent>(onInvoke: (_) => _moveHorizontal(1, rects)),
-            _GoLeftIntent: CallbackAction<_GoLeftIntent>(onInvoke: (_) => _moveHorizontal(-1, rects)),
-            _GoUpIntent: CallbackAction<_GoUpIntent>(onInvoke: (_) => _moveVertical(-1, rects)),
-            _GoDownIntent: CallbackAction<_GoDownIntent>(onInvoke: (_) => _moveVertical(1, rects)),
-            _SelectIntent: CallbackAction<_SelectIntent>(onInvoke: (_) => _selectFocused(rects)),
-            _ClearIntent: CallbackAction<_ClearIntent>(onInvoke: (_) => _clearSelection()),
+            _GoRightIntent: CallbackAction<_GoRightIntent>(
+                onInvoke: (_) => _moveHorizontal(1, rects)),
+            _GoLeftIntent: CallbackAction<_GoLeftIntent>(
+                onInvoke: (_) => _moveHorizontal(-1, rects)),
+            _GoUpIntent: CallbackAction<_GoUpIntent>(
+                onInvoke: (_) => _moveVertical(-1, rects)),
+            _GoDownIntent: CallbackAction<_GoDownIntent>(
+                onInvoke: (_) => _moveVertical(1, rects)),
+            _SelectIntent: CallbackAction<_SelectIntent>(
+                onInvoke: (_) => _selectFocused(rects)),
+            _ClearIntent: CallbackAction<_ClearIntent>(
+                onInvoke: (_) => _clearSelection()),
           },
           child: Listener(
             behavior: HitTestBehavior.translucent,
@@ -211,9 +238,12 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
               child: MouseRegion(
                 cursor: _dragMode != _DragMode.none
                     ? SystemMouseCursors.grabbing
-                    : _handleHover == _HandleHover.left || _handleHover == _HandleHover.right
+                    : _handleHover == _HandleHover.left ||
+                            _handleHover == _HandleHover.right
                         ? SystemMouseCursors.resizeLeftRight
-                        : (_hoverSpan != null ? SystemMouseCursors.move : SystemMouseCursors.basic),
+                        : (_hoverSpan != null
+                            ? SystemMouseCursors.move
+                            : SystemMouseCursors.basic),
                 onHover: (event) {
                   final local = event.localPosition;
                   CalendarSpan? foundSpan;
@@ -228,8 +258,12 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
                   var handle = _HandleHover.none;
                   if (foundRect != null) {
                     const pad = 8.0;
-                    if ((local.dx - foundRect.left).abs() <= pad) handle = _HandleHover.left;
-                    if ((local.dx - foundRect.right).abs() <= pad) handle = _HandleHover.right;
+                    if ((local.dx - foundRect.left).abs() <= pad) {
+                      handle = _HandleHover.left;
+                    }
+                    if ((local.dx - foundRect.right).abs() <= pad) {
+                      handle = _HandleHover.right;
+                    }
                   }
                   setState(() {
                     _lastPos = local;
@@ -264,7 +298,8 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
                         child: Semantics(
                           label: span.title,
                           value: _semanticsValue(span),
-                          hint: 'Use arrow keys to navigate. Press Enter to select. Press Escape to clear.',
+                          hint:
+                              'Use arrow keys to navigate. Press Enter to select. Press Escape to clear.',
                           button: true,
                           onTap: () {
                             setState(() {
@@ -283,7 +318,10 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
                               child: Container(
                                 decoration: (isSelected || node.hasFocus)
                                     ? BoxDecoration(
-                                        border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.5),
+                                        border: Border.all(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.8),
+                                            width: 1.5),
                                         borderRadius: BorderRadius.circular(12),
                                       )
                                     : null,
@@ -311,7 +349,7 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
     String two(int n) => n < 10 ? '0$n' : '$n';
     final s = span.start;
     final e = span.end;
-    final days = (e.difference(s).inDays).clamp(1, 999);
+    final days = e.difference(s).inDays.clamp(1, 999);
     final startStr = '${s.year}-${two(s.month)}-${two(s.day)}';
     final endStr = '${e.year}-${two(e.month)}-${two(e.day)}';
     return '$startStr to $endStr, $days days';
@@ -380,7 +418,10 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
   void _onPointerSignal(PointerSignalEvent e) {
     if (e is! PointerScrollEvent) return;
     final keys = RawKeyboard.instance.keysPressed;
-    final ctrl = keys.contains(LogicalKeyboardKey.controlLeft) || keys.contains(LogicalKeyboardKey.controlRight) || keys.contains(LogicalKeyboardKey.metaLeft) || keys.contains(LogicalKeyboardKey.metaRight);
+    final ctrl = keys.contains(LogicalKeyboardKey.controlLeft) ||
+        keys.contains(LogicalKeyboardKey.controlRight) ||
+        keys.contains(LogicalKeyboardKey.metaLeft) ||
+        keys.contains(LogicalKeyboardKey.metaRight);
     if (!ctrl) return;
     final dy = e.scrollDelta.dy; // up = -ve, down = +ve
     final pc = ref.read(projectorProvider.notifier);
@@ -423,7 +464,12 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
   }
 
   void _updateDrag(Offset local) {
-    if (_dragMode == _DragMode.none || _dragOrigSpan == null || _dragOrigRect == null || _dragStart == null) return;
+    if (_dragMode == _DragMode.none ||
+        _dragOrigSpan == null ||
+        _dragOrigRect == null ||
+        _dragStart == null) {
+      return;
+    }
     final scale = _snapScale(ref);
     final proj = widget.projector;
 
@@ -434,7 +480,8 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
         final newLeft = _dragOrigRect!.left + dx;
         final startT = proj.timeAt(newLeft);
         final snappedStart = snapFloor(startT, scale);
-        final durDays = math.max(1, _dragOrigSpan!.end.difference(_dragOrigSpan!.start).inDays);
+        final durDays = math.max(
+            1, _dragOrigSpan!.end.difference(_dragOrigSpan!.start).inDays);
         final newEnd = snappedStart.add(Duration(days: durDays));
         updated = _withDates(_dragOrigSpan!, snappedStart, newEnd);
         break;
@@ -443,7 +490,7 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
         final snapped = snapFloor(t, scale);
         // Ensure start < end by at least 1 day
         var start = snapped;
-        var end = _dragOrigSpan!.end;
+        final end = _dragOrigSpan!.end;
         if (!start.isBefore(end)) {
           start = end.subtract(const Duration(days: 1));
         }
@@ -455,7 +502,7 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
         final base = snapFloor(t, scale);
         final step = stepDaysForScale(scale);
         var end = base.add(Duration(days: step));
-        var start = _dragOrigSpan!.start;
+        final start = _dragOrigSpan!.start;
         if (!start.isBefore(end)) {
           end = start.add(const Duration(days: 1));
         }
@@ -467,7 +514,8 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
 
     final left = proj.dx(updated.start);
     final right = proj.dx(updated.end);
-    final r = Rect.fromLTWH(left, _dragOrigRect!.top, right - left, _dragOrigRect!.height);
+    final r = Rect.fromLTWH(
+        left, _dragOrigRect!.top, right - left, _dragOrigRect!.height);
     setState(() {
       _dragPreviewSpan = updated;
       _dragPreviewRect = r;
@@ -492,6 +540,7 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
 }
 
 enum _DragMode { none, move, resizeLeft, resizeRight }
+
 enum _HandleHover { none, left, right }
 
 // Keyboard intents
@@ -520,14 +569,16 @@ class _ClearIntent extends Intent {
 }
 
 class _HandleDot extends StatelessWidget {
-  final bool active;
   const _HandleDot({required this.active});
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final Color fill = active ? cs.primary : Colors.white.withValues(alpha: 0.08);
-    final Color border = active ? cs.primary : Colors.white.withValues(alpha: 0.25);
+    final Color fill =
+        active ? cs.primary : Colors.white.withValues(alpha: 0.08);
+    final Color border =
+        active ? cs.primary : Colors.white.withValues(alpha: 0.25);
     return Container(
       width: 16,
       height: 16,
@@ -549,10 +600,11 @@ class _HandleDot extends StatelessWidget {
 }
 
 class _TooltipCard extends StatelessWidget {
+  const _TooltipCard(
+      {required this.title, required this.start, required this.end});
   final String title;
   final DateTime start;
   final DateTime end;
-  const _TooltipCard({required this.title, required this.start, required this.end});
 
   String _fmt(DateTime d) {
     String two(int n) => n < 10 ? '0$n' : '$n';
@@ -575,9 +627,14 @@ class _TooltipCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white)),
             const SizedBox(height: 4),
-            Text('${_fmt(start)} — ${_fmt(end)}', style: const TextStyle(fontSize: 11, color: Colors.white70)),
+            Text('${_fmt(start)} — ${_fmt(end)}',
+                style: const TextStyle(fontSize: 11, color: Colors.white70)),
           ],
         ),
       ),

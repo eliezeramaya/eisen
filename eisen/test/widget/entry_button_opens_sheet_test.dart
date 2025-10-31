@@ -1,17 +1,18 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:eisen/features/eisen_matrix/presentation/pages/matrix_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('Bottom bar Entry button opens AddTaskSheet', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: MatrixPage())));
+    await tester.pumpWidget(
+        const ProviderScope(child: MaterialApp(home: MatrixPage())));
     await tester.pumpAndSettle();
 
     final entryEs = find.text('Entrada');
     final entryEn = find.text('Entry');
-    expect(entryEs.evaluate().isNotEmpty || entryEn.evaluate().isNotEmpty, isTrue,
+    expect(
+        entryEs.evaluate().isNotEmpty || entryEn.evaluate().isNotEmpty, isTrue,
         reason: 'Expected Entry/Entrada button in bottom bar');
 
     // Try robust target selection: FilledButton with label, else IconButton tooltip, else semantics
@@ -31,7 +32,11 @@ void main() {
         final entrySemEn = find.bySemanticsLabel('Entry');
         target = entrySemEs.evaluate().isNotEmpty
             ? entrySemEs.first
-            : (entrySemEn.evaluate().isNotEmpty ? entrySemEn.first : (entryEs.evaluate().isNotEmpty ? entryEs.first : entryEn.first));
+            : (entrySemEn.evaluate().isNotEmpty
+                ? entrySemEn.first
+                : (entryEs.evaluate().isNotEmpty
+                    ? entryEs.first
+                    : entryEn.first));
       }
     }
     await tester.tap(target);
@@ -44,4 +49,3 @@ void main() {
         reason: 'AddTaskSheet should include Save button');
   });
 }
-

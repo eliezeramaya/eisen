@@ -7,8 +7,8 @@ abstract class MatrixRepository {
 }
 
 class LocalPrefsMatrixRepository implements MatrixRepository {
-  final StoragePrefs storage;
   LocalPrefsMatrixRepository(this.storage);
+  final StoragePrefs storage;
 
   @override
   Future<List<Task>> load() async {

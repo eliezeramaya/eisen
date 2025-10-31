@@ -1,19 +1,23 @@
-import 'package:flutter/material.dart';
+import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:flutter/material.dart';
 
 class Legend extends StatelessWidget {
-  final List<Task> tasks;
   const Legend({super.key, required this.tasks});
+  final List<Task> tasks;
 
   @override
   Widget build(BuildContext context) {
-    final double total = tasks.length.toDouble().clamp(1.0, double.infinity) as double;
+    final double total = tasks.length.toDouble().clamp(1.0, double.infinity);
     return Container(
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(10),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.xs,
+        vertical: AppSpacing.xs * 0.75, // 6px
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -31,7 +35,7 @@ class Legend extends StatelessWidget {
   Widget _chip(String label, Color color, double p) {
     final pct = (p * 100).toStringAsFixed(0);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
       child: Chip(
         label: Text('$label $pct%'),
         avatar: CircleAvatar(backgroundColor: color, radius: 6),

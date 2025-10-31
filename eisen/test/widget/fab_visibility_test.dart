@@ -1,7 +1,7 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:eisen/app/app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:eisen/app/app.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('No FAB; single Entry button in bottom bar', (tester) async {
@@ -14,6 +14,7 @@ void main() {
     // One Entry/Entrada button present in bottom bar
     final entryEs = find.text('Entrada');
     final entryEn = find.text('Entry');
-    expect(entryEs.evaluate().isNotEmpty || entryEn.evaluate().isNotEmpty, isTrue);
+    expect(
+        entryEs.evaluate().isNotEmpty || entryEn.evaluate().isNotEmpty, isTrue);
   });
 }

@@ -1,3 +1,4 @@
+import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:flutter/material.dart';
 
 class ProfileSheet extends StatelessWidget {
@@ -13,7 +14,12 @@ class ProfileSheet extends StatelessWidget {
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.xs,
+          AppSpacing.md,
+          AppSpacing.lg,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -29,18 +35,18 @@ class ProfileSheet extends StatelessWidget {
                 child: const Icon(Icons.account_circle, size: 48),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Center(
               child: Text(
                 title,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             _RowItem(label: isEs ? 'Nombre' : 'Name', value: name),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
             _RowItem(label: 'Email', value: email),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -58,9 +64,9 @@ class ProfileSheet extends StatelessWidget {
 }
 
 class _RowItem extends StatelessWidget {
+  const _RowItem({required this.label, required this.value});
   final String label;
   final String value;
-  const _RowItem({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +79,7 @@ class _RowItem extends StatelessWidget {
             style: Theme.of(context).textTheme.labelMedium,
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.xs),
         Expanded(
           child: SelectableText(
             value,

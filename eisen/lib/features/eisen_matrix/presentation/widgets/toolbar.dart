@@ -1,19 +1,9 @@
 import 'dart:ui';
+
+import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:flutter/material.dart';
 
 class AppToolbar extends StatefulWidget {
-  final VoidCallback onToggleTheme;
-  final void Function(String) onQuery;
-  final VoidCallback? onExitZoom;
-  final bool canExitZoom;
-  final VoidCallback? onOpenSettings;
-  final VoidCallback? onOpenStats;
-  final VoidCallback? onOpenWorkflow;
-  final VoidCallback? onOpenProfile;
-  final VoidCallback? onToggleMinimal;
-  final bool minimal;
-  final ThemeMode themeMode;
-  final bool showWorkflowPlan;
   const AppToolbar({
     super.key,
     required this.onToggleTheme,
@@ -29,6 +19,18 @@ class AppToolbar extends StatefulWidget {
     this.minimal = false,
     this.showWorkflowPlan = false,
   });
+  final VoidCallback onToggleTheme;
+  final void Function(String) onQuery;
+  final VoidCallback? onExitZoom;
+  final bool canExitZoom;
+  final VoidCallback? onOpenSettings;
+  final VoidCallback? onOpenStats;
+  final VoidCallback? onOpenWorkflow;
+  final VoidCallback? onOpenProfile;
+  final VoidCallback? onToggleMinimal;
+  final bool minimal;
+  final ThemeMode themeMode;
+  final bool showWorkflowPlan;
 
   @override
   State<AppToolbar> createState() => _AppToolbarState();
@@ -70,16 +72,21 @@ class _AppToolbarState extends State<AppToolbar> {
         : Colors.black.withValues(alpha: 0.08);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.sm, // 12
+        AppSpacing.sm - AppSpacing.xxs / 2, // 10
+        AppSpacing.sm, // 12
+        AppSpacing.xs * 0.75, // 6
+      ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             height: 56,
             decoration: BoxDecoration(
               color: bg,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: border, width: 1),
               boxShadow: [
                 BoxShadow(
@@ -91,10 +98,10 @@ class _AppToolbarState extends State<AppToolbar> {
             ),
             child: Row(
               children: [
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.sm),
                 // Logo: isotipo solo en compacto, isotipo + nombre en pantallas anchas
                 Padding(
-                  padding: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.only(right: AppSpacing.sm),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -112,7 +119,7 @@ class _AppToolbarState extends State<AppToolbar> {
                         ),
                       ),
                       if (isWide) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.xs),
                         Text(
                           'eisen',
                           style: theme.textTheme.titleMedium?.copyWith(
@@ -146,7 +153,7 @@ class _AppToolbarState extends State<AppToolbar> {
                   actionButton(onPressed: widget.onOpenSettings, icon: Icons.settings, label: settingsLabel),
                 if (widget.onOpenProfile != null)
                   actionButton(onPressed: widget.onOpenProfile, icon: Icons.account_circle, label: profileLabel),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.xs),
               ],
             ),
           ),

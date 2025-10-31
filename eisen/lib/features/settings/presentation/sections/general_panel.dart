@@ -1,8 +1,7 @@
+import 'package:eisen/core/notifications/notifications_service.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:eisen/core/services/ui_prefs.dart';
-import 'package:eisen/core/notifications/notifications_service.dart';
 
 class GeneralPanel extends ConsumerWidget {
   const GeneralPanel({super.key});
@@ -11,16 +10,23 @@ class GeneralPanel extends ConsumerWidget {
     final prefs = ref.watch(uiPrefsProvider);
     return ListView(
       children: [
-        const _SectionHeader(title: 'Language & Region', subtitle: 'Idioma, región y formatos de fecha/hora'),
+        const _SectionHeader(
+            title: 'Language & Region',
+            subtitle: 'Idioma, región y formatos de fecha/hora'),
         _LanguageRegionCard(prefs: prefs),
         const SizedBox(height: 24),
-        const _SectionHeader(title: 'Text & Readability', subtitle: 'Escala de texto y legibilidad'),
+        const _SectionHeader(
+            title: 'Text & Readability',
+            subtitle: 'Escala de texto y legibilidad'),
         _TextScaleCard(prefs: prefs),
         const SizedBox(height: 24),
-        const _SectionHeader(title: 'Notifications', subtitle: 'Recordatorios diarios y alertas'),
+        const _SectionHeader(
+            title: 'Notifications',
+            subtitle: 'Recordatorios diarios y alertas'),
         _NotificationsCard(prefs: prefs),
         const SizedBox(height: 24),
-        const _SectionHeader(title: 'Workflow', subtitle: 'Activa el modo plan de trabajo'),
+        const _SectionHeader(
+            title: 'Workflow', subtitle: 'Activa el modo plan de trabajo'),
         _WorkflowCard(prefs: prefs),
       ],
     );
@@ -28,8 +34,8 @@ class GeneralPanel extends ConsumerWidget {
 }
 
 class _TextScaleCard extends ConsumerWidget {
-  final UiPrefsData prefs;
   const _TextScaleCard({required this.prefs});
+  final UiPrefsData prefs;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(uiPrefsControllerProvider.notifier);
@@ -43,7 +49,8 @@ class _TextScaleCard extends ConsumerWidget {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.text_fields),
               title: const Text('Tamaño de texto'),
-              subtitle: const Text('Ajusta la escala del texto en toda la app (1–5).'),
+              subtitle: const Text(
+                  'Ajusta la escala del texto en toda la app (1–5).'),
             ),
             Slider(
               value: prefs.textScaleLevel.toDouble(),
@@ -55,7 +62,8 @@ class _TextScaleCard extends ConsumerWidget {
             ),
             Align(
               alignment: Alignment.centerRight,
-              child: Text('Actual: ${prefs.textScaleLevel}/5', style: Theme.of(context).textTheme.labelSmall),
+              child: Text('Actual: ${prefs.textScaleLevel}/5',
+                  style: Theme.of(context).textTheme.labelSmall),
             ),
           ],
         ),
@@ -65,8 +73,8 @@ class _TextScaleCard extends ConsumerWidget {
 }
 
 class _LanguageRegionCard extends ConsumerWidget {
-  final UiPrefsData prefs;
   const _LanguageRegionCard({required this.prefs});
+  final UiPrefsData prefs;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(uiPrefsControllerProvider.notifier);
@@ -77,23 +85,35 @@ class _LanguageRegionCard extends ConsumerWidget {
           _DropdownRow(
             label: 'Idioma',
             value: prefs.languageCode,
-            items: const ['system','en','es'],
-            itemLabel: (v) => {'system':'Sistema','en':'English','es':'Español'}[v]!,
-            onChanged: (v) { if (v != null) ctrl.setLanguageCode(v); },
+            items: const ['system', 'en', 'es'],
+            itemLabel: (v) =>
+                {'system': 'Sistema', 'en': 'English', 'es': 'Español'}[v]!,
+            onChanged: (v) {
+              if (v != null) ctrl.setLanguageCode(v);
+            },
           ),
           _DropdownRow(
             label: 'Región',
             value: prefs.regionCode,
-            items: const ['system','US','MX','ES'],
-            itemLabel: (v) => {'system':'Sistema','US':'Estados Unidos','MX':'México','ES':'España'}[v]!,
-            onChanged: (v) { if (v != null) ctrl.setRegionCode(v); },
+            items: const ['system', 'US', 'MX', 'ES'],
+            itemLabel: (v) => {
+              'system': 'Sistema',
+              'US': 'Estados Unidos',
+              'MX': 'México',
+              'ES': 'España'
+            }[v]!,
+            onChanged: (v) {
+              if (v != null) ctrl.setRegionCode(v);
+            },
           ),
           _DropdownRow(
             label: 'Formato de Fecha',
             value: prefs.dateFormat,
-            items: const ['dd/MM/yyyy','MM/dd/yyyy','yyyy-MM-dd'],
+            items: const ['dd/MM/yyyy', 'MM/dd/yyyy', 'yyyy-MM-dd'],
             itemLabel: (v) => v,
-            onChanged: (v) { if (v != null) ctrl.setDateFormat(v); },
+            onChanged: (v) {
+              if (v != null) ctrl.setDateFormat(v);
+            },
           ),
           SwitchListTile(
             title: const Text('24-hour time'),
@@ -108,8 +128,8 @@ class _LanguageRegionCard extends ConsumerWidget {
 }
 
 class _NotificationsCard extends ConsumerWidget {
-  final UiPrefsData prefs;
   const _NotificationsCard({required this.prefs});
+  final UiPrefsData prefs;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(uiPrefsControllerProvider.notifier);
@@ -139,7 +159,8 @@ class _NotificationsCard extends ConsumerWidget {
           ),
           SwitchListTile(
             title: const Text('End-of-day summary'),
-            subtitle: const Text('Recibe un resumen de pendientes al finalizar el día'),
+            subtitle: const Text(
+                'Recibe un resumen de pendientes al finalizar el día'),
             value: prefs.endOfDaySummary,
             onChanged: (v) async {
               await ctrl.setEndOfDaySummary(v);
@@ -168,19 +189,25 @@ class _NotificationsCard extends ConsumerWidget {
               },
             ),
           const SizedBox(height: 8),
-                    _DropdownRow(
+          _DropdownRow(
             label: 'Alerta Pomodoro',
             value: prefs.pomodoroAlert,
-            items: const ['none','sound','visual'],
-            itemLabel: (v) => {'none':'Ninguna','sound':'Sonido','visual':'Visual'}[v]!,
-            onChanged: (v) { if (v != null) ctrl.setPomodoroAlert(v); },
+            items: const ['none', 'sound', 'visual'],
+            itemLabel: (v) =>
+                {'none': 'Ninguna', 'sound': 'Sonido', 'visual': 'Visual'}[v]!,
+            onChanged: (v) {
+              if (v != null) ctrl.setPomodoroAlert(v);
+            },
           ),
-                    _DropdownRow(
+          _DropdownRow(
             label: 'Tono de Notificación',
             value: prefs.notificationTone,
-            items: const ['default','chime','bell'],
-            itemLabel: (v) => {'default':'Default','chime':'Chime','bell':'Bell'}[v]!,
-            onChanged: (v) { if (v != null) ctrl.setNotificationTone(v); },
+            items: const ['default', 'chime', 'bell'],
+            itemLabel: (v) =>
+                {'default': 'Default', 'chime': 'Chime', 'bell': 'Bell'}[v]!,
+            onChanged: (v) {
+              if (v != null) ctrl.setNotificationTone(v);
+            },
           ),
         ]),
       ),
@@ -196,8 +223,8 @@ class _NotificationsCard extends ConsumerWidget {
 }
 
 class _WorkflowCard extends ConsumerWidget {
-  final UiPrefsData prefs;
   const _WorkflowCard({required this.prefs});
+  final UiPrefsData prefs;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -210,9 +237,10 @@ class _WorkflowCard extends ConsumerWidget {
           children: [
             SwitchListTile(
               title: const Text('Workflow plan'),
-              subtitle: const Text('Muestra un botón con vista tipo Gantt en la barra superior'),
+              subtitle: const Text(
+                  'Muestra un botón con vista tipo Gantt en la barra superior'),
               value: prefs.workflowPlanEnabled,
-              onChanged: (v) => ctrl.setWorkflowPlanEnabled(v),
+              onChanged: ctrl.setWorkflowPlanEnabled,
             ),
             const SizedBox(height: 4),
             Text(
@@ -229,46 +257,67 @@ class _WorkflowCard extends ConsumerWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, required this.subtitle});
   final String title, subtitle;
-  const _SectionHeader({super.key, required this.title, required this.subtitle});
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+        Text(title,
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Text(subtitle, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+        Text(subtitle,
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: cs.onSurfaceVariant)),
       ]),
     );
   }
 }
 
 class _DropdownRow extends StatelessWidget {
+  const _DropdownRow(
+      {required this.label,
+      required this.value,
+      required this.items,
+      required this.itemLabel,
+      required this.onChanged});
   final String label, value;
   final List<String> items;
   final String Function(String) itemLabel;
   final ValueChanged<String?> onChanged;
-  const _DropdownRow({super.key, required this.label, required this.value, required this.items, required this.itemLabel, required this.onChanged});
   @override
   Widget build(BuildContext context) {
     return ListTile(
       title: Text(label),
       trailing: DropdownButton<String>(
         value: value,
-        items: items.map((e)=>DropdownMenuItem(value: e, child: Text(itemLabel(e)))).toList(),
-        onChanged: (v) { if (v != null) onChanged(v); },
+        items: items
+            .map((e) => DropdownMenuItem(value: e, child: Text(itemLabel(e))))
+            .toList(),
+        onChanged: (v) {
+          if (v != null) onChanged(v);
+        },
       ),
     );
   }
 }
 
 class _TimePickerRow extends StatelessWidget {
+  const _TimePickerRow(
+      {required this.label,
+      required this.hhmm24,
+      required this.onPicked,
+      required this.onClear});
   final String label, hhmm24;
   final ValueChanged<String> onPicked;
   final VoidCallback onClear;
-  const _TimePickerRow({super.key, required this.label, required this.hhmm24, required this.onPicked, required this.onClear});
   @override
   Widget build(BuildContext context) {
     return ListTile(
@@ -280,10 +329,11 @@ class _TimePickerRow extends StatelessWidget {
           child: const Text('Pick time'),
           onPressed: () async {
             final now = TimeOfDay.now();
-            final picked = await showTimePicker(context: context, initialTime: now);
+            final picked =
+                await showTimePicker(context: context, initialTime: now);
             if (picked != null) {
-              final hh = picked.hour.toString().padLeft(2,'0');
-              final mm = picked.minute.toString().padLeft(2,'0');
+              final hh = picked.hour.toString().padLeft(2, '0');
+              final mm = picked.minute.toString().padLeft(2, '0');
               onPicked('$hh:$mm');
             }
           },

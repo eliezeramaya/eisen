@@ -1,7 +1,8 @@
+import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/core/ui/ui_breakpoints.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:eisen/core/ui/ui_breakpoints.dart';
-import 'package:eisen/core/services/ui_prefs.dart';
+
 import 'layout_config.dart';
 
 /// Responsive LayoutConfig provider keyed by viewport size.
@@ -37,4 +38,3 @@ final layoutConfigForSizeProvider =
     quadrantPadding: prefs.quadrantPadding,
   );
 });
-

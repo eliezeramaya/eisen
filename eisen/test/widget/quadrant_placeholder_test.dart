@@ -1,9 +1,10 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/material.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/quadrant_empty_placeholder.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('QuadrantEmptyPlaceholder renders title and hint', (tester) async {
+  testWidgets('QuadrantEmptyPlaceholder renders title and hint',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(

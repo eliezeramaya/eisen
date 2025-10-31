@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../domain/models.dart';
 
 class Sparkline extends StatelessWidget {
-  final List<TrendPoint>? trend;
   const Sparkline({super.key, this.trend});
+  final List<TrendPoint>? trend;
 
   @override
   Widget build(BuildContext context) {
@@ -15,17 +15,24 @@ class Sparkline extends StatelessWidget {
 }
 
 class _SparkPainter extends CustomPainter {
-  final List<TrendPoint> trend;
   _SparkPainter(this.trend);
+  final List<TrendPoint> trend;
   @override
   void paint(Canvas canvas, Size size) {
     if (trend.isEmpty) return;
-    final maxV = trend.map((e) => e.focusMinutes).fold<int>(1, (a, b) => b > a ? b : a).toDouble();
+    final maxV = trend
+        .map((e) => e.focusMinutes)
+        .fold<int>(1, (a, b) => b > a ? b : a)
+        .toDouble();
     final path = Path();
     for (int i = 0; i < trend.length; i++) {
       final x = size.width * (i / (trend.length - 1).clamp(1, 1));
       final y = size.height * (1 - (trend[i].focusMinutes / maxV));
-      if (i == 0) path.moveTo(x, y); else path.lineTo(x, y);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
     }
     final stroke = Paint()
       ..style = PaintingStyle.stroke
@@ -44,6 +51,6 @@ class _SparkPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SparkPainter oldDelegate) => oldDelegate.trend != trend;
+  bool shouldRepaint(covariant _SparkPainter oldDelegate) =>
+      oldDelegate.trend != trend;
 }
-

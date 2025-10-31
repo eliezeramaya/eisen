@@ -1,21 +1,13 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'typography.dart';
+
 import 'colors.dart';
 import 'minimal_tokens.dart';
+import 'typography.dart';
 
 @immutable
 class GlassTokens extends ThemeExtension<GlassTokens> {
-  final Color glassBg;
-  final double blur;
-  final double radius;
-  final Color q1;
-  final Color q2;
-  final Color q3;
-  final Color q4;
-  final Color halo;
-
   const GlassTokens({
     required this.glassBg,
     required this.blur,
@@ -26,6 +18,14 @@ class GlassTokens extends ThemeExtension<GlassTokens> {
     required this.q4,
     required this.halo,
   });
+  final Color glassBg;
+  final double blur;
+  final double radius;
+  final Color q1;
+  final Color q2;
+  final Color q3;
+  final Color q4;
+  final Color halo;
 
   @override
   GlassTokens copyWith({
@@ -51,7 +51,8 @@ class GlassTokens extends ThemeExtension<GlassTokens> {
   }
 
   @override
-  ThemeExtension<GlassTokens> lerp(ThemeExtension<GlassTokens>? other, double t) {
+  ThemeExtension<GlassTokens> lerp(
+      ThemeExtension<GlassTokens>? other, double t) {
     if (other is! GlassTokens) return this;
     return GlassTokens(
       glassBg: Color.lerp(glassBg, other.glassBg, t)!,
@@ -94,10 +95,7 @@ ThemeData buildAppTheme(Brightness brightness) {
       onSurface: onBg,
       surfaceContainerHighest: surface2,
       surfaceContainerLow: surface,
-      surfaceVariant: surface2,
       onSurfaceVariant: onBg2,
-      background: bg,
-      onBackground: onBg,
       error: Color(0xFFFF7A7A),
       onError: Colors.black,
       outline: outline,
@@ -113,9 +111,9 @@ ThemeData buildAppTheme(Brightness brightness) {
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: bg,
-      dialogBackgroundColor: surface,
       canvasColor: surface,
       dividerColor: divider,
+      dialogTheme: DialogThemeData(backgroundColor: surface),
     );
 
     final tokens = GlassTokens(
@@ -138,7 +136,8 @@ ThemeData buildAppTheme(Brightness brightness) {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: onBg),
-        titleTextStyle: base.textTheme.titleMedium?.copyWith(color: onBg, fontWeight: FontWeight.w600),
+        titleTextStyle: base.textTheme.titleMedium
+            ?.copyWith(color: onBg, fontWeight: FontWeight.w600),
       ),
       cardTheme: CardThemeData(
         color: surface,
@@ -171,7 +170,8 @@ ThemeData buildAppTheme(Brightness brightness) {
         side: const BorderSide(color: outline),
         shape: StadiumBorder(side: const BorderSide(color: outline)),
       ),
-      dividerTheme: const DividerThemeData(color: divider, thickness: 1, space: 16),
+      dividerTheme:
+          const DividerThemeData(color: divider, thickness: 1, space: 16),
       splashColor: Colors.white10,
       highlightColor: Colors.white10,
       focusColor: primary,
@@ -227,9 +227,12 @@ ThemeData buildAppTheme(Brightness brightness) {
 
 TextTheme _darkTextTheme(TextTheme t) {
   return t.copyWith(
-    bodyLarge: t.bodyLarge?.copyWith(color: const Color(0xFFE6E9EE), height: 1.42),
-    bodyMedium: t.bodyMedium?.copyWith(color: const Color(0xFFB4BCC8), height: 1.42, letterSpacing: .1),
-    titleMedium: t.titleMedium?.copyWith(color: const Color(0xFFE6E9EE), fontWeight: FontWeight.w600),
+    bodyLarge:
+        t.bodyLarge?.copyWith(color: const Color(0xFFE6E9EE), height: 1.42),
+    bodyMedium: t.bodyMedium?.copyWith(
+        color: const Color(0xFFB4BCC8), height: 1.42, letterSpacing: .1),
+    titleMedium: t.titleMedium
+        ?.copyWith(color: const Color(0xFFE6E9EE), fontWeight: FontWeight.w600),
     labelLarge: t.labelLarge?.copyWith(color: const Color(0xFFE6E9EE)),
   );
 }
@@ -288,7 +291,8 @@ ThemeData asMinimal(ThemeData t) {
       backgroundColor: t.colorScheme.surfaceContainerHighest,
       labelStyle: TextStyle(color: cs.onSurface),
     ),
-    dividerTheme: t.dividerTheme.copyWith(color: border, thickness: 1, space: 16),
+    dividerTheme:
+        t.dividerTheme.copyWith(color: border, thickness: 1, space: 16),
     splashColor: Colors.transparent,
     highlightColor: Colors.transparent,
     focusColor: cs.primary.withValues(alpha: .24),

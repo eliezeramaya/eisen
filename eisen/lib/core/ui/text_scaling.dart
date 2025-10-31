@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/ui/ui_breakpoints.dart';
+import 'package:flutter/material.dart';
 
 /// Maps user level 1..5 to a multiplicative factor around 1.0.
 /// Centered at 3 => 1.0, with gentle steps to preserve readability.

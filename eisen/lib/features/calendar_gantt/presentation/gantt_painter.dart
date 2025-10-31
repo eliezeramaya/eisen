@@ -1,23 +1,14 @@
-import 'package:flutter/material.dart';
 import 'dart:math' as math;
+
 import 'package:eisen/core/ui/ui_tokens.dart';
 import 'package:eisen/features/calendar_gantt/application/gantt_projection.dart';
 import 'package:eisen/features/calendar_gantt/domain/calendar_span.dart';
-import 'package:eisen/features/calendar_gantt/presentation/gantt_palette.dart';
 import 'package:eisen/features/calendar_gantt/presentation/gantt_cache.dart';
+import 'package:eisen/features/calendar_gantt/presentation/gantt_palette.dart';
+import 'package:flutter/material.dart';
 
 /// Painter for Gantt chart body: background and vertical "Now" line.
 class GanttPainter extends CustomPainter {
-  final TimelineProjector projector;
-  final DateTime now;
-  final List<CalendarSpan> spans;
-  final ScrollController hScroll;
-  final double viewportWidth;
-  final bool showBadges;
-  final bool showTodayLine;
-  final double laneHeight;
-  final double laneGap;
-  final List<(DateTime, String)> milestones;
   const GanttPainter({
     required this.projector,
     required this.now,
@@ -30,6 +21,16 @@ class GanttPainter extends CustomPainter {
     this.laneGap = UiTokens.laneGap,
     this.milestones = const <(DateTime, String)>[],
   }) : super(repaint: hScroll);
+  final TimelineProjector projector;
+  final DateTime now;
+  final List<CalendarSpan> spans;
+  final ScrollController hScroll;
+  final double viewportWidth;
+  final bool showBadges;
+  final bool showTodayLine;
+  final double laneHeight;
+  final double laneGap;
+  final List<(DateTime, String)> milestones;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -55,8 +56,8 @@ class GanttPainter extends CustomPainter {
     }
 
     // Bars (Stage 3) + Stage 5: viewport culling & caches
-  final barHeight = laneHeight - laneGap;
-  final yPad = laneGap / 2;
+    final barHeight = laneHeight - laneGap;
+    final yPad = laneGap / 2;
     final r = Radius.circular(UiTokens.barRadius);
     final borderPaint = Paint()
       ..style = PaintingStyle.stroke
@@ -109,13 +110,14 @@ class GanttPainter extends CustomPainter {
       }
       final left = rect.left;
       final right = rect.right;
-      double w = rect.width;
+      final double w = rect.width;
       if (w < 0.5) continue; // nothing to draw
 
       // Cull if fully outside viewport (small tolerance)
       if (right < viewLeft - cullPad || left > viewRight + cullPad) continue;
 
-      final rr = RRect.fromRectAndCorners(rect, topLeft: r, topRight: r, bottomLeft: r, bottomRight: r);
+      final rr = RRect.fromRectAndCorners(rect,
+          topLeft: r, topRight: r, bottomLeft: r, bottomRight: r);
 
       // Gradient fill
       final palette = paletteFor(s.kind);
@@ -133,30 +135,42 @@ class GanttPainter extends CustomPainter {
       // Title text (only when enough width)
       if (w > 56) {
         final maxTextWidth = w - 16; // padding inside bar
-        final tKey = TextKey(text: s.title, fontSize: titleStyle.fontSize!, maxWidth: maxTextWidth, colorValue: palette.text.value);
+        final tKey = TextKey(
+            text: s.title,
+            fontSize: titleStyle.fontSize!,
+            maxWidth: maxTextWidth,
+            colorValue: palette.text.value);
         var tp = GanttCaches.text.get(tKey);
         if (tp == null) {
           tp = TextPainter(
-            text: TextSpan(text: s.title, style: titleStyle.copyWith(color: palette.text)),
+            text: TextSpan(
+                text: s.title, style: titleStyle.copyWith(color: palette.text)),
             maxLines: 1,
             ellipsis: '…',
             textDirection: TextDirection.ltr,
           )..layout(maxWidth: maxTextWidth);
           GanttCaches.text.set(tKey, tp);
         }
-        final textOffset = Offset(rect.left + 8, rect.top + (rect.height - tp.height) / 2);
+        final textOffset =
+            Offset(rect.left + 8, rect.top + (rect.height - tp.height) / 2);
         tp.paint(canvas, textOffset);
       }
 
       // Duration badge (e.g., 3d) when enough width
-      final days = (s.end.difference(s.start).inDays).clamp(1, 999);
+      final days = s.end.difference(s.start).inDays.clamp(1, 999);
       final badgeLabel = '${days}d';
       if (showBadges && w > 88) {
-        final tKey = TextKey(text: badgeLabel, fontSize: badgeTextStyle.fontSize!, maxWidth: 48, colorValue: palette.text.value);
+        final tKey = TextKey(
+            text: badgeLabel,
+            fontSize: badgeTextStyle.fontSize!,
+            maxWidth: 48,
+            colorValue: palette.text.value);
         var tp = GanttCaches.text.get(tKey);
         if (tp == null) {
           tp = TextPainter(
-            text: TextSpan(text: badgeLabel, style: badgeTextStyle.copyWith(color: palette.text)),
+            text: TextSpan(
+                text: badgeLabel,
+                style: badgeTextStyle.copyWith(color: palette.text)),
             maxLines: 1,
             textDirection: TextDirection.ltr,
           )..layout(maxWidth: 48);
@@ -169,7 +183,8 @@ class GanttPainter extends CustomPainter {
         final bx = rect.right - bw - 8; // right aligned inside bar
         final by = rect.top + (rect.height - bh) / 2;
         final bRect = Rect.fromLTWH(bx, by, bw, bh);
-        final bRRect = RRect.fromRectAndRadius(bRect, const Radius.circular(10));
+        final bRRect =
+            RRect.fromRectAndRadius(bRect, const Radius.circular(10));
         final badgePaint = Paint()..color = palette.badgeBg;
         canvas.drawRRect(bRRect, badgePaint);
         tp.paint(canvas, Offset(bRect.left + padH, bRect.top + padV - 0.5));
@@ -182,7 +197,8 @@ class GanttPainter extends CustomPainter {
       for (final m in milestones) {
         final x = projector.dx(m.$1);
         final dSize = 14.0;
-        final rect = Rect.fromCenter(center: Offset(x, y), width: dSize, height: dSize);
+        final rect =
+            Rect.fromCenter(center: Offset(x, y), width: dSize, height: dSize);
         final path = Path()
           ..moveTo(rect.center.dx, rect.top)
           ..lineTo(rect.right, rect.center.dy)
@@ -199,7 +215,12 @@ class GanttPainter extends CustomPainter {
 
         // Label
         final tp = TextPainter(
-          text: TextSpan(text: m.$2, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+          text: TextSpan(
+              text: m.$2,
+              style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
           textDirection: TextDirection.ltr,
         )..layout(maxWidth: 200);
         tp.paint(canvas, Offset(x + 10, y - tp.height / 2));
@@ -211,7 +232,7 @@ class GanttPainter extends CustomPainter {
   bool shouldRepaint(covariant GanttPainter oldDelegate) {
     if (oldDelegate.projector.pxPerDay != projector.pxPerDay) return true;
     if (oldDelegate.projector.viewStart != projector.viewStart) return true;
-    if ((oldDelegate.now.difference(now).inMinutes).abs() > 5) return true;
+    if (oldDelegate.now.difference(now).inMinutes.abs() > 5) return true;
     if (oldDelegate.spans.length != spans.length) return true;
     // Cheap check: if any lane or start/end changed
     for (var i = 0; i < spans.length && i < oldDelegate.spans.length; i++) {

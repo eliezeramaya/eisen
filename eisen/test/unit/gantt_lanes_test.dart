@@ -1,10 +1,11 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/features/calendar_gantt/application/gantt_lanes.dart';
 import 'package:eisen/features/calendar_gantt/domain/calendar_span.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('assignLanes', () {
-    CalendarSpan s(String id, String a, String b, {int lane = -1}) => CalendarSpan(
+    CalendarSpan s(String id, String a, String b, {int lane = -1}) =>
+        CalendarSpan(
           id: id,
           title: id,
           start: DateTime.parse(a),
@@ -17,7 +18,8 @@ void main() {
       final spans = [
         s('A', '2025-03-01', '2025-03-05'),
         s('B', '2025-03-02', '2025-03-03'),
-        s('C', '2025-03-05', '2025-03-07'), // touches A end (exclusive), allowed in same lane
+        s('C', '2025-03-05',
+            '2025-03-07'), // touches A end (exclusive), allowed in same lane
         s('D', '2025-03-03', '2025-03-06'),
       ];
 
@@ -38,13 +40,15 @@ void main() {
         laneSpans.sort((a, b) => a.start.compareTo(b.start));
         for (var i = 1; i < laneSpans.length; i++) {
           expect(!laneSpans[i].start.isBefore(laneSpans[i - 1].end), isTrue,
-              reason: 'Overlap in lane ${laneSpans[i].lane} between ${laneSpans[i - 1].id} and ${laneSpans[i].id}');
+              reason:
+                  'Overlap in lane ${laneSpans[i].lane} between ${laneSpans[i - 1].id} and ${laneSpans[i].id}');
         }
       }
 
       // Minimal lanes: with given inputs, should be 2 lanes
       final laneCount = byLane.keys.length;
-      expect(laneCount, anyOf(1, 2)); // Depending on greedy order, but should not exceed 2
+      expect(laneCount,
+          anyOf(1, 2)); // Depending on greedy order, but should not exceed 2
     });
   });
 }

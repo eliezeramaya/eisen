@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 class SettingsSearchDelegate extends SearchDelegate<String?> {
-  final void Function(String section) onJumpTo;
   SettingsSearchDelegate({required this.onJumpTo});
+  final void Function(String section) onJumpTo;
 
   final Map<String, List<String>> _index = const {
     'General': ['language', 'locale', 'time', 'date'],
@@ -20,8 +20,9 @@ class SettingsSearchDelegate extends SearchDelegate<String?> {
       ];
 
   @override
-  Widget buildLeading(BuildContext context) =>
-      IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => close(context, null));
+  Widget buildLeading(BuildContext context) => IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => close(context, null));
 
   @override
   Widget buildResults(BuildContext context) => _buildList();
@@ -30,7 +31,9 @@ class SettingsSearchDelegate extends SearchDelegate<String?> {
 
   Widget _buildList() {
     final items = _index.entries
-        .expand((e) => e.value.where((k) => k.contains(query.toLowerCase())).map((_) => e.key))
+        .expand((e) => e.value
+            .where((k) => k.contains(query.toLowerCase()))
+            .map((_) => e.key))
         .toSet()
         .toList();
     return ListView.builder(
@@ -49,4 +52,3 @@ class SettingsSearchDelegate extends SearchDelegate<String?> {
     );
   }
 }
-
