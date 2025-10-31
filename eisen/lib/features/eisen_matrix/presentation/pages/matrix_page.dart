@@ -23,6 +23,7 @@ import 'package:eisen/core/ui/ui_breakpoints.dart';
 import 'package:eisen/core/platform/platform_utils.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/ui/text_scaling.dart';
+import 'package:eisen/core/ui/app_text_scale.dart';
 import 'package:go_router/go_router.dart';
 // Removed FAB + coachmark imports; using single CTA in bottom bar
 
@@ -97,6 +98,11 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
       }
     });
     final legendsVisible = showAxisLegends && zoom == null && screenWidth >= 600;
+    // AppTextScale applied
+    final prefsUi = ref.watch(uiPrefsProvider);
+    final uiTsf = AppTextScale.of(context, prefsUi);
+    final isExtremeScale = AppTextScale.isExtreme(context, prefsUi);
+    final axisHeaderHeight = isExtremeScale ? 48.0 : 40.0;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -171,17 +177,36 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: MediaQuery(
+          // AppTextScale applied: scale general UI using prefs
+          data: MediaQuery.of(context).copyWith(textScaleFactor: uiTsf),
+          child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (legendsVisible) _LeftAxisLegends(minimal: minimal),
+              if (legendsVisible)
+                // AppTextScale applied: isolated + scaled legends
+                RepaintBoundary(
+                  child: _LeftAxisLegends(
+                    minimal: minimal,
+                    textScale: uiTsf,
+                    headerHeight: axisHeaderHeight,
+                  ),
+                ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (legendsVisible) _TopAxisLegends(minimal: minimal),
+                    if (legendsVisible)
+                      // AppTextScale applied: isolated + scaled legends
+                      RepaintBoundary(
+                        child: _TopAxisLegends(
+                          minimal: minimal,
+                          textScale: uiTsf,
+                          headerHeight: axisHeaderHeight,
+                        ),
+                      ),
                     Expanded(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(tokens.radius),
@@ -220,8 +245,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                   final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
                                   // Compute user text scale; clamp tighter for treemap readability
                                   final prefs = ref.watch(uiPrefsProvider);
-                                  final appTsf = effectiveTextScaleFactor(context, prefs);
-                                  final tileTsf = appTsf.clamp(0.95, 1.20);
+                                  final tileTsf = AppTextScale.forTreemap(context, prefs);
                                   return clampTreemapTSF(
                                     context,
                                     child: Stack(
@@ -396,6 +420,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             ],
           ),
         ),
+        ),
       ),
       endDrawer: _selectedTask == null ? null : InspectorDrawer(
         key: ValueKey(_selectedTask.id),
@@ -408,7 +433,11 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         },
       ),
       bottomNavigationBar: screenWidth >= 600
-          ? _BottomActionBar(
+          ? MediaQuery(
+              // AppTextScale applied: scale labels/buttons in the bar
+              data: MediaQuery.of(context).copyWith(textScaleFactor: uiTsf),
+              child: _BottomActionBar(
+              highScale: isExtremeScale, // AppTextScale applied
               onNew: () => _openAddTaskSheet(context),
               onNewInQuadrant: (q) {
                 ctrl.setZoom(q);
@@ -430,7 +459,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                   ctrl.invalidateLayout();
                 },
               ),
-            )
+            ))
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: screenWidth < 600
@@ -480,8 +509,10 @@ Future<void> _openAddTaskSheet(BuildContext context) async {
 
 class _TopAxisLegends extends StatelessWidget {
   final bool minimal;
-  const _TopAxisLegends({this.minimal = false});
-  static const double _kAxisHeaderHeight = 40.0;
+  // AppTextScale applied
+  final double textScale;
+  final double headerHeight;
+  const _TopAxisLegends({this.minimal = false, required this.textScale, required this.headerHeight});
   @override
   Widget build(BuildContext context) {
   final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
@@ -492,7 +523,7 @@ class _TopAxisLegends extends StatelessWidget {
           letterSpacing: 0.2,
         );
     return SizedBox(
-      height: _kAxisHeaderHeight,
+      height: headerHeight,
       child: Row(
         children: [
           Expanded(
@@ -503,6 +534,7 @@ class _TopAxisLegends extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.fade,
                 softWrap: false,
+                textScaleFactor: textScale,
               ),
             ),
           ),
@@ -514,6 +546,7 @@ class _TopAxisLegends extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.fade,
                 softWrap: false,
+                textScaleFactor: textScale,
               ),
             ),
           ),
@@ -525,7 +558,10 @@ class _TopAxisLegends extends StatelessWidget {
 
 class _LeftAxisLegends extends StatelessWidget {
   final bool minimal;
-  const _LeftAxisLegends({this.minimal = false});
+  // AppTextScale applied
+  final double textScale;
+  final double headerHeight;
+  const _LeftAxisLegends({this.minimal = false, required this.textScale, required this.headerHeight});
   @override
   Widget build(BuildContext context) {
   final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
@@ -543,7 +579,7 @@ class _LeftAxisLegends extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Reserve the same vertical space as the top axis headers
-            const SizedBox(height: _TopAxisLegends._kAxisHeaderHeight),
+            SizedBox(height: headerHeight),
             // Two equal halves for vertical centering within each quadrant
             Expanded(
               child: Center(
@@ -557,6 +593,7 @@ class _LeftAxisLegends extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.fade,
                       softWrap: false,
+                      textScaleFactor: textScale,
                     ),
                   ),
                 ),
@@ -574,6 +611,7 @@ class _LeftAxisLegends extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.fade,
                       softWrap: false,
+                      textScaleFactor: textScale,
                     ),
                   ),
                 ),
@@ -590,11 +628,14 @@ class _BottomActionBar extends StatelessWidget {
   final VoidCallback onNew;
   final void Function(Quadrant q) onNewInQuadrant;
   final Widget? minimap;
+  // AppTextScale applied: adjusts paddings for high scales
+  final bool highScale;
 
   const _BottomActionBar({
     required this.onNew,
     required this.onNewInQuadrant,
     this.minimap,
+    this.highScale = false,
   });
 
   @override
@@ -604,7 +645,11 @@ class _BottomActionBar extends StatelessWidget {
     return SafeArea(
       child: Container(
         // Reduce vertical padding to make the bar more compact on mobile
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: EdgeInsets.symmetric(
+          horizontal: 16,
+          // Increase vertical padding slightly when scale is extreme
+          vertical: highScale ? 10 : 6,
+        ),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
           border: Border(

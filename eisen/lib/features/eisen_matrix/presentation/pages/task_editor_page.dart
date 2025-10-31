@@ -1,6 +1,10 @@
 import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/core/ui/app_text_scale.dart';
+import 'package:eisen/core/responsive/responsive_wrapper.dart';
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -43,6 +47,12 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
   Widget build(BuildContext context) {
     final ctrl = ref.read(matrixControllerProvider.notifier);
     final detailsLabel = Localizations.localeOf(context).languageCode == 'es' ? 'Detalles' : 'Details';
+    final r = Responsive.of(context);
+    final prefs = ref.watch(uiPrefsProvider);
+    final uiTsf = AppTextScale.of(context, prefs); // AppTextScale applied
+    final isExtreme = AppTextScale.isExtreme(context, prefs);
+    final pad = EdgeInsets.all(AppSpacing.md * r.paddingScale);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit task'),
@@ -59,68 +69,78 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: _title,
-                decoration: const InputDecoration(labelText: 'Title'),
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  const Text('Priority'),
-                  Expanded(
-                    child: Slider(
-                      value: _priority.toDouble(),
-                      min: 1,
-                      max: 10,
-                      divisions: 9,
-                      label: '$_priority',
-                      onChanged: (v) => setState(() => _priority = v.toInt()),
-                    ),
-                  ),
-                ],
-              ),
-              TextField(
-                controller: _minutes,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Minutes'),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              DropdownButtonFormField<Quadrant>(
-                initialValue: _quadrant,
-                decoration: const InputDecoration(labelText: 'Quadrant'),
-                items: Quadrant.values
-                    .map((q) => DropdownMenuItem(value: q, child: Text(q.name.toUpperCase())))
-                    .toList(),
-                onChanged: (q) => setState(() => _quadrant = q ?? _quadrant),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              // Categories selector
-              _CategoriesSelector(
-                selected: _categories,
-                onChanged: (sel) => setState(() => _categories = sel),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
+        child: MediaQuery(
+          // AppTextScale applied
+          data: MediaQuery.of(context).copyWith(textScaleFactor: uiTsf),
+          child: SingleChildScrollView(
+            padding: pad,
+            child: LayoutBuilder(builder: (context, c) {
+              final isTwoColumn = r.bp == BreakpointSize.md || r.isDesktop;
+              final vGap = isExtreme ? AppSpacing.md : AppSpacing.sm;
+
+              Widget buildLeftColumn() => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: _title,
+                        decoration: const InputDecoration(labelText: 'Title'),
+                        textInputAction: TextInputAction.next,
+                      ),
+                      SizedBox(height: vGap),
+                      Row(
+                        children: [
+                          const Text('Priority'),
+                          Expanded(
+                            child: Slider(
+                              value: _priority.toDouble(),
+                              min: 1,
+                              max: 10,
+                              divisions: 9,
+                              label: '$_priority',
+                              onChanged: (v) => setState(() => _priority = v.toInt()),
+                            ),
+                          ),
+                        ],
+                      ),
+                      TextField(
+                        controller: _minutes,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Minutes'),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      DropdownButtonFormField<Quadrant>(
+                        initialValue: _quadrant,
+                        decoration: const InputDecoration(labelText: 'Quadrant'),
+                        items: Quadrant.values
+                            .map((q) => DropdownMenuItem(value: q, child: Text(q.name.toUpperCase())))
+                            .toList(),
+                        onChanged: (q) => setState(() => _quadrant = q ?? _quadrant),
+                      ),
+                      SizedBox(height: vGap),
+                      // Categories selector
+                      _CategoriesSelector(
+                        selected: _categories,
+                        onChanged: (sel) => setState(() => _categories = sel),
+                      ),
+                    ],
+                  );
+
+              final notesField = TextField(
                 controller: _notes,
                 decoration: InputDecoration(labelText: detailsLabel),
-                minLines: 4,
-                maxLines: 10,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Row(
+                minLines: isTwoColumn ? 12 : 4,
+                maxLines: 18,
+              );
+
+              final actions = Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
                 children: [
                   OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).maybePop(),
                     icon: const Icon(Icons.close),
                     label: const Text('Cancel'),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
                   FilledButton.icon(
                     onPressed: () {
                       final updated = _buildTask();
@@ -131,8 +151,39 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
                     label: const Text('Save'),
                   ),
                 ],
-              ),
-            ],
+              );
+
+              if (!isTwoColumn) {
+                // Mobile/compact: single column
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    buildLeftColumn(),
+                    SizedBox(height: vGap),
+                    notesField,
+                    const SizedBox(height: AppSpacing.lg),
+                    actions,
+                  ],
+                );
+              }
+
+              // Tablet/Desktop: two columns
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: buildLeftColumn()),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(child: notesField),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  actions,
+                ],
+              );
+            }),
           ),
         ),
       ),

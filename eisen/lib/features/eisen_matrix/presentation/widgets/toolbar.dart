@@ -1,6 +1,10 @@
 import 'dart:ui';
 
 import 'package:eisen/core/responsive/layout_tokens.dart';
+import 'package:eisen/core/responsive/responsive_wrapper.dart';
+import 'package:eisen/core/ui/app_text_scale.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 
 class AppToolbar extends StatefulWidget {
@@ -41,6 +45,10 @@ class _AppToolbarState extends State<AppToolbar> {
 
   @override
   Widget build(BuildContext context) {
+    final r = Responsive.of(context);
+    // If parent already applies AppTextScale via MediaQuery, this is a no-op; otherwise it ensures consistency
+    final prefs = ProviderScope.containerOf(context, listen: false).read(uiPrefsControllerProvider);
+    final uiTsf = AppTextScale.of(context, prefs);
     final isEs = Localizations.localeOf(context).languageCode == 'es';
     final fullViewLabel = isEs ? 'Vista completa' : 'Full view';
     final statsLabel = isEs ? 'Estadísticas' : 'Stats';
@@ -73,16 +81,18 @@ class _AppToolbarState extends State<AppToolbar> {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.sm, // 12
-        AppSpacing.sm - AppSpacing.xxs / 2, // 10
-        AppSpacing.sm, // 12
-        AppSpacing.xs * 0.75, // 6
+        AppSpacing.sm * r.paddingScale,
+        (AppSpacing.sm - AppSpacing.xxs / 2) * r.paddingScale,
+        AppSpacing.sm * r.paddingScale,
+        (AppSpacing.xs * 0.75) * r.paddingScale,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaleFactor: uiTsf), // AppTextScale applied
+            child: Container(
             height: 56,
             decoration: BoxDecoration(
               color: bg,
@@ -98,10 +108,10 @@ class _AppToolbarState extends State<AppToolbar> {
             ),
             child: Row(
               children: [
-                const SizedBox(width: AppSpacing.sm),
+                SizedBox(width: AppSpacing.sm * r.spacingScale),
                 // Logo: isotipo solo en compacto, isotipo + nombre en pantallas anchas
                 Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.sm),
+                  padding: EdgeInsets.only(right: AppSpacing.sm * r.spacingScale),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -119,7 +129,7 @@ class _AppToolbarState extends State<AppToolbar> {
                         ),
                       ),
                       if (isWide) ...[
-                        const SizedBox(width: AppSpacing.xs),
+                        SizedBox(width: AppSpacing.xs * r.spacingScale),
                         Text(
                           'eisen',
                           style: theme.textTheme.titleMedium?.copyWith(
@@ -153,9 +163,10 @@ class _AppToolbarState extends State<AppToolbar> {
                   actionButton(onPressed: widget.onOpenSettings, icon: Icons.settings, label: settingsLabel),
                 if (widget.onOpenProfile != null)
                   actionButton(onPressed: widget.onOpenProfile, icon: Icons.account_circle, label: profileLabel),
-                const SizedBox(width: AppSpacing.xs),
+                SizedBox(width: AppSpacing.xs * r.spacingScale),
               ],
             ),
+          ),
           ),
         ),
       ),
