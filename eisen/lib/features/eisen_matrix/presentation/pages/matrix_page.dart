@@ -15,8 +15,8 @@ import 'package:eisen/features/eisen_matrix/presentation/widgets/inspector_drawe
 import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/task_editor_page.dart';
 import 'package:eisen/l10n/app_localizations.dart';
-import 'package:eisen/l10n/app_localizations_en.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/stats_page.dart';
+import 'package:eisen/l10n/app_localizations_en.dart';
 import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/quadrant_empty_placeholder.dart';
 import 'package:eisen/core/ui/ui_breakpoints.dart';
@@ -217,7 +217,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                   // Recompute incrementally based on current viewport
                                   final dynamicLayout = ctrl.computeLayout(viewport: size);
                                   final suggested = ctrl.suggestedTopSpots;
-                                  // Avoid hard l10n lookup here (not needed in this scope and can be null in tests)
+                                  final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
                                   // Compute user text scale; clamp tighter for treemap readability
                                   final prefs = ref.watch(uiPrefsProvider);
                                   final appTsf = effectiveTextScaleFactor(context, prefs);
@@ -621,7 +621,7 @@ class _BottomActionBar extends StatelessWidget {
 
             return SizedBox(
               // More compact height on very narrow screens
-              height: (MediaQuery.sizeOf(context).width < 400) ? 44 : 52,
+              height: isNarrow ? 44 : 52,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -630,7 +630,7 @@ class _BottomActionBar extends StatelessWidget {
                     button: true,
                     enabled: true,
                     label: entryLabel,
-                    child: (MediaQuery.sizeOf(context).width < 400)
+                    child: isNarrow
                         // Icon-only CTA on very small widths
                         ? IconButton(
                             onPressed: onNew,
