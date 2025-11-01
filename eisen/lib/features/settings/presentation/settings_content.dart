@@ -10,10 +10,12 @@ class SettingsContent extends StatelessWidget {
     required this.compact,
     required this.minimal,
     required this.showAxisLegends,
+    required this.densityPreset,
     required this.onThemeChanged,
     required this.onCompactChanged,
     required this.onMinimalChanged,
     required this.onAxisLegendsChanged,
+    required this.onDensityPresetChanged,
     required this.topK,
     required this.gamma,
     required this.minAreaNormalized,
@@ -42,10 +44,12 @@ class SettingsContent extends StatelessWidget {
   final bool compact;
   final bool minimal;
   final bool showAxisLegends;
+  final String densityPreset; // 'auto' | 'comfy' | 'compact' | 'ultra'
   final ValueChanged<ThemeMode> onThemeChanged;
   final ValueChanged<bool> onCompactChanged;
   final ValueChanged<bool> onMinimalChanged;
   final ValueChanged<bool> onAxisLegendsChanged;
+  final ValueChanged<String> onDensityPresetChanged;
   // Staged layout values
   final int topK;
   final double gamma;
@@ -78,6 +82,7 @@ class SettingsContent extends StatelessWidget {
           compact: compact,
           minimal: minimal,
           showAxisLegends: showAxisLegends,
+          densityPreset: densityPreset,
           onThemeChanged: (v) {
             onThemeChanged(v);
             onDirty(true);
@@ -92,6 +97,10 @@ class SettingsContent extends StatelessWidget {
           },
           onAxisLegendsChanged: (v) {
             onAxisLegendsChanged(v);
+            onDirty(true);
+          },
+          onDensityPresetChanged: (v) {
+            onDensityPresetChanged(v);
             onDirty(true);
           },
         );
@@ -172,19 +181,23 @@ class _AppearancePanel extends StatelessWidget {
     required this.compact,
     required this.minimal,
     required this.showAxisLegends,
+    required this.densityPreset,
     required this.onThemeChanged,
     required this.onCompactChanged,
     required this.onMinimalChanged,
     required this.onAxisLegendsChanged,
+    required this.onDensityPresetChanged,
   });
   final ThemeMode themeMode;
   final bool compact;
   final bool minimal;
   final bool showAxisLegends;
+  final String densityPreset;
   final ValueChanged<ThemeMode> onThemeChanged;
   final ValueChanged<bool> onCompactChanged;
   final ValueChanged<bool> onMinimalChanged;
   final ValueChanged<bool> onAxisLegendsChanged;
+  final ValueChanged<String> onDensityPresetChanged;
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -213,6 +226,25 @@ class _AppearancePanel extends StatelessWidget {
             ],
             selected: {themeMode},
             onSelectionChanged: (s) => onThemeChanged(s.first),
+          ),
+        ),
+        const Divider(height: 24),
+        const ListTile(
+          leading: Icon(Icons.density_medium),
+          title: Text('Density'),
+          subtitle: Text('Comfy / Compact / Ultra / Auto'),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'comfy', label: Text('Comfy')),
+              ButtonSegment(value: 'compact', label: Text('Compact')),
+              ButtonSegment(value: 'ultra', label: Text('Ultra')),
+              ButtonSegment(value: 'auto', label: Text('Auto')),
+            ],
+            selected: {densityPreset},
+            onSelectionChanged: (s) => onDensityPresetChanged(s.first),
           ),
         ),
         const Divider(height: 24),

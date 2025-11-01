@@ -198,6 +198,17 @@ Asegúrate de ubicar:
 
 ### Test Coverage
 
+## Desktop Density Mode
+
+- New density presets: Comfy, Compact, Ultra. Auto-selects by width (≥1280 → Compact, ≥1600 → Ultra) with manual override in the toolbar menu (Density).
+- Desktop 2×2 matrix view with pinned quadrant headers and thin scrollbars. Each quadrant renders a fast SliverPrototypeExtentList of single-line TaskRow items (~32 px high in Compact), doubling tasks-per-viewport on typical 1440p screens.
+- Keyboard: Enter opens task, Space toggles done, arrows move focus. Hover tooltips show full titles.
+- Tokens: SpacingTokens (insetXs/Sm/Md) are provided via Theme extensions; no hardcoded paddings.
+
+To try it:
+- Resize to ≥1280 px or pick Density → Compact/Ultra in the top bar.
+- Tasks per quadrant should increase to 18–28 depending on viewport.
+
 ```bash
 # Generate coverage report
 flutter test --coverage

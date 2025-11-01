@@ -25,8 +25,10 @@ import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/ui/text_scaling.dart';
 import 'package:eisen/core/ui/app_text_scale.dart';
 import 'package:go_router/go_router.dart';
+import 'package:eisen/ui/matrix/matrix_desktop.dart';
+import 'package:eisen/theme/density.dart';
+import 'package:eisen/utils/breakpoints.dart';
 // Removed FAB + coachmark imports; using single CTA in bottom bar
-
 
 class MatrixPage extends ConsumerStatefulWidget {
   const MatrixPage({super.key});
@@ -61,31 +63,39 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final tokens = theme.extension<GlassTokens>() ?? GlassTokens(
-      glassBg: theme.colorScheme.surface,
-      blur: 12,
-      radius: 16,
-      q1: Colors.transparent,
-      q2: Colors.transparent,
-      q3: Colors.transparent,
-      q4: Colors.transparent,
-      halo: Colors.transparent,
-    );
+    final tokens = theme.extension<GlassTokens>() ??
+        GlassTokens(
+          glassBg: theme.colorScheme.surface,
+          blur: 12,
+          radius: 16,
+          q1: Colors.transparent,
+          q2: Colors.transparent,
+          q3: Colors.transparent,
+          q4: Colors.transparent,
+          halo: Colors.transparent,
+        );
     final ctrl = ref.read(matrixControllerProvider.notifier);
     // Minimize rebuild noise via .select
     final zoom = ref.watch(matrixZoomProvider);
-    final themeMode = ref.watch(matrixControllerProvider.select((s) => s.themeMode));
+    final themeMode =
+        ref.watch(matrixControllerProvider.select((s) => s.themeMode));
     final query = ref.watch(matrixControllerProvider.select((s) => s.query));
-    final compact = ref.watch(matrixControllerProvider.select((s) => s.compact));
-    final showAxisLegends = ref.watch(matrixControllerProvider.select((s) => s.showAxisLegends));
-    final minimal = ref.watch(matrixControllerProvider.select((s) => s.minimal));
+    final compact =
+        ref.watch(matrixControllerProvider.select((s) => s.compact));
+    final showAxisLegends =
+        ref.watch(matrixControllerProvider.select((s) => s.showAxisLegends));
+    final minimal =
+        ref.watch(matrixControllerProvider.select((s) => s.minimal));
     final tasks = ref.watch(matrixTasksProvider);
-    final selectedId = ref.watch(matrixControllerProvider.select((s) => s.selectedId));
+    final selectedId =
+        ref.watch(matrixControllerProvider.select((s) => s.selectedId));
 
     // Safe lookup for selected task (may be deleted externally)
-  final _selectedTask = selectedId == null
-    ? null
-    : (tasks.indexWhere((t) => t.id == selectedId) == -1 ? null : tasks.firstWhere((t) => t.id == selectedId));
+    final _selectedTask = selectedId == null
+        ? null
+        : (tasks.indexWhere((t) => t.id == selectedId) == -1
+            ? null
+            : tasks.firstWhere((t) => t.id == selectedId));
 
     final screenSize = MediaQuery.sizeOf(context);
     final screenWidth = screenSize.width;
@@ -97,12 +107,16 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         ref.read(matrixControllerProvider.notifier).notifyLayoutRecompute();
       }
     });
-    final legendsVisible = showAxisLegends && zoom == null && screenWidth >= 600;
+    final legendsVisible =
+        showAxisLegends && zoom == null && screenWidth >= 600;
     // AppTextScale applied
     final prefsUi = ref.watch(uiPrefsProvider);
     final uiTsf = AppTextScale.of(context, prefsUi);
     final isExtremeScale = AppTextScale.isExtreme(context, prefsUi);
     final axisHeaderHeight = isExtremeScale ? 48.0 : 40.0;
+
+    final viewMode = ref.watch(uiPrefsProvider).viewMode; // 'treemap' | 'list'
+    final isDesktopGrid = screenWidth >= bpDesktop && viewMode == 'list';
 
     return Scaffold(
       key: _scaffoldKey,
@@ -120,13 +134,17 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           onOpenWorkflow: () {
             if (!ref.read(uiPrefsProvider).workflowPlanEnabled) {
               final isEs = Localizations.localeOf(context).languageCode == 'es';
-              final msg = isEs ? 'Activa "Workflow plan" en Ajustes' : 'Enable "Workflow plan" in Settings';
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+              final msg = isEs
+                  ? 'Activa "Workflow plan" en Ajustes'
+                  : 'Enable "Workflow plan" in Settings';
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(msg)));
               return;
             }
-            context.push('/workflow-plan');
+            context.push('/list-mode');
           },
-          onOpenStats: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StatsPage())),
+          onOpenStats: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const StatsPage())),
           onOpenProfile: () => showModalBottomSheet(
             context: context,
             showDragHandle: true,
@@ -164,7 +182,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('\u2728 Tareas demo restauradas (20 tareas)'),
+                          content: Text(
+                              '\u2728 Tareas demo restauradas (20 tareas)'),
                           duration: Duration(seconds: 2),
                         ),
                       );
@@ -181,285 +200,407 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           // AppTextScale applied: scale general UI using prefs
           data: MediaQuery.of(context).copyWith(textScaleFactor: uiTsf),
           child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (legendsVisible)
-                // AppTextScale applied: isolated + scaled legends
-                RepaintBoundary(
-                  child: _LeftAxisLegends(
-                    minimal: minimal,
-                    textScale: uiTsf,
-                    headerHeight: axisHeaderHeight,
-                  ),
-                ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (legendsVisible)
-                      // AppTextScale applied: isolated + scaled legends
-                      RepaintBoundary(
-                        child: _TopAxisLegends(
-                          minimal: minimal,
-                          textScale: uiTsf,
-                          headerHeight: axisHeaderHeight,
+            padding: const EdgeInsets.all(16.0),
+            child: isDesktopGrid
+                ? _buildDesktopGrid(context, tokens, tasks)
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (legendsVisible)
+                        // AppTextScale applied: isolated + scaled legends
+                        RepaintBoundary(
+                          child: _LeftAxisLegends(
+                            minimal: minimal,
+                            textScale: uiTsf,
+                            headerHeight: axisHeaderHeight,
+                          ),
                         ),
-                      ),
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(tokens.radius),
-                        child: Stack(
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // Removed Beta banner
-                            Positioned.fill(
-                              child: minimal
-                                  ? const SizedBox.expand()
-                                  : BackdropFilter(
-                                      filter: ImageFilter.blur(sigmaX: tokens.blur, sigmaY: tokens.blur),
-                                      child: const SizedBox.expand(),
+                            if (legendsVisible)
+                              // AppTextScale applied: isolated + scaled legends
+                              RepaintBoundary(
+                                child: _TopAxisLegends(
+                                  minimal: minimal,
+                                  textScale: uiTsf,
+                                  headerHeight: axisHeaderHeight,
+                                ),
+                              ),
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius:
+                                    BorderRadius.circular(tokens.radius),
+                                child: Stack(
+                                  children: [
+                                    // Removed Beta banner
+                                    Positioned.fill(
+                                      child: minimal
+                                          ? const SizedBox.expand()
+                                          : BackdropFilter(
+                                              filter: ImageFilter.blur(
+                                                  sigmaX: tokens.blur,
+                                                  sigmaY: tokens.blur),
+                                              child: const SizedBox.expand(),
+                                            ),
                                     ),
-                            ),
-                            DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: minimal ? Colors.transparent : tokens.glassBg, // TEMP: transparent to see tiles
-                                borderRadius: BorderRadius.circular(tokens.radius),
-                                border: minimal
-                                    ? Border.all(color: Colors.transparent, width: 0)
-                                    : Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1),
-                                boxShadow: minimal
-                                    ? const []
-                                    : [BoxShadow(color: tokens.halo.withValues(alpha: 0.15), blurRadius: 24, spreadRadius: 2)],
-                              ),
-                            ),
-                            // TEMP: Disabled grayscale filter to see tile colors
-                            ColorFiltered(
-                              colorFilter: const ColorFilter.mode(Colors.transparent, BlendMode.srcOver),
-                              child: LayoutBuilder(
-                                builder: (context, constraints) {
-                                  final size = Size(constraints.maxWidth, constraints.maxHeight);
-                                  // Recompute incrementally based on current viewport
-                                  final dynamicLayout = ctrl.computeLayout(viewport: size);
-                                  final suggested = ctrl.suggestedTopSpots;
-                                  final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
-                                  // Compute user text scale; clamp tighter for treemap readability
-                                  final prefs = ref.watch(uiPrefsProvider);
-                                  final tileTsf = AppTextScale.forTreemap(context, prefs);
-                                  return clampTreemapTSF(
-                                    context,
-                                    child: Stack(
-                                    children: [
-                                      AnimatedSwitcher(
-                                        duration: const Duration(milliseconds: 240),
-                                        switchInCurve: Curves.easeOutCubic,
-                                        switchOutCurve: Curves.easeOutCubic,
-                                        child: TreemapCanvas(
-                                          key: ValueKey('${zoom}_${dynamicLayout.length}_${suggested.length}'),
-                                          tasks: tasks,
-                                          layout: dynamicLayout,
-                                          compact: compact,
-                                          suggestedIds: suggested,
-                                          minimal: minimal,
-                                          selectedId: selectedId,
-                                          zoom: zoom,
-                                          presentQuadrant: zoom ?? ref.read(matrixControllerProvider).presentQuadrant,
-                                          textScale: tileTsf,
-                                          inlineEditId: _inlineEditId,
-                                          onInlineSubmit: (id, title) {
-                                            ctrl.updateTask(id, (t) => t.copyWith(title: title));
-                                            setState(() => _inlineEditId = null);
-                                          },
-                                          onInlineCancel: (id) {
-                                            final idx = tasks.indexWhere((e) => e.id == id);
-                                            if (idx != -1) {
-                                              final t = tasks[idx];
-                                              if (t.title == 'New Task' && (t.notes == null || t.notes!.isEmpty)) {
-                                                ctrl.deleteTask(id);
-                                              }
-                                            }
-                                            setState(() => _inlineEditId = null);
-                                          },
-                                          onTap: (id) {
-                                            ctrl.select(id);
-                                            if (id != null) {
-                                              WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
-                                            }
-                                          },
-                                          onDropToQuadrant: (id, q) {
-                                            final idx = tasks.indexWhere((t) => t.id == id);
-                                            if (idx == -1) return;
-                                            final prev = tasks[idx].quadrant;
-                                            if (prev == q) return; // no-op
-                                            ctrl.moveTaskToQuadrant(id, q);
-                                            final qName = q.name.toUpperCase();
-                                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: Text('Tarea movida a $qName'),
-                                                action: SnackBarAction(
-                                                  label: 'Deshacer',
-                                                  onPressed: () {
-                                                    ctrl.moveTaskToQuadrant(id, prev);
-                                                  },
-                                                ),
-                                                duration: const Duration(seconds: 4),
-                                              ),
-                                            );
-                                          },
-                                          onDoubleTapQuadrant: (q) {
-                                            ctrl.setZoom(zoom == q ? null : q);
-                                            ctrl.setPresentQuadrant(q);
-                                            ctrl.invalidateLayout();
-                                          },
-                                        ),
+                                    DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: minimal
+                                            ? Colors.transparent
+                                            : tokens
+                                                .glassBg, // TEMP: transparent to see tiles
+                                        borderRadius: BorderRadius.circular(
+                                            tokens.radius),
+                                        border: minimal
+                                            ? Border.all(
+                                                color: Colors.transparent,
+                                                width: 0)
+                                            : Border.all(
+                                                color: Colors.white
+                                                    .withValues(alpha: 0.08),
+                                                width: 1),
+                                        boxShadow: minimal
+                                            ? const []
+                                            : [
+                                                BoxShadow(
+                                                    color: tokens.halo
+                                                        .withValues(
+                                                            alpha: 0.15),
+                                                    blurRadius: 24,
+                                                    spreadRadius: 2)
+                                              ],
                                       ),
-                                      if (dynamicLayout.isEmpty) ...[
-                                        // Quadrant-specific placeholders to guide first use
-                                        Positioned(
-                                          left: 0,
-                                          top: 0,
-                                          width: size.width / 2,
-                                          height: size.height / 2,
-                                          child: const QuadrantEmptyPlaceholder(
-                                            title: 'Q1 · Urgente e Importante',
-                                            hint: 'No tienes tareas aquí. Usa “Entrada”.',
-                                          ),
-                                        ),
-                                        Positioned(
-                                          left: size.width / 2,
-                                          top: 0,
-                                          width: size.width / 2,
-                                          height: size.height / 2,
-                                          child: const QuadrantEmptyPlaceholder(
-                                            title: 'Q2 · No Urgente e Importante',
-                                            hint: 'Planifica aquí objetivos clave.',
-                                          ),
-                                        ),
-                                        Positioned(
-                                          left: 0,
-                                          top: size.height / 2,
-                                          width: size.width / 2,
-                                          height: size.height / 2,
-                                          child: const QuadrantEmptyPlaceholder(
-                                            title: 'Q3 · Urgente y No Importante',
-                                            hint: 'Delegables o de baja prioridad.',
-                                          ),
-                                        ),
-                                        Positioned(
-                                          left: size.width / 2,
-                                          top: size.height / 2,
-                                          width: size.width / 2,
-                                          height: size.height / 2,
-                                          child: const QuadrantEmptyPlaceholder(
-                                            title: 'Q4 · No Urgente y No Importante',
-                                            hint: 'Evita o elimina distracciones.',
-                                          ),
-                                        ),
-                                      ],
-                                      if (dynamicLayout.isNotEmpty) ...[
-                                        // Show placeholders for empty quadrants even when others have tasks
-                                        if (!tasks.any((t) => t.completedAt == null && t.quadrant == Quadrant.q1))
-                                          Positioned(
-                                            left: 0,
-                                            top: 0,
-                                            width: size.width / 2,
-                                            height: size.height / 2,
-                                            child: const QuadrantEmptyPlaceholder(
-                                              title: 'Q1 · Urgente e Importante',
-                                              hint: 'No tienes tareas aquí. Usa “Entrada”.',
-                                            ),
-                                          ),
-                                        if (!tasks.any((t) => t.completedAt == null && t.quadrant == Quadrant.q2))
-                                          Positioned(
-                                            left: size.width / 2,
-                                            top: 0,
-                                            width: size.width / 2,
-                                            height: size.height / 2,
-                                            child: const QuadrantEmptyPlaceholder(
-                                              title: 'Q2 · No Urgente e Importante',
-                                              hint: 'Planifica aquí objetivos clave.',
-                                            ),
-                                          ),
-                                        if (!tasks.any((t) => t.completedAt == null && t.quadrant == Quadrant.q3))
-                                          Positioned(
-                                            left: 0,
-                                            top: size.height / 2,
-                                            width: size.width / 2,
-                                            height: size.height / 2,
-                                            child: const QuadrantEmptyPlaceholder(
-                                              title: 'Q3 · Urgente y No Importante',
-                                              hint: 'Delegables o de baja prioridad.',
-                                            ),
-                                          ),
-                                        if (!tasks.any((t) => t.completedAt == null && t.quadrant == Quadrant.q4))
-                                          Positioned(
-                                            left: size.width / 2,
-                                            top: size.height / 2,
-                                            width: size.width / 2,
-                                            height: size.height / 2,
-                                            child: const QuadrantEmptyPlaceholder(
-                                              title: 'Q4 · No Urgente y No Importante',
-                                              hint: 'Evita o elimina distracciones.',
-                                            ),
-                                          ),
-                                      ],
-                                    ],
-                                  ));
-                                },
+                                    ),
+                                    // TEMP: Disabled grayscale filter to see tile colors
+                                    ColorFiltered(
+                                      colorFilter: const ColorFilter.mode(
+                                          Colors.transparent,
+                                          BlendMode.srcOver),
+                                      child: LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          final size = Size(
+                                              constraints.maxWidth,
+                                              constraints.maxHeight);
+                                          // Recompute incrementally based on current viewport
+                                          final dynamicLayout = ctrl
+                                              .computeLayout(viewport: size);
+                                          final suggested =
+                                              ctrl.suggestedTopSpots;
+                                          final l10n = Localizations.of<
+                                                      AppLocalizations>(
+                                                  context, AppLocalizations) ??
+                                              AppLocalizationsEn();
+                                          // Compute user text scale; clamp tighter for treemap readability
+                                          final prefs =
+                                              ref.watch(uiPrefsProvider);
+                                          final tileTsf =
+                                              AppTextScale.forTreemap(
+                                                  context, prefs);
+                                          return clampTreemapTSF(context,
+                                              child: Stack(
+                                                children: [
+                                                  AnimatedSwitcher(
+                                                    duration: const Duration(
+                                                        milliseconds: 240),
+                                                    switchInCurve:
+                                                        Curves.easeOutCubic,
+                                                    switchOutCurve:
+                                                        Curves.easeOutCubic,
+                                                    child: TreemapCanvas(
+                                                      key: ValueKey(
+                                                          '${zoom}_${dynamicLayout.length}_${suggested.length}'),
+                                                      tasks: tasks,
+                                                      layout: dynamicLayout,
+                                                      compact: compact,
+                                                      suggestedIds: suggested,
+                                                      minimal: minimal,
+                                                      selectedId: selectedId,
+                                                      zoom: zoom,
+                                                      presentQuadrant: zoom ??
+                                                          ref
+                                                              .read(
+                                                                  matrixControllerProvider)
+                                                              .presentQuadrant,
+                                                      textScale: tileTsf,
+                                                      inlineEditId:
+                                                          _inlineEditId,
+                                                      onInlineSubmit:
+                                                          (id, title) {
+                                                        ctrl.updateTask(
+                                                            id,
+                                                            (t) => t.copyWith(
+                                                                title: title));
+                                                        setState(() =>
+                                                            _inlineEditId =
+                                                                null);
+                                                      },
+                                                      onInlineCancel: (id) {
+                                                        final idx = tasks
+                                                            .indexWhere((e) =>
+                                                                e.id == id);
+                                                        if (idx != -1) {
+                                                          final t = tasks[idx];
+                                                          if (t.title ==
+                                                                  'New Task' &&
+                                                              (t.notes ==
+                                                                      null ||
+                                                                  t.notes!
+                                                                      .isEmpty)) {
+                                                            ctrl.deleteTask(id);
+                                                          }
+                                                        }
+                                                        setState(() =>
+                                                            _inlineEditId =
+                                                                null);
+                                                      },
+                                                      onTap: (id) {
+                                                        ctrl.select(id);
+                                                        if (id != null) {
+                                                          WidgetsBinding
+                                                              .instance
+                                                              .addPostFrameCallback(
+                                                                  (_) => _scaffoldKey
+                                                                      .currentState
+                                                                      ?.openEndDrawer());
+                                                        }
+                                                      },
+                                                      onDropToQuadrant:
+                                                          (id, q) {
+                                                        final idx = tasks
+                                                            .indexWhere((t) =>
+                                                                t.id == id);
+                                                        if (idx == -1) return;
+                                                        final prev =
+                                                            tasks[idx].quadrant;
+                                                        if (prev == q)
+                                                          return; // no-op
+                                                        ctrl.moveTaskToQuadrant(
+                                                            id, q);
+                                                        final qName = q.name
+                                                            .toUpperCase();
+                                                        ScaffoldMessenger.of(
+                                                                context)
+                                                            .hideCurrentSnackBar();
+                                                        ScaffoldMessenger.of(
+                                                                context)
+                                                            .showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                                'Tarea movida a $qName'),
+                                                            action:
+                                                                SnackBarAction(
+                                                              label: 'Deshacer',
+                                                              onPressed: () {
+                                                                ctrl.moveTaskToQuadrant(
+                                                                    id, prev);
+                                                              },
+                                                            ),
+                                                            duration:
+                                                                const Duration(
+                                                                    seconds: 4),
+                                                          ),
+                                                        );
+                                                      },
+                                                      onDoubleTapQuadrant: (q) {
+                                                        ctrl.setZoom(zoom == q
+                                                            ? null
+                                                            : q);
+                                                        ctrl.setPresentQuadrant(
+                                                            q);
+                                                        ctrl.invalidateLayout();
+                                                      },
+                                                    ),
+                                                  ),
+                                                  if (dynamicLayout
+                                                      .isEmpty) ...[
+                                                    // Quadrant-specific placeholders to guide first use
+                                                    Positioned(
+                                                      left: 0,
+                                                      top: 0,
+                                                      width: size.width / 2,
+                                                      height: size.height / 2,
+                                                      child:
+                                                          const QuadrantEmptyPlaceholder(
+                                                        title:
+                                                            'Q1 · Urgente e Importante',
+                                                        hint:
+                                                            'No tienes tareas aquí. Usa “Entrada”.',
+                                                      ),
+                                                    ),
+                                                    Positioned(
+                                                      left: size.width / 2,
+                                                      top: 0,
+                                                      width: size.width / 2,
+                                                      height: size.height / 2,
+                                                      child:
+                                                          const QuadrantEmptyPlaceholder(
+                                                        title:
+                                                            'Q2 · No Urgente e Importante',
+                                                        hint:
+                                                            'Planifica aquí objetivos clave.',
+                                                      ),
+                                                    ),
+                                                    Positioned(
+                                                      left: 0,
+                                                      top: size.height / 2,
+                                                      width: size.width / 2,
+                                                      height: size.height / 2,
+                                                      child:
+                                                          const QuadrantEmptyPlaceholder(
+                                                        title:
+                                                            'Q3 · Urgente y No Importante',
+                                                        hint:
+                                                            'Delegables o de baja prioridad.',
+                                                      ),
+                                                    ),
+                                                    Positioned(
+                                                      left: size.width / 2,
+                                                      top: size.height / 2,
+                                                      width: size.width / 2,
+                                                      height: size.height / 2,
+                                                      child:
+                                                          const QuadrantEmptyPlaceholder(
+                                                        title:
+                                                            'Q4 · No Urgente y No Importante',
+                                                        hint:
+                                                            'Evita o elimina distracciones.',
+                                                      ),
+                                                    ),
+                                                  ],
+                                                  if (dynamicLayout
+                                                      .isNotEmpty) ...[
+                                                    // Show placeholders for empty quadrants even when others have tasks
+                                                    if (!tasks.any((t) =>
+                                                        t.completedAt == null &&
+                                                        t.quadrant ==
+                                                            Quadrant.q1))
+                                                      Positioned(
+                                                        left: 0,
+                                                        top: 0,
+                                                        width: size.width / 2,
+                                                        height: size.height / 2,
+                                                        child:
+                                                            const QuadrantEmptyPlaceholder(
+                                                          title:
+                                                              'Q1 · Urgente e Importante',
+                                                          hint:
+                                                              'No tienes tareas aquí. Usa “Entrada”.',
+                                                        ),
+                                                      ),
+                                                    if (!tasks.any((t) =>
+                                                        t.completedAt == null &&
+                                                        t.quadrant ==
+                                                            Quadrant.q2))
+                                                      Positioned(
+                                                        left: size.width / 2,
+                                                        top: 0,
+                                                        width: size.width / 2,
+                                                        height: size.height / 2,
+                                                        child:
+                                                            const QuadrantEmptyPlaceholder(
+                                                          title:
+                                                              'Q2 · No Urgente e Importante',
+                                                          hint:
+                                                              'Planifica aquí objetivos clave.',
+                                                        ),
+                                                      ),
+                                                    if (!tasks.any((t) =>
+                                                        t.completedAt == null &&
+                                                        t.quadrant ==
+                                                            Quadrant.q3))
+                                                      Positioned(
+                                                        left: 0,
+                                                        top: size.height / 2,
+                                                        width: size.width / 2,
+                                                        height: size.height / 2,
+                                                        child:
+                                                            const QuadrantEmptyPlaceholder(
+                                                          title:
+                                                              'Q3 · Urgente y No Importante',
+                                                          hint:
+                                                              'Delegables o de baja prioridad.',
+                                                        ),
+                                                      ),
+                                                    if (!tasks.any((t) =>
+                                                        t.completedAt == null &&
+                                                        t.quadrant ==
+                                                            Quadrant.q4))
+                                                      Positioned(
+                                                        left: size.width / 2,
+                                                        top: size.height / 2,
+                                                        width: size.width / 2,
+                                                        height: size.height / 2,
+                                                        child:
+                                                            const QuadrantEmptyPlaceholder(
+                                                          title:
+                                                              'Q4 · No Urgente y No Importante',
+                                                          hint:
+                                                              'Evita o elimina distracciones.',
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ],
+                                              ));
+                                        },
+                                      ),
+                                    ),
+                                    // Removed quadrant quick-add buttons; using global FAB instead
+                                  ],
+                                ),
                               ),
                             ),
-                            // Removed quadrant quick-add buttons; using global FAB instead
                           ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                    ],
+                  ),
           ),
         ),
-        ),
       ),
-      endDrawer: _selectedTask == null ? null : InspectorDrawer(
-        key: ValueKey(_selectedTask.id),
-        task: _selectedTask,
-        onChanged: (t) => ctrl.updateTask(t.id, (_) => t),
-        onDelete: () => ctrl.deleteTask(_selectedTask.id),
-        onComplete: () {
-          ctrl.markTaskDone(_selectedTask.id);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('¡Tarea completada!'), duration: Duration(milliseconds: 900)));
-        },
-      ),
+      endDrawer: _selectedTask == null
+          ? null
+          : InspectorDrawer(
+              key: ValueKey(_selectedTask.id),
+              task: _selectedTask,
+              onChanged: (t) => ctrl.updateTask(t.id, (_) => t),
+              onDelete: () => ctrl.deleteTask(_selectedTask.id),
+              onComplete: () {
+                ctrl.markTaskDone(_selectedTask.id);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('¡Tarea completada!'),
+                    duration: Duration(milliseconds: 900)));
+              },
+            ),
       bottomNavigationBar: screenWidth >= 600
           ? MediaQuery(
               // AppTextScale applied: scale labels/buttons in the bar
               data: MediaQuery.of(context).copyWith(textScaleFactor: uiTsf),
               child: _BottomActionBar(
-              highScale: isExtremeScale, // AppTextScale applied
-              onNew: () => _openAddTaskSheet(context),
-              onNewInQuadrant: (q) {
-                ctrl.setZoom(q);
-                _openAddTaskSheet(context);
-              },
-              minimap: Minimap(
-                zoom: zoom,
-                tasks: tasks,
-                onSelectQuadrant: (q) {
+                highScale: isExtremeScale, // AppTextScale applied
+                onNew: () => _openAddTaskSheet(context),
+                onNewInQuadrant: (q) {
                   ctrl.setZoom(q);
-                  ctrl.setPresentQuadrant(q);
-                  ctrl.invalidateLayout();
+                  _openAddTaskSheet(context);
                 },
-                onFullView: () {
-                  ctrl.setZoom(null);
-                  ctrl.setPresentQuadrant(Quadrant.q2);
-                  ctrl.select(null);
-                  ctrl.setQuery('');
-                  ctrl.invalidateLayout();
-                },
-              ),
-            ))
+                minimap: Minimap(
+                  zoom: zoom,
+                  tasks: tasks,
+                  onSelectQuadrant: (q) {
+                    ctrl.setZoom(q);
+                    ctrl.setPresentQuadrant(q);
+                    ctrl.invalidateLayout();
+                  },
+                  onFullView: () {
+                    ctrl.setZoom(null);
+                    ctrl.setPresentQuadrant(Quadrant.q2);
+                    ctrl.select(null);
+                    ctrl.setQuery('');
+                    ctrl.invalidateLayout();
+                  },
+                ),
+              ))
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: screenWidth < 600
@@ -493,6 +634,79 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           : null,
     );
   }
+
+  Widget _buildDesktopGrid(
+      BuildContext context, GlassTokens tokens, List<Task> tasks) {
+    final w = MediaQuery.sizeOf(context).width;
+    final densityPref = ref.watch(uiPrefsProvider).densityPreset;
+    final DensityPreset preset = () {
+      if (densityPref != 'auto') {
+        switch (densityPref) {
+          case 'compact':
+            return DensityPreset.compact;
+          case 'ultra':
+            return DensityPreset.ultra;
+          case 'comfy':
+          default:
+            return DensityPreset.comfy;
+        }
+      }
+      if (w >= bpWidescreen) return DensityPreset.ultra;
+      if (w >= bpDesktop) return DensityPreset.compact;
+      return DensityPreset.comfy;
+    }();
+
+    final theme = Theme.of(context);
+    final filtered =
+        tasks.where((t) => t.completedAt == null).toList(growable: false);
+    final q1 = filtered
+        .where((t) => t.quadrant == Quadrant.q1)
+        .toList(growable: false);
+    final q2 = filtered
+        .where((t) => t.quadrant == Quadrant.q2)
+        .toList(growable: false);
+    final q3 = filtered
+        .where((t) => t.quadrant == Quadrant.q3)
+        .toList(growable: false);
+    final q4 = filtered
+        .where((t) => t.quadrant == Quadrant.q4)
+        .toList(growable: false);
+
+    return Theme(
+      data: applyDensity(theme, preset),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(tokens.radius),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(tokens.radius),
+            border: Border.all(
+                color: Colors.white.withValues(alpha: 0.06), width: 1),
+          ),
+          child: MatrixDesktop(
+            q1: q1,
+            q2: q2,
+            q3: q3,
+            q4: q4,
+            onToggle: (task) {
+              final ctrl = ref.read(matrixControllerProvider.notifier);
+              final nowDone = task.completedAt == null;
+              ctrl.updateTask(
+                task.id,
+                (t) => t.copyWith(completedAt: nowDone ? DateTime.now() : null),
+              );
+            },
+            onOpen: (task) {
+              final ctrl = ref.read(matrixControllerProvider.notifier);
+              ctrl.select(task.id);
+              WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => _scaffoldKey.currentState?.openEndDrawer());
+            },
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // Quick quadrant add removed in favor of global FAB
@@ -512,10 +726,15 @@ class _TopAxisLegends extends StatelessWidget {
   // AppTextScale applied
   final double textScale;
   final double headerHeight;
-  const _TopAxisLegends({this.minimal = false, required this.textScale, required this.headerHeight});
+  const _TopAxisLegends(
+      {this.minimal = false,
+      required this.textScale,
+      required this.headerHeight});
   @override
   Widget build(BuildContext context) {
-  final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
+    final l10n =
+        Localizations.of<AppLocalizations>(context, AppLocalizations) ??
+            AppLocalizationsEn();
     final cs = Theme.of(context).colorScheme;
     final style = Theme.of(context).textTheme.labelLarge?.copyWith(
           color: cs.onSurfaceVariant,
@@ -561,10 +780,15 @@ class _LeftAxisLegends extends StatelessWidget {
   // AppTextScale applied
   final double textScale;
   final double headerHeight;
-  const _LeftAxisLegends({this.minimal = false, required this.textScale, required this.headerHeight});
+  const _LeftAxisLegends(
+      {this.minimal = false,
+      required this.textScale,
+      required this.headerHeight});
   @override
   Widget build(BuildContext context) {
-  final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
+    final l10n =
+        Localizations.of<AppLocalizations>(context, AppLocalizations) ??
+            AppLocalizationsEn();
     final cs = Theme.of(context).colorScheme;
     final style = Theme.of(context).textTheme.labelLarge?.copyWith(
           color: cs.onSurfaceVariant,

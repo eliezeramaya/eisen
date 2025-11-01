@@ -61,6 +61,7 @@ class _AppToolbarState extends State<AppToolbar> {
     final themeLabel = isEs
         ? (widget.themeMode == ThemeMode.dark ? 'Claro' : 'Oscuro')
         : (widget.themeMode == ThemeMode.dark ? 'Light' : 'Dark');
+    final viewLabel = isEs ? 'Vista' : 'View';
 
     final size = MediaQuery.of(context).size;
     final width = size.width;
@@ -153,6 +154,8 @@ class _AppToolbarState extends State<AppToolbar> {
                   icon: widget.themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
                   label: themeLabel,
                 ),
+                // View mode (Treemap/List)
+                const _ViewModeMenu(),
                 if (widget.onToggleMinimal != null)
                   actionButton(
                     onPressed: widget.onToggleMinimal,
@@ -171,5 +174,69 @@ class _AppToolbarState extends State<AppToolbar> {
         ),
       ),
     );
+  }
+}
+
+class _ViewModeMenu extends ConsumerStatefulWidget {
+  const _ViewModeMenu();
+  @override
+  ConsumerState<_ViewModeMenu> createState() => _ViewModeMenuState();
+}
+
+class _ViewModeMenuState extends ConsumerState<_ViewModeMenu> {
+  @override
+  Widget build(BuildContext context) {
+    final prefs = ref.watch(uiPrefsProvider);
+    final current = prefs.viewMode; // 'treemap' | 'list'
+    final width = MediaQuery.sizeOf(context).width;
+    final isCompactBar = width < 1100;
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final label = isEs ? 'Vista' : 'View';
+    final icon = const Icon(Icons.view_agenda_outlined);
+
+    if (isCompactBar) {
+      return PopupMenuButton<String>(
+        tooltip: label,
+        icon: icon,
+        initialValue: current,
+        onSelected: (v) => ref.read(uiPrefsControllerProvider.notifier).setViewMode(v),
+        itemBuilder: (ctx) => _entries(ctx, current),
+      );
+    }
+    return MenuAnchor(
+      builder: (ctx, controller, child) => TextButton.icon(
+        onPressed: () => controller.isOpen ? controller.close() : controller.open(),
+        icon: icon,
+        label: Text(label),
+      ),
+      menuChildren: _menuItems(context, current),
+    );
+  }
+
+  List<PopupMenuEntry<String>> _entries(BuildContext context, String current) {
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final treemap = isEs ? 'Treemap' : 'Treemap';
+    final list = isEs ? 'Lista' : 'List';
+    return [
+      CheckedPopupMenuItem(value: 'treemap', checked: current == 'treemap', child: Text(treemap)),
+      CheckedPopupMenuItem(value: 'list', checked: current == 'list', child: Text(list)),
+    ];
+  }
+
+  List<Widget> _menuItems(BuildContext context, String current) {
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final items = [
+      ('treemap', isEs ? 'Treemap' : 'Treemap'),
+      ('list', isEs ? 'Lista' : 'List'),
+    ];
+    return items
+        .map(
+          (e) => MenuItemButton(
+            onPressed: () => ref.read(uiPrefsControllerProvider.notifier).setViewMode(e.$1),
+            leadingIcon: current == e.$1 ? const Icon(Icons.check, size: 16) : null,
+            child: Text(e.$2),
+          ),
+        )
+        .toList();
   }
 }

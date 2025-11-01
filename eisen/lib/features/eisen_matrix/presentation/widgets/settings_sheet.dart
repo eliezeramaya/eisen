@@ -1,8 +1,6 @@
 import 'package:eisen/core/providers/locale_provider.dart';
 import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
-import 'package:eisen/core/ui/app_text_scale.dart';
-import 'package:eisen/core/responsive/responsive_wrapper.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/l10n/app_localizations_en.dart';
 import 'package:flutter/material.dart';
@@ -38,8 +36,7 @@ class SettingsSheet extends ConsumerWidget {
     final currentLocale = ref.watch(localeProvider);
     final prefs = ref.watch(uiPrefsControllerProvider);
     final cs = Theme.of(context).colorScheme;
-    final r = Responsive.of(context);
-    final bottomPad = MediaQuery.paddingOf(context).bottom + AppSpacing.md * r.paddingScale;
+    final bottomPad = MediaQuery.paddingOf(context).bottom + AppSpacing.md;
 
     return Container(
       decoration: BoxDecoration(
@@ -48,16 +45,8 @@ class SettingsSheet extends ConsumerWidget {
       ),
       child: SafeArea(
         top: false,
-        child: MediaQuery(
-          // AppTextScale applied: scale entire sheet typography
-          data: MediaQuery.of(context).copyWith(textScaleFactor: AppTextScale.of(context, prefs)),
-          child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.md * r.paddingScale,
-            AppSpacing.md * r.paddingScale,
-            AppSpacing.md * r.paddingScale,
-            bottomPad,
-          ),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, bottomPad),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,6 +75,37 @@ class SettingsSheet extends ConsumerWidget {
                   Navigator.of(context).pop();
                 },
               ),
+              // Density preset (Comfy / Compact / Ultra / Auto)
+              const SizedBox(height: AppSpacing.xs),
+              Builder(builder: (context) {
+                final isEs = Localizations.localeOf(context).languageCode == 'es';
+                return ListTile(
+                  leading: const Icon(Icons.density_medium, size: 22),
+                  minLeadingWidth: 32,
+                  title: Text(isEs ? 'Densidad' : 'Density'),
+                  subtitle: Text(isEs
+                      ? 'Cómodo / Compacto / Ultra / Auto'
+                      : 'Comfy / Compact / Ultra / Auto'),
+                );
+              }),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Builder(builder: (context) {
+                  final isEs = Localizations.localeOf(context).languageCode == 'es';
+                  return SegmentedButton<String>(
+                    segments: [
+                      ButtonSegment(value: 'comfy', label: Text(isEs ? 'Cómodo' : 'Comfy')),
+                      ButtonSegment(value: 'compact', label: Text(isEs ? 'Compacto' : 'Compact')),
+                      ButtonSegment(value: 'ultra', label: const Text('Ultra')),
+                      ButtonSegment(value: 'auto', label: const Text('Auto')),
+                    ],
+                  selected: {prefs.densityPreset},
+                  onSelectionChanged: (s) => ref
+                      .read(uiPrefsControllerProvider.notifier)
+                      .setDensityPreset(s.first),
+                  );
+                }),
+              ),
               SwitchListTile(
                 value: compact,
                 onChanged: (_) {
@@ -97,8 +117,20 @@ class SettingsSheet extends ConsumerWidget {
                     ? l10n.settingsDensityCompact
                     : l10n.settingsDensityComfortable),
               ),
-              // AppTextScale applied: vista previa en tiempo real + persistencia al soltar
-              _TextScalePreviewControl(),
+              _SliderTile<int>(
+                sliderKey: const Key('slider_text_scale'),
+                label: 'Tamaño de texto',
+                value: prefs.textScaleLevel,
+                min: 1,
+                max: 5,
+                divisions: 4,
+                helper: 'Escala del texto en la aplicación (1–5).',
+                toDouble: (v) => v.toDouble(),
+                fromDouble: (d) => d.round().clamp(1, 5),
+                onChanged: (v) => ref
+                    .read(uiPrefsControllerProvider.notifier)
+                    .setTextScaleLevel(v),
+              ),
               SwitchListTile(
                 value: showAxisLegends,
                 onChanged: (_) {
@@ -340,76 +372,4 @@ class _SliderTile<T extends num> extends StatelessWidget {
   String _fmt(double d) => d >= 1
       ? d.toStringAsFixed(0)
       : (d >= 0.01 ? d.toStringAsFixed(2) : d.toStringAsExponential(2));
-}
-
-// AppTextScale applied: control deslizante con vista previa en tiempo real
-class _TextScalePreviewControl extends ConsumerStatefulWidget {
-  @override
-  ConsumerState<_TextScalePreviewControl> createState() => _TextScalePreviewControlState();
-}
-
-class _TextScalePreviewControlState extends ConsumerState<_TextScalePreviewControl> {
-  int? _previewLevel; // null = usa prefs actuales
-
-  int get _level => _previewLevel ?? ref.watch(uiPrefsProvider).textScaleLevel;
-
-  @override
-  Widget build(BuildContext context) {
-    final prefs = ref.watch(uiPrefsProvider);
-    final cs = Theme.of(context).colorScheme;
-    final previewPrefs = prefs.copyWith(textScaleLevel: _level);
-    final mq = AppTextScale.mediaWithAppScale(context, previewPrefs);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-          title: const Text('Tamaño de texto'),
-          subtitle: Slider(
-            key: const Key('slider_text_scale'),
-            value: _level.toDouble(),
-            min: 1,
-            max: 5,
-            divisions: 4,
-            label: '$_level',
-            onChanged: (d) => setState(() => _previewLevel = d.round().clamp(1, 5)),
-            onChangeEnd: (d) {
-              final v = d.round().clamp(1, 5);
-              setState(() => _previewLevel = v);
-              ref.read(uiPrefsControllerProvider.notifier).setTextScaleLevel(v);
-            },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: MediaQuery(
-            data: mq,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: cs.outlineVariant.withValues(alpha: .18)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Título de ejemplo', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 6),
-                  Text('Cuerpo de ejemplo — observa tamaño y espaciado.', style: Theme.of(context).textTheme.bodySmall),
-                  const SizedBox(height: 8),
-                  Wrap(spacing: 8, children: const [
-                    FilledButton(onPressed: null, child: Text('Acción')),
-                    OutlinedButton(onPressed: null, child: Text('Secundaria')),
-                    Text('Etiqueta'),
-                  ]),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }

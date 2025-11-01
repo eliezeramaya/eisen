@@ -13,6 +13,9 @@ import 'package:go_router/go_router.dart';
 import '../core/providers/locale_provider.dart';
 import '../core/theme/app_theme.dart';
 import 'router.dart';
+import 'package:eisen/theme/density.dart';
+import 'package:eisen/utils/breakpoints.dart';
+import 'dart:ui' show View;
 
 class EisenApp extends ConsumerWidget {
   const EisenApp({super.key});
@@ -29,6 +32,30 @@ class EisenApp extends ConsumerWidget {
     final dark = buildAppTheme(Brightness.dark);
     final theme = minimal ? asMinimal(light) : light;
     final darkTheme = minimal ? asMinimal(dark) : dark;
+
+    // Density selection (auto by breakpoint, user override via UiPrefs)
+    final densityPref = ref.watch(uiPrefsProvider).densityPreset;
+    final view = View.of(context);
+    final logicalWidth = view.physicalSize.width / view.devicePixelRatio;
+    final DensityPreset preset = () {
+      if (densityPref != 'auto') {
+        switch (densityPref) {
+          case 'compact':
+            return DensityPreset.compact;
+          case 'ultra':
+            return DensityPreset.ultra;
+          case 'comfy':
+          default:
+            return DensityPreset.comfy;
+        }
+      }
+      if (logicalWidth >= bpWidescreen) return DensityPreset.ultra;
+      if (logicalWidth >= bpDesktop) return DensityPreset.compact;
+      return DensityPreset.comfy;
+    }();
+
+    final themed = applyDensity(theme, preset);
+    final darkThemed = applyDensity(darkTheme, preset);
 
     return MaterialApp.router(
       builder: (ctx, child) {
@@ -67,8 +94,8 @@ class EisenApp extends ConsumerWidget {
       },
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
-      theme: theme,
-      darkTheme: darkTheme,
+      theme: themed,
+      darkTheme: darkThemed,
       themeMode: themeMode,
       routerConfig: createRouter(),
       locale: _resolveLocale(ref.watch(uiPrefsProvider)),

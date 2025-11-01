@@ -30,6 +30,8 @@ class UiPrefsData {
     this.ganttCompactLanes = false,
     this.ganttWorkweekOnly = false,
     this.ganttShowTodayLine = true,
+    this.densityPreset = 'auto', // 'auto' | 'comfy' | 'compact' | 'ultra'
+    this.viewMode = 'treemap', // 'treemap' | 'list'
   });
   final ThemeMode themeMode;
   final bool compact;
@@ -61,6 +63,10 @@ class UiPrefsData {
   final bool ganttCompactLanes;
   final bool ganttWorkweekOnly;
   final bool ganttShowTodayLine;
+  // Density preset override for desktop layouts
+  final String densityPreset; // 'auto' | 'comfy' | 'compact' | 'ultra'
+  // Matrix view mode (desktop): treemap (default) or list (2x2)
+  final String viewMode; // 'treemap' | 'list'
 
   UiPrefsData copyWith({
     ThemeMode? themeMode,
@@ -87,6 +93,8 @@ class UiPrefsData {
     bool? ganttCompactLanes,
     bool? ganttWorkweekOnly,
     bool? ganttShowTodayLine,
+    String? densityPreset,
+    String? viewMode,
   }) =>
       UiPrefsData(
         themeMode: themeMode ?? this.themeMode,
@@ -113,6 +121,8 @@ class UiPrefsData {
         ganttCompactLanes: ganttCompactLanes ?? this.ganttCompactLanes,
         ganttWorkweekOnly: ganttWorkweekOnly ?? this.ganttWorkweekOnly,
         ganttShowTodayLine: ganttShowTodayLine ?? this.ganttShowTodayLine,
+        densityPreset: densityPreset ?? this.densityPreset,
+        viewMode: viewMode ?? this.viewMode,
       );
 
   Map<String, Object?> toJson() => {
@@ -140,6 +150,8 @@ class UiPrefsData {
         'ganttCompactLanes': ganttCompactLanes,
         'ganttWorkweekOnly': ganttWorkweekOnly,
         'ganttShowTodayLine': ganttShowTodayLine,
+        'densityPreset': densityPreset,
+        'viewMode': viewMode,
       };
 
   static UiPrefsData fromJson(Map<String, Object?> json) {
@@ -178,6 +190,8 @@ class UiPrefsData {
       ganttCompactLanes: (json['ganttCompactLanes'] as bool?) ?? false,
       ganttWorkweekOnly: (json['ganttWorkweekOnly'] as bool?) ?? false,
       ganttShowTodayLine: (json['ganttShowTodayLine'] as bool?) ?? true,
+      densityPreset: (json['densityPreset'] as String?) ?? 'auto',
+      viewMode: (json['viewMode'] as String?) ?? 'treemap',
     );
   }
 }
@@ -327,6 +341,22 @@ class UiPrefsController extends Notifier<UiPrefsData> {
   Future<void> setTextScaleLevel(int level) async {
     final v = level.clamp(1, 5);
     state = state.copyWith(textScaleLevel: v);
+    await _save();
+  }
+
+  // Density preset override
+  Future<void> setDensityPreset(String preset) async {
+    const allowed = {'auto', 'comfy', 'compact', 'ultra'};
+    final p = allowed.contains(preset) ? preset : 'auto';
+    state = state.copyWith(densityPreset: p);
+    await _save();
+  }
+
+  // View mode override (treemap | list)
+  Future<void> setViewMode(String mode) async {
+    const allowed = {'treemap', 'list'};
+    final m = allowed.contains(mode) ? mode : 'treemap';
+    state = state.copyWith(viewMode: m);
     await _save();
   }
 

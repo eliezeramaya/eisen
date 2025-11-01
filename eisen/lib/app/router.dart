@@ -1,6 +1,7 @@
 import 'package:eisen/features/calendar_gantt/presentation/pages/workflow_plan_page.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/matrix_page.dart';
 import 'package:eisen/features/settings/presentation/settings_page_desktop.dart';
+import 'package:eisen/ui/list_mode/list_mode_screen.dart';
 import 'package:go_router/go_router.dart';
 
 // Keep a single router instance to avoid route reset on app rebuilds
@@ -23,6 +24,13 @@ final GoRouter _router = GoRouter(
       name: 'workflow-plan',
       pageBuilder: (context, state) => const NoTransitionPage(
         child: WorkflowPlanPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/list-mode',
+      name: 'list-mode',
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: ListModeScreen(),
       ),
     ),
   ],

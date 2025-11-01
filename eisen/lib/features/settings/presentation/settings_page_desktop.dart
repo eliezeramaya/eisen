@@ -27,6 +27,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
   double _stagedGamma = 1.0;
   double _stagedMinArea = 0.00004;
   double _stagedPadding = 0.012;
+  String _stagedDensity = 'auto'; // 'auto' | 'comfy' | 'compact' | 'ultra'
   // Staged Gantt values
   String _stagedGanttScale = 'weeks';
   bool _stagedGanttBadges = true;
@@ -43,6 +44,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
   double? _origGamma;
   double? _origMinArea;
   double? _origPadding;
+  String? _origDensity;
 
   @override
   void initState() {
@@ -63,6 +65,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       _stagedGamma = ui.gamma;
       _stagedMinArea = ui.minAreaNormalized;
       _stagedPadding = ui.quadrantPadding;
+      _stagedDensity = ui.densityPreset;
       // Gantt prefs
       _stagedGanttScale = ui.ganttTimeScale;
       _stagedGanttBadges = ui.ganttShowBadges;
@@ -78,6 +81,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       _origGamma = _stagedGamma;
       _origMinArea = _stagedMinArea;
       _origPadding = _stagedPadding;
+      _origDensity = _stagedDensity;
       _dirty = false;
     });
   }
@@ -124,10 +128,12 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
                   compact: _stagedCompact,
                   minimal: _stagedMinimal,
                   showAxisLegends: _stagedAxis,
+                  densityPreset: _stagedDensity,
                   onThemeChanged: (m) => setState(() => _stagedTheme = m),
                   onCompactChanged: (v) => setState(() => _stagedCompact = v),
                   onMinimalChanged: (v) => setState(() => _stagedMinimal = v),
                   onAxisLegendsChanged: (v) => setState(() => _stagedAxis = v),
+                  onDensityPresetChanged: (v) => setState(() => _stagedDensity = v),
                   topK: _stagedTopK,
                   gamma: _stagedGamma,
                   minAreaNormalized: _stagedMinArea,
@@ -240,6 +246,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
           minAreaNormalized: _stagedMinArea,
           quadrantPadding: _stagedPadding,
         )
+        .then((_) => uiCtl.setDensityPreset(_stagedDensity))
         .then((_) => uiCtl.applyGanttPrefs(
               timeScale: _stagedGanttScale,
               showBadges: _stagedGanttBadges,
@@ -260,6 +267,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
         _origGamma = _stagedGamma;
         _origMinArea = _stagedMinArea;
         _origPadding = _stagedPadding;
+        _origDensity = _stagedDensity;
         // No originals stored for Gantt yet; not used in Cancel
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -279,6 +287,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       _stagedGamma = _origGamma ?? 1.0;
       _stagedMinArea = _origMinArea ?? 0.00004;
       _stagedPadding = _origPadding ?? 0.012;
+      _stagedDensity = _origDensity ?? 'auto';
       _dirty = false;
     });
   }
@@ -293,6 +302,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       _stagedGamma = const UiPrefsData().gamma;
       _stagedMinArea = const UiPrefsData().minAreaNormalized;
       _stagedPadding = const UiPrefsData().quadrantPadding;
+      _stagedDensity = const UiPrefsData().densityPreset;
       _dirty = true;
     });
   }
