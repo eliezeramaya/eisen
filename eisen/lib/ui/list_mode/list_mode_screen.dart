@@ -1,6 +1,5 @@
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
-import 'package:eisen/ui/list_mode/widgets/quadrant_bars_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -68,110 +67,261 @@ class ListModeScreen extends ConsumerWidget {
     Map<Quadrant, List<Task>> quadrants,
     WidgetRef ref,
   ) {
-    // Calculate task counts for responsive spacing
-    final q1Count = quadrants[Quadrant.q1]?.length ?? 0;
-    final q2Count = quadrants[Quadrant.q2]?.length ?? 0;
-    final q3Count = quadrants[Quadrant.q3]?.length ?? 0;
-    final q4Count = quadrants[Quadrant.q4]?.length ?? 0;
+    // Unificar todas las tareas en una sola lista
+    final allTasks = <Task>[];
 
-    // Calculate responsive spacing (base + per task)
-    // Minimum spacing: 16px, adds 3px per task up to a max
-    double calculateSpacing(int count) {
-      if (count == 0) return 8.0;
-      return (16.0 + (count * 3.0)).clamp(16.0, 48.0);
-    }
+    // Agregar todas las tareas de todos los cuadrantes
+    allTasks.addAll(quadrants[Quadrant.q1] ?? []);
+    allTasks.addAll(quadrants[Quadrant.q2] ?? []);
+    allTasks.addAll(quadrants[Quadrant.q3] ?? []);
+    allTasks.addAll(quadrants[Quadrant.q4] ?? []);
 
-    final spacingQ1 = calculateSpacing(q1Count);
-    final spacingQ2 = calculateSpacing(q2Count);
-    final spacingQ3 = calculateSpacing(q3Count);
-    final spacingQ4 = calculateSpacing(q4Count);
+    // Ordenar todas las tareas por peso (mayor a menor)
+    allTasks.sort((a, b) {
+      final weightA = _calculateWeight(a);
+      final weightB = _calculateWeight(b);
+      return weightB.compareTo(weightA);
+    });
 
-    // Central divider spacing (fixed to maintain visual separation)
-    const centralDividerSpacing = 32.0;
+    // Calcular peso máximo para normalización
+    final maxWeight = allTasks.isEmpty
+        ? 1.0
+        : allTasks
+            .map((t) => _calculateWeight(t))
+            .fold<double>(0, (a, b) => a > b ? a : b);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
+          // Header con contador de tareas
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Row(
+              children: [
+                const Text(
+                  'Todas las tareas',
+                  style: TextStyle(
+                    color: Color(0xFFE6E6E6),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2A2A2A),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${allTasks.length}',
+                    style: const TextStyle(
+                      color: Color(0xFF7C7C7C),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           const Padding(
-            padding: EdgeInsets.only(bottom: 24),
+            padding: EdgeInsets.only(bottom: 20),
             child: Text(
-              'Tareas organizadas por importancia',
+              'Ordenadas por importancia y urgencia',
               style: TextStyle(
-                color: Color(0xFF7C7C7C),
+                color: Color(0xFF666666),
                 fontSize: 12,
                 fontWeight: FontWeight.w400,
               ),
             ),
           ),
 
-          // Q1: Urgent & Important
-          if (q1Count > 0)
-            QuadrantBarsSection(
-              quadrantName: 'Q1 · URGENTE E IMPORTANTE',
-              description: 'Crisis y deadlines críticos',
-              tasks: quadrants[Quadrant.q1]!,
-              color: const Color(0xFFE84545),
-              onTaskTap: (task) => _handleTaskTap(ref, task),
-            ),
-          if (q1Count > 0) SizedBox(height: spacingQ1),
+          // Lista unificada de tareas con animación escalonada
+          ...List.generate(allTasks.length, (index) {
+            final task = allTasks[index];
+            final weight = _calculateWeight(task);
+            final color = _getQuadrantColor(task.quadrant);
 
-          // Q2: Not Urgent but Important
-          if (q2Count > 0)
-            QuadrantBarsSection(
-              quadrantName: 'Q2 · NO URGENTE E IMPORTANTE',
-              description: 'Planificación y desarrollo',
-              tasks: quadrants[Quadrant.q2]!,
-              color: const Color(0xFFF4996E),
-              onTaskTap: (task) => _handleTaskTap(ref, task),
-            ),
-          if (q2Count > 0) SizedBox(height: spacingQ2),
-
-          // Central divider (visual separation between top and bottom)
-          if ((q1Count > 0 || q2Count > 0) && (q3Count > 0 || q4Count > 0))
-            Container(
-              margin:
-                  const EdgeInsets.symmetric(vertical: centralDividerSpacing),
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.transparent,
-                    const Color(0xFF7C7C7C).withOpacity(0.2),
-                    Colors.transparent,
-                  ],
-                ),
+            return TweenAnimationBuilder<double>(
+              duration: Duration(milliseconds: 300 + (index * 30)),
+              curve: Curves.easeOutCubic,
+              tween: Tween(begin: 0.0, end: 1.0),
+              builder: (context, value, child) {
+                return Opacity(
+                  opacity: value,
+                  child: Transform.translate(
+                    offset: Offset(-20 * (1 - value), 0),
+                    child: child,
+                  ),
+                );
+              },
+              child: _buildTaskBar(
+                task: task,
+                color: color,
+                weight: weight,
+                maxWeight: maxWeight,
+                onTap: () => _handleTaskTap(ref, task),
               ),
-            ),
-
-          // Q3: Urgent but Not Important
-          if (q3Count > 0)
-            QuadrantBarsSection(
-              quadrantName: 'Q3 · URGENTE Y NO IMPORTANTE',
-              description: 'Interrupciones y distracciones',
-              tasks: quadrants[Quadrant.q3]!,
-              color: const Color(0xFF2563EB),
-              onTaskTap: (task) => _handleTaskTap(ref, task),
-            ),
-          if (q3Count > 0) SizedBox(height: spacingQ3),
-
-          // Q4: Neither Urgent nor Important
-          if (q4Count > 0)
-            QuadrantBarsSection(
-              quadrantName: 'Q4 · NI URGENTE NI IMPORTANTE',
-              description: 'Actividades de bajo valor',
-              tasks: quadrants[Quadrant.q4]!,
-              color: const Color(0xFFA3A3A3),
-              onTaskTap: (task) => _handleTaskTap(ref, task),
-            ),
-          if (q4Count > 0) SizedBox(height: spacingQ4),
+            );
+          }),
 
           const SizedBox(height: 40),
         ],
       ),
     );
+  }
+
+  Color _getQuadrantColor(Quadrant q) {
+    switch (q) {
+      case Quadrant.q1:
+        return const Color(0xFFE84545); // Rojo - Urgente e Importante
+      case Quadrant.q2:
+        return const Color(0xFFF4996E); // Naranja - No Urgente e Importante
+      case Quadrant.q3:
+        return const Color(0xFF2563EB); // Azul - Urgente y No Importante
+      case Quadrant.q4:
+        return const Color(0xFFA3A3A3); // Gris - Ni Urgente ni Importante
+    }
+  }
+
+  Widget _buildTaskBar({
+    required Task task,
+    required Color color,
+    required double weight,
+    required double maxWeight,
+    required VoidCallback onTap,
+  }) {
+    final widthFactor = (weight / maxWeight).clamp(0.15, 1.0);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onTap,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final barWidth = constraints.maxWidth * widthFactor;
+
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: barWidth,
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [
+                      color.withOpacity(0.4),
+                      color.withOpacity(0.15),
+                    ],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  border: Border.all(
+                    color: color.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      // Indicador de cuadrante
+                      Container(
+                        width: 4,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Título de la tarea
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              task.title,
+                              style: const TextStyle(
+                                color: Color(0xFFE6E6E6),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 0.2,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _getQuadrantLabel(task.quadrant),
+                              style: TextStyle(
+                                color: color.withOpacity(0.8),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Indicador de tiempo
+                      if (task.due != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A1A1A),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            _formatDueDate(task.due!),
+                            style: const TextStyle(
+                              color: Color(0xFF7C7C7C),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getQuadrantLabel(Quadrant q) {
+    switch (q) {
+      case Quadrant.q1:
+        return 'Q1 · Urgente e Importante';
+      case Quadrant.q2:
+        return 'Q2 · No Urgente e Importante';
+      case Quadrant.q3:
+        return 'Q3 · Urgente y No Importante';
+      case Quadrant.q4:
+        return 'Q4 · Ni Urgente ni Importante';
+    }
+  }
+
+  String _formatDueDate(DateTime due) {
+    final now = DateTime.now();
+    final diff = due.difference(now).inDays;
+    if (diff == 0) return 'Hoy';
+    if (diff == 1) return 'Mañana';
+    if (diff < 0) return '${diff.abs()}d atrás';
+    if (diff < 7) return '${diff}d';
+    return '${(diff / 7).ceil()}sem';
   }
 
   Widget _buildEmptyState() {

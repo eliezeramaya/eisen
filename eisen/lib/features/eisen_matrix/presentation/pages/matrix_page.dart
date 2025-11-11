@@ -13,6 +13,7 @@ import 'package:eisen/features/eisen_matrix/presentation/widgets/profile_sheet.d
 import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_canvas.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/inspector_drawer.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet_compact.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/task_editor_page.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/stats_page.dart';
@@ -91,7 +92,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         ref.watch(matrixControllerProvider.select((s) => s.selectedId));
 
     // Safe lookup for selected task (may be deleted externally)
-    final _selectedTask = selectedId == null
+    final selectedTask = selectedId == null
         ? null
         : (tasks.indexWhere((t) => t.id == selectedId) == -1
             ? null
@@ -163,33 +164,57 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             if (isDesktop) {
               context.push('/settings');
             } else {
+              final width = MediaQuery.sizeOf(context).width;
+              final isMobile = width < 600;
               showModalBottomSheet(
                 context: context,
                 showDragHandle: true,
                 isScrollControlled: true,
                 useSafeArea: true,
                 backgroundColor: Colors.transparent,
-                builder: (_) => SettingsSheet(
-                  onToggleTheme: ctrl.toggleTheme,
-                  onToggleDensity: ctrl.toggleCompact,
-                  compact: compact,
-                  showAxisLegends: showAxisLegends,
-                  onToggleAxisLegends: ctrl.toggleAxisLegends,
-                  minimal: minimal,
-                  onToggleMinimal: ctrl.toggleMinimal,
-                  onResetToDemo: () async {
-                    await ctrl.resetToDemo();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              '\u2728 Tareas demo restauradas (20 tareas)'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  },
-                ),
+                builder: (_) => isMobile
+                    ? SettingsSheetCompact(
+                        onToggleTheme: ctrl.toggleTheme,
+                        onToggleDensity: ctrl.toggleCompact,
+                        compact: compact,
+                        showAxisLegends: showAxisLegends,
+                        onToggleAxisLegends: ctrl.toggleAxisLegends,
+                        minimal: minimal,
+                        onToggleMinimal: ctrl.toggleMinimal,
+                        onResetToDemo: () async {
+                          await ctrl.resetToDemo();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    '\u2728 Tareas demo restauradas (20 tareas)'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                      )
+                    : SettingsSheet(
+                        onToggleTheme: ctrl.toggleTheme,
+                        onToggleDensity: ctrl.toggleCompact,
+                        compact: compact,
+                        showAxisLegends: showAxisLegends,
+                        onToggleAxisLegends: ctrl.toggleAxisLegends,
+                        minimal: minimal,
+                        onToggleMinimal: ctrl.toggleMinimal,
+                        onResetToDemo: () async {
+                          await ctrl.resetToDemo();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    '\u2728 Tareas demo restauradas (20 tareas)'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                      ),
               );
             }
           },
@@ -198,7 +223,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
       body: SafeArea(
         child: MediaQuery(
           // AppTextScale applied: scale general UI using prefs
-          data: MediaQuery.of(context).copyWith(textScaleFactor: uiTsf),
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(uiTsf)),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: isDesktopGrid
@@ -374,8 +400,9 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                         if (idx == -1) return;
                                                         final prev =
                                                             tasks[idx].quadrant;
-                                                        if (prev == q)
+                                                        if (prev == q) {
                                                           return; // no-op
+                                                        }
                                                         ctrl.moveTaskToQuadrant(
                                                             id, q);
                                                         final qName = q.name
@@ -559,15 +586,15 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           ),
         ),
       ),
-      endDrawer: _selectedTask == null
+      endDrawer: selectedTask == null
           ? null
           : InspectorDrawer(
-              key: ValueKey(_selectedTask.id),
-              task: _selectedTask,
+              key: ValueKey(selectedTask.id),
+              task: selectedTask,
               onChanged: (t) => ctrl.updateTask(t.id, (_) => t),
-              onDelete: () => ctrl.deleteTask(_selectedTask.id),
+              onDelete: () => ctrl.deleteTask(selectedTask.id),
               onComplete: () {
-                ctrl.markTaskDone(_selectedTask.id);
+                ctrl.markTaskDone(selectedTask.id);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                     content: Text('¡Tarea completada!'),
                     duration: Duration(milliseconds: 900)));
@@ -576,7 +603,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
       bottomNavigationBar: screenWidth >= 600
           ? MediaQuery(
               // AppTextScale applied: scale labels/buttons in the bar
-              data: MediaQuery.of(context).copyWith(textScaleFactor: uiTsf),
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(uiTsf)),
               child: _BottomActionBar(
                 highScale: isExtremeScale, // AppTextScale applied
                 onNew: () => _openAddTaskSheet(context),
@@ -722,14 +750,14 @@ Future<void> _openAddTaskSheet(BuildContext context) async {
 }
 
 class _TopAxisLegends extends StatelessWidget {
-  final bool minimal;
-  // AppTextScale applied
-  final double textScale;
-  final double headerHeight;
   const _TopAxisLegends(
       {this.minimal = false,
       required this.textScale,
       required this.headerHeight});
+  final bool minimal;
+  // AppTextScale applied
+  final double textScale;
+  final double headerHeight;
   @override
   Widget build(BuildContext context) {
     final l10n =
@@ -776,14 +804,14 @@ class _TopAxisLegends extends StatelessWidget {
 }
 
 class _LeftAxisLegends extends StatelessWidget {
-  final bool minimal;
-  // AppTextScale applied
-  final double textScale;
-  final double headerHeight;
   const _LeftAxisLegends(
       {this.minimal = false,
       required this.textScale,
       required this.headerHeight});
+  final bool minimal;
+  // AppTextScale applied
+  final double textScale;
+  final double headerHeight;
   @override
   Widget build(BuildContext context) {
     final l10n =
@@ -849,18 +877,17 @@ class _LeftAxisLegends extends StatelessWidget {
 }
 
 class _BottomActionBar extends StatelessWidget {
-  final VoidCallback onNew;
-  final void Function(Quadrant q) onNewInQuadrant;
-  final Widget? minimap;
-  // AppTextScale applied: adjusts paddings for high scales
-  final bool highScale;
-
   const _BottomActionBar({
     required this.onNew,
     required this.onNewInQuadrant,
     this.minimap,
     this.highScale = false,
   });
+  final VoidCallback onNew;
+  final void Function(Quadrant q) onNewInQuadrant;
+  final Widget? minimap;
+  // AppTextScale applied: adjusts paddings for high scales
+  final bool highScale;
 
   @override
   Widget build(BuildContext context) {
