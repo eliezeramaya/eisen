@@ -37,6 +37,15 @@ class LocalPrefsMatrixRepository implements MatrixRepository {
       categories: (j['categories'] as List?)?.cast<String>() ?? const [],
       notes: j['notes'] as String?,
       category: j['category'] as String?,
+      createdAt: j['createdAt'] != null
+          ? DateTime.tryParse(j['createdAt'] as String)
+          : null,
+      updatedAt: j['updatedAt'] != null
+          ? DateTime.tryParse(j['updatedAt'] as String)
+          : null,
+      completedAt: j['completedAt'] != null
+          ? DateTime.tryParse(j['completedAt'] as String)
+          : null,
     );
   }
 
@@ -51,5 +60,8 @@ class LocalPrefsMatrixRepository implements MatrixRepository {
         'categories': t.categories,
         'notes': t.notes,
         'category': t.category,
+        'createdAt': t.createdAt?.toIso8601String(),
+        'updatedAt': t.updatedAt?.toIso8601String(),
+        'completedAt': t.completedAt?.toIso8601String(),
       };
 }

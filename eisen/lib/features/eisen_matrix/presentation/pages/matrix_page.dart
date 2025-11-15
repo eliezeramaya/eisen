@@ -144,6 +144,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             }
             context.push('/list-mode');
           },
+          onOpenCompletedTasks: () => context.go('/completed-matrix'),
           onOpenStats: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const StatsPage())),
           onOpenProfile: () => showModalBottomSheet(

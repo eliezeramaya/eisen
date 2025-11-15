@@ -109,6 +109,7 @@ class Task extends Equatable {
   /// Derived convenience flags (not persisted)
   bool get isUrgent => quadrant.isUrgent;
   bool get isImportant => quadrant.isImportant;
+  bool get isCompleted => completedAt != null;
 
   /// Clamped projections used by layout/weighting.
   double get priorityClamped => priority.clamp(1, 10).toDouble();
