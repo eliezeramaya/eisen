@@ -9,4 +9,9 @@ final activeCategoryFiltersProvider =
 class ActiveCategoryFilters extends Notifier<List<String>> {
   @override
   List<String> build() => const <String>[];
+
+  /// Update the list of active filters
+  void update(List<String> newFilters) {
+    state = newFilters;
+  }
 }

@@ -1,6 +1,6 @@
-import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/completed_tasks/domain/filters.dart';
 import 'package:eisen/features/completed_tasks/domain/project_category.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 
 /// Repository for completed tasks operations.
 ///
@@ -52,9 +52,11 @@ class CompletedTasksRepository {
 
     // Match by category string
     final targetCategory = project.displayName;
-    return tasks.where((t) =>
-        t.category != null &&
-        t.category!.toLowerCase() == targetCategory.toLowerCase());
+    return tasks.where(
+      (t) =>
+          t.category != null &&
+          t.category!.toLowerCase() == targetCategory.toLowerCase(),
+    );
   }
 
   /// Get statistics for completed tasks in filter range
@@ -62,10 +64,7 @@ class CompletedTasksRepository {
     required List<Task> allTasks,
     required CompletedTasksFilter filter,
   }) {
-    final completed = getCompletedTasks(
-      allTasks: allTasks,
-      filter: filter,
-    );
+    final completed = getCompletedTasks(allTasks: allTasks, filter: filter);
 
     final byQuadrant = {
       Quadrant.q1: completed.where((t) => t.quadrant == Quadrant.q1).length,

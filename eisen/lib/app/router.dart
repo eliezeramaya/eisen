@@ -1,7 +1,8 @@
 import 'package:eisen/features/calendar_gantt/presentation/pages/workflow_plan_page.dart';
-import 'package:eisen/features/eisen_matrix/presentation/pages/matrix_page.dart';
-import 'package:eisen/features/settings/presentation/settings_page_desktop.dart';
 import 'package:eisen/features/completed_tasks/presentation/pages/completed_matrix_page.dart';
+import 'package:eisen/features/eisen_matrix/presentation/pages/matrix_page.dart';
+import 'package:eisen/features/pomodoro/presentation/pages/pomodoro_page.dart';
+import 'package:eisen/features/settings/presentation/settings_page_desktop.dart';
 import 'package:eisen/ui/list_mode/list_mode_screen.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,6 +26,13 @@ final GoRouter _router = GoRouter(
       name: 'workflow-plan',
       pageBuilder: (context, state) => const NoTransitionPage(
         child: WorkflowPlanPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/pomodoro',
+      name: 'pomodoro',
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: PomodoroPage(),
       ),
     ),
     GoRoute(

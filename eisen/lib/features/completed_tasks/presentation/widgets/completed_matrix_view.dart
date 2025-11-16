@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:flutter/material.dart';
+
 import 'completed_task_card.dart';
 
 /// Matrix view for completed tasks organized in 4 quadrants.
@@ -201,10 +202,7 @@ class _QuadrantPanel extends StatelessWidget {
           // Task list or empty state
           Expanded(
             child: tasks.isEmpty
-                ? _EmptyQuadrant(
-                    quadrant: quadrant,
-                    zoomFactor: zoomFactor,
-                  )
+                ? _EmptyQuadrant(quadrant: quadrant, zoomFactor: zoomFactor)
                 : ListView.builder(
                     padding: EdgeInsets.all(8 * zoomFactor),
                     itemCount: tasks.length,
@@ -230,40 +228,37 @@ class _QuadrantPanel extends StatelessWidget {
   }
 
   Color _getQuadrantColor(Quadrant q, ColorScheme cs) => switch (q) {
-        Quadrant.q1 => cs.error,
-        Quadrant.q2 => cs.primary,
-        Quadrant.q3 => cs.tertiary,
-        Quadrant.q4 => cs.outline,
-      };
+    Quadrant.q1 => cs.error,
+    Quadrant.q2 => cs.primary,
+    Quadrant.q3 => cs.tertiary,
+    Quadrant.q4 => cs.outline,
+  };
 
   Color _getQuadrantBgColor(Quadrant q, ColorScheme cs) => switch (q) {
-        Quadrant.q1 => cs.errorContainer.withOpacity(0.05),
-        Quadrant.q2 => cs.primaryContainer.withOpacity(0.05),
-        Quadrant.q3 => cs.tertiaryContainer.withOpacity(0.05),
-        Quadrant.q4 => cs.surfaceContainerLowest,
-      };
+    Quadrant.q1 => cs.errorContainer.withOpacity(0.05),
+    Quadrant.q2 => cs.primaryContainer.withOpacity(0.05),
+    Quadrant.q3 => cs.tertiaryContainer.withOpacity(0.05),
+    Quadrant.q4 => cs.surfaceContainerLowest,
+  };
 
   IconData _getQuadrantIcon(Quadrant q) => switch (q) {
-        Quadrant.q1 => Icons.priority_high,
-        Quadrant.q2 => Icons.schedule,
-        Quadrant.q3 => Icons.forward_to_inbox,
-        Quadrant.q4 => Icons.delete_outline,
-      };
+    Quadrant.q1 => Icons.priority_high,
+    Quadrant.q2 => Icons.schedule,
+    Quadrant.q3 => Icons.forward_to_inbox,
+    Quadrant.q4 => Icons.delete_outline,
+  };
 
   String _getQuadrantTitle(Quadrant q) => switch (q) {
-        Quadrant.q1 => 'Q1: Hacer Primero',
-        Quadrant.q2 => 'Q2: Programar',
-        Quadrant.q3 => 'Q3: Delegar',
-        Quadrant.q4 => 'Q4: Eliminar',
-      };
+    Quadrant.q1 => 'Q1: Hacer Primero',
+    Quadrant.q2 => 'Q2: Programar',
+    Quadrant.q3 => 'Q3: Delegar',
+    Quadrant.q4 => 'Q4: Eliminar',
+  };
 }
 
 /// Empty state for quadrant with no completed tasks
 class _EmptyQuadrant extends StatelessWidget {
-  const _EmptyQuadrant({
-    required this.quadrant,
-    required this.zoomFactor,
-  });
+  const _EmptyQuadrant({required this.quadrant, required this.zoomFactor});
 
   final Quadrant quadrant;
   final double zoomFactor;

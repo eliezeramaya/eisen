@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/ui/text_scaling.dart';
+import 'package:flutter/material.dart';
 
 /// Centralized text scale helper for Eisen.
 ///
@@ -39,7 +39,6 @@ class AppTextScale {
     UiPrefsData prefs,
   ) {
     final mq = MediaQuery.of(context);
-    return mq.copyWith(textScaleFactor: of(context, prefs));
+    return mq.copyWith(textScaler: TextScaler.linear(of(context, prefs)));
   }
 }
-

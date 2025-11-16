@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/features/completed_tasks/application/completed_controller.dart';
-import 'package:eisen/features/completed_tasks/presentation/widgets/filter_bar.dart';
-import 'package:eisen/features/completed_tasks/presentation/widgets/zoom_control.dart';
 import 'package:eisen/features/completed_tasks/presentation/widgets/completed_matrix_view.dart';
 import 'package:eisen/features/completed_tasks/domain/filters.dart';
+import 'package:eisen/features/completed_tasks/domain/project_category.dart';
 import 'package:eisen/features/completed_tasks/data/completed_tasks_repository.dart';
 
 /// Completed tasks matrix page.
@@ -44,6 +43,18 @@ class _CompletedMatrixPageState extends ConsumerState<CompletedMatrixPage> {
         title: const Text('Tareas Completadas'),
         backgroundColor: colorScheme.surfaceContainer,
         actions: [
+          // Filter button (opens bottom sheet)
+          IconButton(
+            icon: const Icon(Icons.filter_alt),
+            onPressed: () => _showFiltersSheet(context, state, controller),
+            tooltip: 'Filtros',
+          ),
+          // Zoom control (compact)
+          IconButton(
+            icon: const Icon(Icons.zoom_in),
+            onPressed: () => _showZoomSheet(context, state, controller),
+            tooltip: 'Zoom',
+          ),
           // Info button
           IconButton(
             icon: const Icon(Icons.info_outline),
@@ -53,36 +64,53 @@ class _CompletedMatrixPageState extends ConsumerState<CompletedMatrixPage> {
           // Refresh button
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => controller.refresh(),
+            onPressed: controller.refresh,
             tooltip: 'Actualizar',
           ),
         ],
       ),
       body: Column(
         children: [
-          // Filter bar
-          FilterBar(
-            filter: state.filter,
-            onTimeFilterChanged: (type) {
-              controller.updateTimeFilter(type);
-            },
-            onDateChanged: (date) {
-              controller.updateReferenceDate(date);
-            },
-            onProjectChanged: (project) {
-              controller.updateProject(project);
-            },
-            onPreviousPeriod: () => controller.previousPeriod(),
-            onNextPeriod: () => controller.nextPeriod(),
-            onResetToToday: () => controller.resetToToday(),
-          ),
-
-          // Zoom control
-          ZoomControl(
-            value: state.zoomFactor,
-            onChanged: (factor) {
-              controller.setZoomFactor(factor);
-            },
+          // Filter description bar (compact)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHigh,
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.shadow.withOpacity(0.1),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  state.filter.timeType.icon,
+                  size: 16,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    state.filter.description,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  'Zoom: ${(state.zoomFactor * 100).round()}%',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
 
           // Warning for "All" filter
@@ -175,6 +203,257 @@ class _CompletedMatrixPageState extends ConsumerState<CompletedMatrixPage> {
       ),
     );
   }
+
+  void _showFiltersSheet(
+    BuildContext context,
+    CompletedMatrixState state,
+    CompletedMatrixController controller,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.filter_alt, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Filtros',
+                  style: theme.textTheme.titleLarge,
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Time filter segments
+            Text(
+              'Período de tiempo',
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<TimeFilterType>(
+              segments: TimeFilterType.values.map((type) {
+                return ButtonSegment(
+                  value: type,
+                  label: Text(type.displayName),
+                  icon: Icon(type.icon, size: 18),
+                );
+              }).toList(),
+              selected: {state.filter.timeType},
+              onSelectionChanged: (selection) {
+                if (selection.isNotEmpty) {
+                  controller.updateTimeFilter(selection.first);
+                }
+              },
+              showSelectedIcon: false,
+            ),
+
+            const SizedBox(height: 16),
+
+            // Date navigation (only if not "all")
+            if (state.filter.timeType != TimeFilterType.all) ...[
+              Text(
+                'Navegación',
+                style: theme.textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  IconButton.outlined(
+                    icon: const Icon(Icons.chevron_left),
+                    onPressed: controller.previousPeriod,
+                    tooltip: 'Anterior',
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: state.filter.referenceDate,
+                          firstDate: DateTime(2020),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)),
+                          locale: const Locale('es'),
+                        );
+                        if (picked != null) {
+                          controller.updateReferenceDate(picked);
+                        }
+                      },
+                      icon: const Icon(Icons.calendar_today, size: 18),
+                      label: Text(_formatDateLabel(state.filter)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.outlined(
+                    icon: const Icon(Icons.today),
+                    onPressed: controller.resetToToday,
+                    tooltip: 'Hoy',
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.outlined(
+                    icon: const Icon(Icons.chevron_right),
+                    onPressed: controller.nextPeriod,
+                    tooltip: 'Siguiente',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Project filter
+            Text(
+              'Proyecto',
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<ProjectCategory>(
+              initialValue: state.filter.project ?? ProjectCategory.all,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.category, size: 20),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+              ),
+              items: ProjectCategory.values.map((category) {
+                return DropdownMenuItem(
+                  value: category,
+                  child: Text(category.displayName),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value == ProjectCategory.all) {
+                  controller.updateProject(null);
+                } else {
+                  controller.updateProject(value);
+                }
+              },
+            ),
+
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(ctx),
+              icon: const Icon(Icons.check),
+              label: const Text('Aplicar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showZoomSheet(
+    BuildContext context,
+    CompletedMatrixState state,
+    CompletedMatrixController controller,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.zoom_in, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Control de Zoom',
+                  style: theme.textTheme.titleLarge,
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Icon(
+                  Icons.zoom_out,
+                  size: 20,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                Expanded(
+                  child: Slider(
+                    value: state.zoomFactor,
+                    min: 0.7,
+                    max: 1.4,
+                    divisions: 14,
+                    label: '${(state.zoomFactor * 100).round()}%',
+                    onChanged: controller.setZoomFactor,
+                  ),
+                ),
+                Icon(
+                  Icons.zoom_in,
+                  size: 20,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${(state.zoomFactor * 100).round()}%',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDateLabel(CompletedTasksFilter filter) {
+    final date = filter.referenceDate;
+    return switch (filter.timeType) {
+      TimeFilterType.all => 'Todo',
+      TimeFilterType.year => '${date.year}',
+      TimeFilterType.month => '${_monthName(date.month)} ${date.year}',
+      TimeFilterType.week => 'Semana del ${date.day}/${date.month}',
+      TimeFilterType.day => '${date.day}/${date.month}/${date.year}',
+    };
+  }
+
+  String _monthName(int month) => [
+        'Enero',
+        'Febrero',
+        'Marzo',
+        'Abril',
+        'Mayo',
+        'Junio',
+        'Julio',
+        'Agosto',
+        'Septiembre',
+        'Octubre',
+        'Noviembre',
+        'Diciembre'
+      ][month - 1];
 
   void _showInfoDialog(BuildContext context, CompletedTasksStats? stats) {
     final theme = Theme.of(context);

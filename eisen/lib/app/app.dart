@@ -5,6 +5,8 @@ import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/ui/text_scaling.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/l10n/app_localizations.dart';
+import 'package:eisen/theme/density.dart';
+import 'package:eisen/utils/breakpoints.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,19 +15,18 @@ import 'package:go_router/go_router.dart';
 import '../core/providers/locale_provider.dart';
 import '../core/theme/app_theme.dart';
 import 'router.dart';
-import 'package:eisen/theme/density.dart';
-import 'package:eisen/utils/breakpoints.dart';
-import 'dart:ui' show View;
 
 class EisenApp extends ConsumerWidget {
   const EisenApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode =
-        ref.watch(matrixControllerProvider.select((s) => s.themeMode));
-    final minimal =
-        ref.watch(matrixControllerProvider.select((s) => s.minimal));
+    final themeMode = ref.watch(
+      matrixControllerProvider.select((s) => s.themeMode),
+    );
+    final minimal = ref.watch(
+      matrixControllerProvider.select((s) => s.minimal),
+    );
     final userLocale = ref.watch(localeProvider);
 
     final light = buildAppTheme(Brightness.light);

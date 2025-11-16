@@ -87,8 +87,8 @@ class ListModeScreen extends ConsumerWidget {
     final maxWeight = allTasks.isEmpty
         ? 1.0
         : allTasks
-            .map((t) => _calculateWeight(t))
-            .fold<double>(0, (a, b) => a > b ? a : b);
+              .map(_calculateWeight)
+              .fold<double>(0, (a, b) => a > b ? a : b);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -111,8 +111,10 @@ class ListModeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(width: 12),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF2A2A2A),
                     borderRadius: BorderRadius.circular(12),
@@ -216,17 +218,11 @@ class ListModeScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   gradient: LinearGradient(
-                    colors: [
-                      color.withOpacity(0.4),
-                      color.withOpacity(0.15),
-                    ],
+                    colors: [color.withOpacity(0.4), color.withOpacity(0.15)],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
-                  border: Border.all(
-                    color: color.withOpacity(0.3),
-                    width: 1,
-                  ),
+                  border: Border.all(color: color.withOpacity(0.3), width: 1),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -276,7 +272,9 @@ class ListModeScreen extends ConsumerWidget {
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF1A1A1A),
                             borderRadius: BorderRadius.circular(6),
@@ -346,10 +344,7 @@ class ListModeScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           const Text(
             'Agrega tareas desde la vista Matrix',
-            style: TextStyle(
-              color: Color(0xFF666666),
-              fontSize: 13,
-            ),
+            style: TextStyle(color: Color(0xFF666666), fontSize: 13),
           ),
         ],
       ),

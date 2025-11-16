@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:flutter/material.dart';
 
 /// Individual card for displaying a completed task.
 ///
@@ -126,11 +126,11 @@ class CompletedTaskCard extends StatelessWidget {
   }
 
   Color _getQuadrantColor(Quadrant q, ColorScheme cs) => switch (q) {
-        Quadrant.q1 => cs.error,
-        Quadrant.q2 => cs.primary,
-        Quadrant.q3 => cs.tertiary,
-        Quadrant.q4 => cs.outline,
-      };
+    Quadrant.q1 => cs.error,
+    Quadrant.q2 => cs.primary,
+    Quadrant.q3 => cs.tertiary,
+    Quadrant.q4 => cs.outline,
+  };
 
   Color _getPriorityColor(int priority, ColorScheme cs) {
     if (priority >= 8) return cs.errorContainer;
@@ -171,20 +171,14 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 6,
-        vertical: 2,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: FontWeight.w600,
-        ),
+        style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
       ),
     );
   }

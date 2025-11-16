@@ -27,7 +27,7 @@ class QuadrantBarsSection extends StatelessWidget {
 
     // Calculate max weight for normalization
     final maxWeight = tasks
-        .map((t) => _calculateWeight(t))
+        .map(_calculateWeight)
         .fold<double>(0, (a, b) => a > b ? a : b);
 
     return Column(

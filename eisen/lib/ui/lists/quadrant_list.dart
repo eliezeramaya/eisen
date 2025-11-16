@@ -1,12 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/ui/task/task_row.dart';
+import 'package:flutter/material.dart';
 
 class QuadrantList extends StatelessWidget {
-  final List<Task> tasks;
-  final Widget header; // includes title and counter
-  final void Function(Task task)? onToggle;
-  final void Function(Task task)? onOpen;
   const QuadrantList({
     super.key,
     required this.tasks,
@@ -14,6 +10,10 @@ class QuadrantList extends StatelessWidget {
     this.onToggle,
     this.onOpen,
   });
+  final List<Task> tasks;
+  final Widget header; // includes title and counter
+  final void Function(Task task)? onToggle;
+  final void Function(Task task)? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +36,11 @@ class QuadrantList extends StatelessWidget {
         slivers: [
           SliverPersistentHeader(
             pinned: true,
-            delegate: _HeaderDelegate(child: header, minExtent: 40, maxExtent: 48),
+            delegate: _HeaderDelegate(
+              child: header,
+              minExtent: 40,
+              maxExtent: 48,
+            ),
           ),
           SliverPrototypeExtentList(
             prototypeItem: prototype,
@@ -57,16 +61,19 @@ class QuadrantList extends StatelessWidget {
 }
 
 class _HeaderDelegate extends SliverPersistentHeaderDelegate {
+  _HeaderDelegate({
+    required this.child,
+    this.minExtent = 44,
+    this.maxExtent = 48,
+  });
   final Widget child;
-  final double minExtent;
-  final double maxExtent;
-  _HeaderDelegate({required this.child, this.minExtent = 44, this.maxExtent = 48});
   @override
-  Widget build(context, shrinkOffset, overlapsContent) => Material(
-        color: Theme.of(context).colorScheme.surface,
-        child: child,
-      );
+  final double minExtent;
+  @override
+  final double maxExtent;
+  @override
+  Widget build(context, shrinkOffset, overlapsContent) =>
+      Material(color: Theme.of(context).colorScheme.surface, child: child);
   @override
   bool shouldRebuild(covariant _HeaderDelegate old) => false;
 }
-

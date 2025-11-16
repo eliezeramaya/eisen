@@ -25,8 +25,9 @@ class CategoryFiltersBar extends ConsumerWidget {
                 onSelected: (sel) {
                   final curr = [...active];
                   sel ? curr.add(cat) : curr.remove(cat);
-                  ref.read(activeCategoryFiltersProvider.notifier).state =
-                      curr.toSet().toList();
+                  ref
+                      .read(activeCategoryFiltersProvider.notifier)
+                      .update(curr.toSet().toList());
                 },
               ),
             ),

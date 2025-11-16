@@ -60,8 +60,9 @@ class CompletedMatrixState {
       tasks: tasks ?? this.tasks,
       isLoading: isLoading ?? this.isLoading,
       zoomFactor: zoomFactor ?? this.zoomFactor,
-      selectedTaskId:
-          clearSelection ? null : (selectedTaskId ?? this.selectedTaskId),
+      selectedTaskId: clearSelection
+          ? null
+          : (selectedTaskId ?? this.selectedTaskId),
       stats: stats ?? this.stats,
     );
   }
@@ -91,7 +92,7 @@ class CompletedMatrixController extends Notifier<CompletedMatrixState> {
     );
 
     // Load tasks on init
-    Future.microtask(() => _loadTasks());
+    Future.microtask(_loadTasks);
 
     return CompletedMatrixState(filter: initialFilter);
   }
@@ -128,10 +129,7 @@ class CompletedMatrixController extends Notifier<CompletedMatrixState> {
 
   /// Select a task (or null to deselect)
   void selectTask(String? id) {
-    state = state.copyWith(
-      selectedTaskId: id,
-      clearSelection: id == null,
-    );
+    state = state.copyWith(selectedTaskId: id, clearSelection: id == null);
   }
 
   /// Load tasks from main controller with current filter
@@ -151,11 +149,7 @@ class CompletedMatrixController extends Notifier<CompletedMatrixState> {
       filter: state.filter,
     );
 
-    state = state.copyWith(
-      tasks: filtered,
-      stats: stats,
-      isLoading: false,
-    );
+    state = state.copyWith(tasks: filtered, stats: stats, isLoading: false);
   }
 
   /// Refresh tasks (call after main controller updates)
@@ -166,10 +160,16 @@ class CompletedMatrixController extends Notifier<CompletedMatrixState> {
     final current = state.filter.referenceDate;
     final next = switch (state.filter.timeType) {
       TimeFilterType.all => current, // No change for "all"
-      TimeFilterType.year =>
-        DateTime(current.year + 1, current.month, current.day),
-      TimeFilterType.month =>
-        DateTime(current.year, current.month + 1, current.day),
+      TimeFilterType.year => DateTime(
+        current.year + 1,
+        current.month,
+        current.day,
+      ),
+      TimeFilterType.month => DateTime(
+        current.year,
+        current.month + 1,
+        current.day,
+      ),
       TimeFilterType.week => current.add(const Duration(days: 7)),
       TimeFilterType.day => current.add(const Duration(days: 1)),
     };
@@ -181,10 +181,16 @@ class CompletedMatrixController extends Notifier<CompletedMatrixState> {
     final current = state.filter.referenceDate;
     final prev = switch (state.filter.timeType) {
       TimeFilterType.all => current, // No change for "all"
-      TimeFilterType.year =>
-        DateTime(current.year - 1, current.month, current.day),
-      TimeFilterType.month =>
-        DateTime(current.year, current.month - 1, current.day),
+      TimeFilterType.year => DateTime(
+        current.year - 1,
+        current.month,
+        current.day,
+      ),
+      TimeFilterType.month => DateTime(
+        current.year,
+        current.month - 1,
+        current.day,
+      ),
       TimeFilterType.week => current.subtract(const Duration(days: 7)),
       TimeFilterType.day => current.subtract(const Duration(days: 1)),
     };
@@ -200,8 +206,8 @@ class CompletedMatrixController extends Notifier<CompletedMatrixState> {
 /// Main provider for completed matrix controller
 final completedMatrixProvider =
     NotifierProvider<CompletedMatrixController, CompletedMatrixState>(
-  CompletedMatrixController.new,
-);
+      CompletedMatrixController.new,
+    );
 
 /// Selector providers for optimized rebuilds
 final completedTasksFilterProvider = Provider<CompletedTasksFilter>(

@@ -115,7 +115,7 @@ class FilterBar extends StatelessWidget {
 
           // Project filter dropdown
           DropdownButtonFormField<ProjectCategory>(
-            value: filter.project ?? ProjectCategory.all,
+            initialValue: filter.project ?? ProjectCategory.all,
             decoration: InputDecoration(
               labelText: 'Proyecto',
               prefixIcon: const Icon(Icons.category, size: 20),
@@ -171,19 +171,19 @@ String _formatDateLabel(CompletedTasksFilter filter) {
 }
 
 String _monthName(int month) => [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre'
-    ][month - 1];
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+][month - 1];
 
 Future<void> _showDatePicker(
   BuildContext context,

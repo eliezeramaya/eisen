@@ -1,5 +1,5 @@
-import 'package:flutter/widgets.dart';
 import 'package:eisen/core/responsive/app_breakpoints.dart';
+import 'package:flutter/widgets.dart';
 
 class ResponsiveData {
   ResponsiveData(this.bp, this.width);
@@ -12,12 +12,12 @@ class ResponsiveData {
   bool get isUltraWide => bp == BreakpointSize.xl && width >= AppBreakpoints.xl;
 
   double get spacingScale => switch (bp) {
-        BreakpointSize.xs => 1.0,
-        BreakpointSize.sm => 1.0,
-        BreakpointSize.md => 1.1,
-        BreakpointSize.lg => 1.15,
-        BreakpointSize.xl => 1.2,
-      };
+    BreakpointSize.xs => 1.0,
+    BreakpointSize.sm => 1.0,
+    BreakpointSize.md => 1.1,
+    BreakpointSize.lg => 1.15,
+    BreakpointSize.xl => 1.2,
+  };
 
   double get paddingScale => spacingScale;
 }
@@ -39,4 +39,3 @@ class Responsive extends InheritedWidget {
   bool updateShouldNotify(covariant Responsive oldWidget) =>
       oldWidget.data.bp != data.bp || oldWidget.data.width != data.width;
 }
-

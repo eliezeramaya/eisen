@@ -148,7 +148,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                       return;
                     }
                     context.push('/list-mode');
-                }
+                  }
                 : null,
             onOpenStats: showTopStats
                 ? () => Navigator.of(context).push(
@@ -157,7 +157,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                       ),
                     )
                 : null,
-            onOpenCompleted: () => context.go('/completed-matrix'),
+            onOpenCompletedTasks:
+                showTopSettings ? () => context.go('/completed-matrix') : null,
             onOpenProfile: () => showModalBottomSheet(
               context: context,
               showDragHandle: true,

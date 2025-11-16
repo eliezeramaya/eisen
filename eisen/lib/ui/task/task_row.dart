@@ -1,14 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/theme/density.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Compact single-line task item suitable for dense desktop lists.
 class TaskRow extends StatelessWidget {
-  final Task task;
-  final VoidCallback? onToggle;
-  final VoidCallback? onOpen;
-  final bool selected;
   const TaskRow({
     super.key,
     required this.task,
@@ -16,6 +12,10 @@ class TaskRow extends StatelessWidget {
     this.onOpen,
     this.selected = false,
   });
+  final Task task;
+  final VoidCallback? onToggle;
+  final VoidCallback? onOpen;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -57,9 +57,9 @@ class TaskRow extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           _MetaChip('P${task.priority}', t),
-          if (task.due != null) SizedBox(width: (s?.insetXs ?? 4)),
+          if (task.due != null) SizedBox(width: s?.insetXs ?? 4),
           if (task.due != null) _MetaChip(_dueLabel(task.due!), t),
-          SizedBox(width: (s?.insetSm ?? 8)),
+          SizedBox(width: s?.insetSm ?? 8),
           IconButton(
             onPressed: onOpen,
             icon: const Icon(Icons.more_horiz, size: 16),
@@ -77,14 +77,18 @@ class TaskRow extends StatelessWidget {
         LogicalKeySet(LogicalKeyboardKey.space): const _ToggleIntent(),
       },
       actions: <Type, Action<Intent>>{
-        _OpenIntent: CallbackAction<_OpenIntent>(onInvoke: (_) {
-          onOpen?.call();
-          return null;
-        }),
-        _ToggleIntent: CallbackAction<_ToggleIntent>(onInvoke: (_) {
-          onToggle?.call();
-          return null;
-        }),
+        _OpenIntent: CallbackAction<_OpenIntent>(
+          onInvoke: (_) {
+            onOpen?.call();
+            return null;
+          },
+        ),
+        _ToggleIntent: CallbackAction<_ToggleIntent>(
+          onInvoke: (_) {
+            onToggle?.call();
+            return null;
+          },
+        ),
       },
       child: Container(
         decoration: BoxDecoration(
@@ -93,7 +97,7 @@ class TaskRow extends StatelessWidget {
               : Colors.transparent,
           border: Border(bottom: BorderSide(color: borderColor, width: 0.8)),
         ),
-        padding: EdgeInsets.symmetric(horizontal: (s?.insetSm ?? 8)),
+        padding: EdgeInsets.symmetric(horizontal: s?.insetSm ?? 8),
         child: row,
       ),
     );
