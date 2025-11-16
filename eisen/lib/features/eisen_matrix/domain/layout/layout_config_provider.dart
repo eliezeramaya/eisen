@@ -17,7 +17,7 @@ final layoutConfigForSizeProvider =
   final prefs = ref.watch(uiPrefsProvider);
   final sc = classifyScreen(size);
 
-  final userTopK = prefs.topKPerQuadrant.clamp(3, 60);
+  final userTopK = prefs.topKPerQuadrant.clamp(3, 100);
   int effectiveTopK;
   switch (sc) {
     case ScreenClass.compact:

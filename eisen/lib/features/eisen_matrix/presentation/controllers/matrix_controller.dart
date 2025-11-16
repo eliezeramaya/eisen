@@ -9,6 +9,7 @@ import 'package:eisen/features/eisen_matrix/domain/layout/layout_config.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/layout_config_provider.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/layout_providers.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
+import 'package:eisen/features/eisen_matrix/domain/matrix_view_mode.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/compute_layout_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/compute_reorder_delta_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/create_task_usecase.dart';
@@ -17,6 +18,7 @@ import 'package:eisen/features/eisen_matrix/domain/usecases/suggest_top_spots_us
 import 'package:eisen/features/eisen_matrix/domain/usecases/update_task_usecase.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Immutable state for the Eisenhower matrix.
 ///
@@ -30,6 +32,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// - [showAxisLegends]: Show urgency/importance axis labels
 /// - [minimal]: Minimal UI mode (hide extra chrome)
 /// - [version]: Increments on mutations to help .select detect changes
+/// - [viewMode]: Task view mode (top10/top25/top50/all/custom)
+/// - [customTaskLimit]: Custom top‑K value when [viewMode] is [MatrixViewMode.custom]
 class MatrixState {
   const MatrixState({
     required this.tasks,
@@ -43,6 +47,8 @@ class MatrixState {
     this.version = 0,
     this.presentQuadrant,
     this.layoutVersion = 0,
+    this.viewMode = MatrixViewMode.top25,
+    this.customTaskLimit = 25,
   });
   final List<Task> tasks;
   final String? selectedId;
@@ -56,6 +62,8 @@ class MatrixState {
   final int version; // increments on task list mutations to help .select
   // Increments when layout configuration changes to force recompute/refresh
   final int layoutVersion;
+  final MatrixViewMode viewMode;
+  final int customTaskLimit;
 
   MatrixState copyWith({
     List<Task>? tasks,
@@ -69,6 +77,8 @@ class MatrixState {
     bool? minimal,
     int? version,
     int? layoutVersion,
+    MatrixViewMode? viewMode,
+    int? customTaskLimit,
   }) =>
       MatrixState(
         tasks: tasks ?? this.tasks,
@@ -82,6 +92,8 @@ class MatrixState {
         minimal: minimal ?? this.minimal,
         version: version ?? this.version,
         layoutVersion: layoutVersion ?? this.layoutVersion,
+        viewMode: viewMode ?? this.viewMode,
+        customTaskLimit: customTaskLimit ?? this.customTaskLimit,
       );
 }
 
@@ -110,6 +122,8 @@ class MatrixController extends Notifier<MatrixState> {
   final BanditService _bandit = BanditService();
   Set<String> _suggested = {};
   LayoutConfig? _lastDynamicCfg;
+  static const _customTaskLimitKey = 'customTaskLimit';
+  static const _viewModeKey = 'matrixViewMode';
 
   @override
   MatrixState build() {
@@ -168,6 +182,8 @@ class MatrixController extends Notifier<MatrixState> {
       showAxisLegends: ui.showAxisLegends,
       minimal: ui.minimal,
     );
+    // Load matrix‑specific view prefs (viewMode + customTaskLimit)
+    await _loadMatrixViewPrefs();
     // Force full layout recomputation on load
     invalidateLayout();
   }
@@ -222,6 +238,28 @@ class MatrixController extends Notifier<MatrixState> {
     _saveUi();
   }
 
+  /// Sets the task view mode (top10/top25/top50/all/custom) and synchronizes
+  /// treemap layout topK with the effective limit.
+  void setViewMode(MatrixViewMode mode) {
+    state = state.copyWith(viewMode: mode);
+    _syncTopKWithViewMode(mode, state.customTaskLimit);
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.setInt(_viewModeKey, mode.index));
+  }
+
+  /// Updates custom top‑K limit (10–100) and persists it.
+  /// When the active [viewMode] is [MatrixViewMode.custom], this also updates
+  /// the treemap layout topK preference.
+  void setCustomTaskLimit(int newLimit) {
+    final clamped = newLimit.clamp(10, 100);
+    state = state.copyWith(customTaskLimit: clamped);
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.setInt(_customTaskLimitKey, clamped));
+    if (state.viewMode == MatrixViewMode.custom) {
+      _syncTopKWithViewMode(MatrixViewMode.custom, clamped);
+    }
+  }
+
   Future<void> _saveUi() async {
     // Preserve existing layout-related fields when saving basic toggles.
     final prev = await _ui.load();
@@ -232,6 +270,57 @@ class MatrixController extends Notifier<MatrixState> {
       minimal: state.minimal,
     );
     await _ui.save(data);
+  }
+
+  Future<void> _loadMatrixViewPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasLimit = prefs.containsKey(_customTaskLimitKey);
+    final hasMode = prefs.containsKey(_viewModeKey);
+
+    final savedLimit =
+        hasLimit ? (prefs.getInt(_customTaskLimitKey) ?? 25) : state.customTaskLimit;
+    final modeIndex = hasMode ? prefs.getInt(_viewModeKey) : null;
+    MatrixViewMode mode = state.viewMode;
+    if (modeIndex != null &&
+        modeIndex >= 0 &&
+        modeIndex < MatrixViewMode.values.length) {
+      mode = MatrixViewMode.values[modeIndex];
+    }
+    state = state.copyWith(
+      customTaskLimit: savedLimit,
+      viewMode: mode,
+    );
+
+    // Only override existing layout prefs when there is an explicit
+    // saved view mode or custom limit from a previous session.
+    if (hasMode || hasLimit) {
+      _syncTopKWithViewMode(mode, savedLimit);
+    }
+  }
+
+  void _syncTopKWithViewMode(MatrixViewMode mode, int customLimit) {
+    int k;
+    switch (mode) {
+      case MatrixViewMode.top10:
+        k = 10;
+        break;
+      case MatrixViewMode.top25:
+        k = 25;
+        break;
+      case MatrixViewMode.top50:
+        k = 50;
+        break;
+      case MatrixViewMode.all:
+        // Use a high value to approximate "no limit"; layout providers will
+        // clamp based on their own safety bounds.
+        k = 100;
+        break;
+      case MatrixViewMode.custom:
+        k = customLimit;
+        break;
+    }
+    // Synchronize with layout prefs so treemap uses the effective topK
+    ref.read(uiPrefsControllerProvider.notifier).setTopK(k);
   }
 
   String createTask(

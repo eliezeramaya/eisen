@@ -38,7 +38,7 @@ class UiPrefsData {
   final bool showAxisLegends;
   final bool minimal;
   // Treemap layout settings
-  final int topKPerQuadrant; // 5..60
+  final int topKPerQuadrant; // 5..100
   final double gamma; // 0.70..1.00
   final double minAreaNormalized; // 2e-5 .. 2e-4
   final double quadrantPadding; // 0.0 .. 0.02
@@ -242,7 +242,7 @@ class UiPrefsController extends Notifier<UiPrefsData> {
   Future<void> _save() => _repo.save(state);
 
   Future<void> setTopK(int value) async {
-    final v = value.clamp(5, 60);
+    final v = value.clamp(5, 100);
     state = state.copyWith(topKPerQuadrant: v);
     await _save();
   }
@@ -272,7 +272,7 @@ class UiPrefsController extends Notifier<UiPrefsData> {
     required double minAreaNormalized,
     required double quadrantPadding,
   }) async {
-    final k = topKPerQuadrant.clamp(5, 60);
+    final k = topKPerQuadrant.clamp(5, 100);
     final g = gamma.clamp(0.70, 1.0);
     final minA = minAreaNormalized.clamp(0.00002, 0.0002);
     final pad = quadrantPadding.clamp(0.0, 0.02);

@@ -6,7 +6,9 @@ import '../../data/focus_space_repository.dart';
 import '../../domain/matrix_view_filter.dart';
 import '../../domain/saved_matrix_view.dart';
 import '../../domain/focus_space.dart';
+import '../../domain/matrix_view_mode.dart';
 import '../controllers/matrix_view_filter_controller.dart';
+import '../controllers/matrix_controller.dart';
 
 class MatrixFiltersBar extends ConsumerWidget {
   const MatrixFiltersBar({super.key});
@@ -73,6 +75,8 @@ class MatrixFiltersBar extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           _TimeAndCompletionRow(filter: filter),
+          const SizedBox(height: 12),
+          const _ViewModeRow(),
         ],
       ),
     );
@@ -192,6 +196,105 @@ class _TimeAndCompletionRow extends ConsumerWidget {
         Expanded(child: timeSelector),
         const SizedBox(width: 12),
         completedChip,
+      ],
+    );
+  }
+}
+
+class _ViewModeRow extends ConsumerWidget {
+  const _ViewModeRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewMode = ref.watch(
+      matrixControllerProvider.select((s) => s.viewMode),
+    );
+    final customLimit = ref.watch(
+      matrixControllerProvider.select((s) => s.customTaskLimit),
+    );
+    final controller = ref.read(matrixControllerProvider.notifier);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isCompact = MediaQuery.sizeOf(context).width < 720;
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+
+    String labelFor(MatrixViewMode mode) {
+      switch (mode) {
+        case MatrixViewMode.top10:
+          return 'Top 10';
+        case MatrixViewMode.top25:
+          return 'Top 25';
+        case MatrixViewMode.top50:
+          return 'Top 50';
+        case MatrixViewMode.all:
+          return isEs ? 'Todas' : 'All';
+        case MatrixViewMode.custom:
+          return isEs ? 'Personalizado' : 'Custom';
+      }
+    }
+
+    final segments = MatrixViewMode.values.map((m) {
+      return ButtonSegment<MatrixViewMode>(
+        value: m,
+        label: Text(labelFor(m)),
+      );
+    }).toList();
+
+    final selector = SegmentedButton<MatrixViewMode>(
+      segments: segments,
+      selected: {viewMode},
+      onSelectionChanged: (selection) {
+        if (selection.isNotEmpty) {
+          controller.setViewMode(selection.first);
+        }
+      },
+      showSelectedIcon: false,
+    );
+
+    final customControls = viewMode == MatrixViewMode.custom
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isEs
+                    ? 'Mostrando las $customLimit tareas más importantes por cuadrante'
+                    : 'Showing top $customLimit tasks per quadrant',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+              Slider(
+                value: customLimit.toDouble().clamp(10, 100),
+                min: 10,
+                max: 100,
+                divisions: 18,
+                label: '$customLimit',
+                onChanged: (v) => controller.setCustomTaskLimit(v.toInt()),
+              ),
+            ],
+          )
+        : const SizedBox.shrink();
+
+    if (isCompact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          selector,
+          const SizedBox(height: 8),
+          customControls,
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: selector),
+        const SizedBox(width: 12),
+        if (viewMode == MatrixViewMode.custom)
+          SizedBox(
+            width: 260,
+            child: customControls,
+          ),
       ],
     );
   }
