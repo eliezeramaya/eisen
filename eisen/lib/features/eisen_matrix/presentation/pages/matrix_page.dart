@@ -1,34 +1,31 @@
 import 'dart:ui';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/rendering.dart';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:eisen/core/theme/app_theme.dart';
-import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
-import 'package:eisen/features/eisen_matrix/domain/entities.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/minimap.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/toolbar.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/profile_sheet.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_canvas.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/inspector_drawer.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet_compact.dart';
-import 'package:eisen/features/eisen_matrix/presentation/pages/task_editor_page.dart';
-import 'package:eisen/l10n/app_localizations.dart';
-import 'package:eisen/features/eisen_matrix/presentation/pages/stats_page.dart';
-import 'package:eisen/l10n/app_localizations_en.dart';
-import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/quadrant_empty_placeholder.dart';
-import 'package:eisen/core/ui/ui_breakpoints.dart';
 import 'package:eisen/core/platform/platform_utils.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
-import 'package:eisen/core/ui/text_scaling.dart';
+import 'package:eisen/core/theme/app_theme.dart';
 import 'package:eisen/core/ui/app_text_scale.dart';
-import 'package:go_router/go_router.dart';
-import 'package:eisen/ui/matrix/matrix_desktop.dart';
+import 'package:eisen/core/ui/ui_breakpoints.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/features/eisen_matrix/presentation/pages/stats_page.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/inspector_drawer.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/minimap.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/profile_sheet.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/quadrant_empty_placeholder.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet_compact.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/toolbar.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_canvas.dart';
+import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
+import 'package:eisen/l10n/app_localizations.dart';
+import 'package:eisen/l10n/app_localizations_en.dart';
 import 'package:eisen/theme/density.dart';
+import 'package:eisen/ui/matrix/matrix_desktop.dart';
 import 'package:eisen/utils/breakpoints.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 // Removed FAB + coachmark imports; using single CTA in bottom bar
 
 class MatrixPage extends ConsumerStatefulWidget {
@@ -80,7 +77,6 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
     final zoom = ref.watch(matrixZoomProvider);
     final themeMode =
         ref.watch(matrixControllerProvider.select((s) => s.themeMode));
-    final query = ref.watch(matrixControllerProvider.select((s) => s.query));
     final compact =
         ref.watch(matrixControllerProvider.select((s) => s.compact));
     final showAxisLegends =
@@ -118,107 +114,125 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
 
     final viewMode = ref.watch(uiPrefsProvider).viewMode; // 'treemap' | 'list'
     final isDesktopGrid = screenWidth >= bpDesktop && viewMode == 'list';
+    // Show top-level navigation actions on all sizes; layout adapts inside AppToolbar.
+    final showTopStats = true;
+    final showTopSettings = true;
+    final showTopWorkflow = true;
 
     return Scaffold(
       key: _scaffoldKey,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
-        child: AppToolbar(
-          onToggleTheme: ctrl.toggleTheme,
-          onQuery: ctrl.setQuery,
-          themeMode: themeMode,
-          minimal: minimal,
-          onToggleMinimal: ctrl.toggleMinimal,
-          // Always show the Workflow button in the top menu (home screen)
-          // If the feature is disabled in Settings, clicking will prompt to enable it.
-          showWorkflowPlan: true,
-          onOpenWorkflow: () {
-            if (!ref.read(uiPrefsProvider).workflowPlanEnabled) {
-              final isEs = Localizations.localeOf(context).languageCode == 'es';
-              final msg = isEs
-                  ? 'Activa "Workflow plan" en Ajustes'
-                  : 'Enable "Workflow plan" in Settings';
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text(msg)));
-              return;
-            }
-            context.push('/list-mode');
-          },
-          onOpenCompletedTasks: () => context.go('/completed-matrix'),
-          onOpenStats: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const StatsPage())),
-          onOpenProfile: () => showModalBottomSheet(
-            context: context,
-            showDragHandle: true,
-            useSafeArea: true,
-            builder: (_) => const ProfileSheet(),
-          ),
-          onExitZoom: () {
-            ctrl.setZoom(null);
-            ctrl.setPresentQuadrant(Quadrant.q2);
-            ctrl.select(null);
-            ctrl.setQuery('');
-            ctrl.invalidateLayout();
-          },
-          canExitZoom: zoom != null,
-          onOpenSettings: () {
-            if (isDesktop) {
-              context.push('/settings');
-            } else {
-              final width = MediaQuery.sizeOf(context).width;
-              final isMobile = width < 600;
-              showModalBottomSheet(
-                context: context,
-                showDragHandle: true,
-                isScrollControlled: true,
-                useSafeArea: true,
-                backgroundColor: Colors.transparent,
-                builder: (_) => isMobile
-                    ? SettingsSheetCompact(
-                        onToggleTheme: ctrl.toggleTheme,
-                        onToggleDensity: ctrl.toggleCompact,
-                        compact: compact,
-                        showAxisLegends: showAxisLegends,
-                        onToggleAxisLegends: ctrl.toggleAxisLegends,
-                        minimal: minimal,
-                        onToggleMinimal: ctrl.toggleMinimal,
-                        onResetToDemo: () async {
-                          await ctrl.resetToDemo();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    '\u2728 Tareas demo restauradas (20 tareas)'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        },
-                      )
-                    : SettingsSheet(
-                        onToggleTheme: ctrl.toggleTheme,
-                        onToggleDensity: ctrl.toggleCompact,
-                        compact: compact,
-                        showAxisLegends: showAxisLegends,
-                        onToggleAxisLegends: ctrl.toggleAxisLegends,
-                        minimal: minimal,
-                        onToggleMinimal: ctrl.toggleMinimal,
-                        onResetToDemo: () async {
-                          await ctrl.resetToDemo();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    '\u2728 Tareas demo restauradas (20 tareas)'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        },
+        preferredSize: const Size.fromHeight(70),
+        child: SafeArea(
+          top: true,
+          bottom: false,
+          child: AppToolbar(
+            onToggleTheme: ctrl.toggleTheme,
+            onQuery: ctrl.setQuery,
+            themeMode: themeMode,
+            minimal: minimal,
+            onToggleMinimal: ctrl.toggleMinimal,
+            // Always allow Workflow in the top menu on wide layouts.
+            // On mobile, we only keep the bottom-nav entry.
+            showWorkflowPlan: true,
+            onOpenWorkflow: showTopWorkflow
+                ? () {
+                    if (!ref.read(uiPrefsProvider).workflowPlanEnabled) {
+                      final isEs =
+                          Localizations.localeOf(context).languageCode == 'es';
+                      final msg = isEs
+                          ? 'Activa \"Workflow plan\" en Ajustes'
+                          : 'Enable \"Workflow plan\" in Settings';
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(SnackBar(content: Text(msg)));
+                      return;
+                    }
+                    context.push('/list-mode');
+                }
+                : null,
+            onOpenStats: showTopStats
+                ? () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const StatsPage(),
                       ),
-              );
-            }
-          },
+                    )
+                : null,
+            onOpenCompleted: () => context.go('/completed-matrix'),
+            onOpenProfile: () => showModalBottomSheet(
+              context: context,
+              showDragHandle: true,
+              useSafeArea: true,
+              builder: (_) => const ProfileSheet(),
+            ),
+            onExitZoom: () {
+              ctrl.setZoom(null);
+              ctrl.setPresentQuadrant(Quadrant.q2);
+              ctrl.select(null);
+              ctrl.setQuery('');
+              ctrl.invalidateLayout();
+            },
+            canExitZoom: zoom != null,
+            onOpenSettings: showTopSettings
+                ? () {
+                    if (isDesktop) {
+                      context.push('/settings');
+                    } else {
+                      final width = MediaQuery.sizeOf(context).width;
+                      final isMobile = width < 600;
+                      showModalBottomSheet(
+                        context: context,
+                        showDragHandle: true,
+                        isScrollControlled: true,
+                        useSafeArea: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => isMobile
+                            ? SettingsSheetCompact(
+                                onToggleTheme: ctrl.toggleTheme,
+                                onToggleDensity: ctrl.toggleCompact,
+                                compact: compact,
+                                showAxisLegends: showAxisLegends,
+                                onToggleAxisLegends: ctrl.toggleAxisLegends,
+                                minimal: minimal,
+                                onToggleMinimal: ctrl.toggleMinimal,
+                                onResetToDemo: () async {
+                                  await ctrl.resetToDemo();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            '\u2728 Tareas demo restauradas (20 tareas)'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
+                              )
+                            : SettingsSheet(
+                                onToggleTheme: ctrl.toggleTheme,
+                                onToggleDensity: ctrl.toggleCompact,
+                                compact: compact,
+                                showAxisLegends: showAxisLegends,
+                                onToggleAxisLegends: ctrl.toggleAxisLegends,
+                                minimal: minimal,
+                                onToggleMinimal: ctrl.toggleMinimal,
+                                onResetToDemo: () async {
+                                  await ctrl.resetToDemo();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            '\u2728 Tareas demo restauradas (20 tareas)'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                      );
+                    }
+                  }
+                : null,
+          ),
         ),
       ),
       body: SafeArea(
@@ -227,7 +241,13 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           data: MediaQuery.of(context)
               .copyWith(textScaler: TextScaler.linear(uiTsf)),
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            // Slightly reduce bottom spacing above the bottom bar on compact layouts.
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              screenWidth < 600 ? 8 : 16,
+            ),
             child: isDesktopGrid
                 ? _buildDesktopGrid(context, tokens, tasks)
                 : Row(
@@ -315,10 +335,6 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                               .computeLayout(viewport: size);
                                           final suggested =
                                               ctrl.suggestedTopSpots;
-                                          final l10n = Localizations.of<
-                                                      AppLocalizations>(
-                                                  context, AppLocalizations) ??
-                                              AppLocalizationsEn();
                                           // Compute user text scale; clamp tighter for treemap readability
                                           final prefs =
                                               ref.watch(uiPrefsProvider);
@@ -601,66 +617,35 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                     duration: Duration(milliseconds: 900)));
               },
             ),
-      bottomNavigationBar: screenWidth >= 600
-          ? MediaQuery(
-              // AppTextScale applied: scale labels/buttons in the bar
-              data: MediaQuery.of(context)
-                  .copyWith(textScaler: TextScaler.linear(uiTsf)),
-              child: _BottomActionBar(
-                highScale: isExtremeScale, // AppTextScale applied
-                onNew: () => _openAddTaskSheet(context),
-                onNewInQuadrant: (q) {
-                  ctrl.setZoom(q);
-                  _openAddTaskSheet(context);
-                },
-                minimap: Minimap(
-                  zoom: zoom,
-                  tasks: tasks,
-                  onSelectQuadrant: (q) {
+      bottomNavigationBar: MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(uiTsf)),
+          child: screenWidth >= 600
+              ? _BottomActionBar(
+                  highScale: isExtremeScale,
+                  onNew: () => _openAddTaskSheet(context),
+                  onNewInQuadrant: (q) {
                     ctrl.setZoom(q);
-                    ctrl.setPresentQuadrant(q);
-                    ctrl.invalidateLayout();
+                    _openAddTaskSheet(context);
                   },
-                  onFullView: () {
-                    ctrl.setZoom(null);
-                    ctrl.setPresentQuadrant(Quadrant.q2);
-                    ctrl.select(null);
-                    ctrl.setQuery('');
-                    ctrl.invalidateLayout();
-                  },
-                ),
-              ))
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: screenWidth < 600
-          ? SafeArea(
-              minimum: EdgeInsets.only(
-                right: 16,
-                bottom: MediaQuery.paddingOf(context).bottom + 8,
-              ),
-              child: LayoutBuilder(
-                builder: (context, c) {
-                  final compact = screenWidth < 360;
-                  if (compact) {
-                    // Solo ícono en pantallas muy compactas
-                    return FloatingActionButton(
-                      heroTag: 'fab-entry',
-                      onPressed: () => _openAddTaskSheet(context),
-                      child: const Icon(Icons.add),
-                    );
-                  }
-                  // Botón extendido en pantallas normales
-                  return FloatingActionButton.extended(
-                    heroTag: 'fab-entry',
-                    icon: const Icon(Icons.add),
-                    label: const Text('Entry'),
-                    onPressed: () => _openAddTaskSheet(context),
-                    extendedIconLabelSpacing: 6,
-                  );
-                },
-              ),
-            )
-          : null,
+                  minimap: Minimap(
+                    zoom: zoom,
+                    tasks: tasks,
+                    onSelectQuadrant: (q) {
+                      ctrl.setZoom(q);
+                      ctrl.setPresentQuadrant(q);
+                      ctrl.invalidateLayout();
+                    },
+                    onFullView: () {
+                      ctrl.setZoom(null);
+                      ctrl.setPresentQuadrant(Quadrant.q2);
+                      ctrl.select(null);
+                      ctrl.setQuery('');
+                      ctrl.invalidateLayout();
+                    },
+                  ),
+                )
+              : _buildMobileBottomNav(context, tokens)),
     );
   }
 
@@ -732,6 +717,173 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                   (_) => _scaffoldKey.currentState?.openEndDrawer());
             },
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileBottomNav(BuildContext context, GlassTokens tokens) {
+    final ctrl = ref.read(matrixControllerProvider.notifier);
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final compact = ref.watch(uiPrefsProvider).compact;
+    final showAxisLegends = ref.watch(uiPrefsProvider).showAxisLegends;
+    final minimal = ref.watch(uiPrefsProvider).minimal;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
+        border: Border(
+          top: BorderSide(
+            color: Colors.white.withValues(alpha: 0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        child: SizedBox(
+          height: 70,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _NavBarItem(
+                icon: Icons.bar_chart_rounded,
+                label: isEs ? 'Stats' : 'Stats',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const StatsPage()),
+                ),
+              ),
+              _NavBarItem(
+                icon: Icons.history,
+                label: isEs ? 'Completas' : 'Completed',
+                onTap: () => context.go('/completed-matrix'),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: FloatingActionButton(
+                  heroTag: 'fab-entry-nav',
+                  onPressed: () => _openAddTaskSheet(context),
+                  elevation: 2,
+                  child: const Icon(Icons.add, size: 28),
+                ),
+              ),
+              _NavBarItem(
+                icon: Icons.view_timeline,
+                label: isEs ? 'Workflow' : 'Workflow',
+                onTap: () {
+                  if (!ref.read(uiPrefsProvider).workflowPlanEnabled) {
+                    final msg = isEs
+                        ? 'Activa "Workflow plan" en Ajustes'
+                        : 'Enable "Workflow plan" in Settings';
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(SnackBar(content: Text(msg)));
+                    return;
+                  }
+                  context.push('/list-mode');
+                },
+              ),
+              _NavBarItem(
+                icon: Icons.settings,
+                label: isEs ? 'Ajustes' : 'Settings',
+                onTap: () {
+                  final width = MediaQuery.sizeOf(context).width;
+                  final isMobile = width < 600;
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    useSafeArea: true,
+                    builder: (_) => isMobile
+                        ? SettingsSheetCompact(
+                            onToggleTheme: ctrl.toggleTheme,
+                            onToggleDensity: ctrl.toggleCompact,
+                            compact: compact,
+                            showAxisLegends: showAxisLegends,
+                            onToggleAxisLegends: ctrl.toggleAxisLegends,
+                            minimal: minimal,
+                            onToggleMinimal: ctrl.toggleMinimal,
+                            onResetToDemo: () async {
+                              await ctrl.resetToDemo();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        '\u2728 Tareas demo restauradas (20 tareas)'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            },
+                          )
+                        : SettingsSheet(
+                            onToggleTheme: ctrl.toggleTheme,
+                            onToggleDensity: ctrl.toggleCompact,
+                            compact: compact,
+                            showAxisLegends: showAxisLegends,
+                            onToggleAxisLegends: ctrl.toggleAxisLegends,
+                            minimal: minimal,
+                            onToggleMinimal: ctrl.toggleMinimal,
+                            onResetToDemo: () async {
+                              await ctrl.resetToDemo();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        '\u2728 Tareas demo restauradas (20 tareas)'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavBarItem extends StatelessWidget {
+  const _NavBarItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 24,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );

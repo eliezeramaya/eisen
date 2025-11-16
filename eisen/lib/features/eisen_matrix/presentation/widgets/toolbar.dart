@@ -17,7 +17,9 @@ class AppToolbar extends StatefulWidget {
     this.canExitZoom = false,
     this.onOpenSettings,
     this.onOpenStats,
+    this.onOpenCompleted,
     this.onOpenWorkflow,
+    this.onOpenPomodoro,
     this.onOpenProfile,
     this.onToggleMinimal,
     this.minimal = false,
@@ -29,7 +31,9 @@ class AppToolbar extends StatefulWidget {
   final bool canExitZoom;
   final VoidCallback? onOpenSettings;
   final VoidCallback? onOpenStats;
+  final VoidCallback? onOpenCompleted;
   final VoidCallback? onOpenWorkflow;
+  final VoidCallback? onOpenPomodoro;
   final VoidCallback? onOpenProfile;
   final VoidCallback? onToggleMinimal;
   final bool minimal;
@@ -52,7 +56,9 @@ class _AppToolbarState extends State<AppToolbar> {
     final isEs = Localizations.localeOf(context).languageCode == 'es';
     final fullViewLabel = isEs ? 'Vista completa' : 'Full view';
     final statsLabel = isEs ? 'Estadísticas' : 'Stats';
+    final completedLabel = isEs ? 'Completas' : 'Completed';
     final workflowLabel = isEs ? 'Plan' : 'Workflow';
+    final pomodoroLabel = 'Pomodoro';
     final settingsLabel = isEs ? 'Ajustes' : 'Settings';
     final profileLabel = isEs ? 'Mi perfil' : 'My profile';
     final minimalLabel = isEs
@@ -67,15 +73,42 @@ class _AppToolbarState extends State<AppToolbar> {
     final width = size.width;
     final compactActions = width < 1100; // icons-only when narrow
     final isWide = width >= 600; // show logo + name on wide screens
+    final isMobileTopBar = width < 600;
 
-    Widget actionButton({required VoidCallback? onPressed, required IconData icon, required String label}) {
+    Widget actionButton({
+      required VoidCallback? onPressed,
+      required IconData icon,
+      required String label,
+    }) {
+      if (isMobileTopBar) {
+        final theme = Theme.of(context);
+        return InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 22),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: theme.textTheme.labelSmall,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        );
+      }
       return compactActions
           ? IconButton(onPressed: onPressed, tooltip: label, icon: Icon(icon))
           : TextButton.icon(onPressed: onPressed, icon: Icon(icon), label: Text(label));
     }
 
     final theme = Theme.of(context);
-  final bg = theme.colorScheme.surface.withValues(alpha: 0.65);
+    final bg = theme.colorScheme.surface.withValues(alpha: 0.65);
     final border = theme.brightness == Brightness.dark
         ? Colors.white.withValues(alpha: 0.08)
         : Colors.black.withValues(alpha: 0.08);
@@ -93,27 +126,24 @@ class _AppToolbarState extends State<AppToolbar> {
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: MediaQuery(
             data: MediaQuery.of(context).copyWith(textScaleFactor: uiTsf), // AppTextScale applied
-            child: Container(
-            height: 56,
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: border, width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                SizedBox(width: AppSpacing.sm * r.spacingScale),
-                // Logo: isotipo solo en compacto, isotipo + nombre en pantallas anchas
-                Padding(
-                  padding: EdgeInsets.only(right: AppSpacing.sm * r.spacingScale),
-                  child: Row(
+              child: Container(
+              height: 56,
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: border, width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // App icon
+                  final logoCore = Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
@@ -140,36 +170,128 @@ class _AppToolbarState extends State<AppToolbar> {
                         ),
                       ],
                     ],
-                  ),
-                ),
-                // Search bar removed: filters are handled via chips in page body
-                if (widget.canExitZoom && widget.onExitZoom != null)
-                  actionButton(onPressed: widget.onExitZoom, icon: Icons.fullscreen_exit, label: fullViewLabel),
-                if (widget.onOpenStats != null)
-                  actionButton(onPressed: widget.onOpenStats, icon: Icons.insights, label: statsLabel),
-                if (widget.showWorkflowPlan && widget.onOpenWorkflow != null)
-                  actionButton(onPressed: widget.onOpenWorkflow, icon: Icons.view_timeline, label: workflowLabel),
-                actionButton(
-                  onPressed: widget.onToggleTheme,
-                  icon: widget.themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
-                  label: themeLabel,
-                ),
-                // View mode (Treemap/List)
-                const _ViewModeMenu(),
-                if (widget.onToggleMinimal != null)
-                  actionButton(
-                    onPressed: widget.onToggleMinimal,
-                    icon: widget.minimal ? Icons.visibility : Icons.filter_b_and_w,
-                    label: minimalLabel,
-                  ),
-                if (widget.onOpenSettings != null)
-                  actionButton(onPressed: widget.onOpenSettings, icon: Icons.settings, label: settingsLabel),
-                if (widget.onOpenProfile != null)
-                  actionButton(onPressed: widget.onOpenProfile, icon: Icons.account_circle, label: profileLabel),
-                SizedBox(width: AppSpacing.xs * r.spacingScale),
-              ],
+                  );
+
+                  final Widget logo = (widget.canExitZoom && widget.onExitZoom != null)
+                      ? InkWell(
+                          onTap: widget.onExitZoom,
+                          borderRadius: BorderRadius.circular(8),
+                          child: logoCore,
+                        )
+                      : logoCore;
+
+                  if (isMobileTopBar) {
+                    // Mobile: align logo with center "+" and mirror bottom nav actions,
+                    // but use the View selector instead of a Workflow button.
+                    final trailing = widget.onOpenProfile != null
+                        ? actionButton(
+                            onPressed: widget.onOpenProfile,
+                            icon: Icons.account_circle,
+                            label: profileLabel,
+                          )
+                        : (widget.onOpenSettings != null
+                            ? actionButton(
+                                onPressed: widget.onOpenSettings,
+                                icon: Icons.settings,
+                                label: settingsLabel,
+                              )
+                            : null);
+
+                    final children = <Widget>[
+                      if (widget.onOpenStats != null)
+                        actionButton(
+                          onPressed: widget.onOpenStats,
+                          icon: Icons.bar_chart_rounded,
+                          label: statsLabel,
+                        ),
+                      if (widget.onOpenCompleted != null)
+                        actionButton(
+                          onPressed: widget.onOpenCompleted,
+                          icon: Icons.history,
+                          label: completedLabel,
+                        ),
+                      logo,
+                      const _ViewModeMenu(),
+                      if (trailing != null) trailing,
+                    ];
+
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: children,
+                    );
+                  }
+
+                  final actions = <Widget>[
+                    if (widget.canExitZoom && widget.onExitZoom != null)
+                      actionButton(
+                        onPressed: widget.onExitZoom,
+                        icon: Icons.fullscreen_exit,
+                        label: fullViewLabel,
+                      ),
+                    if (widget.onOpenStats != null)
+                      actionButton(
+                        onPressed: widget.onOpenStats,
+                        icon: Icons.bar_chart_rounded,
+                        label: statsLabel,
+                      ),
+                    if (widget.onOpenCompleted != null)
+                      actionButton(
+                        onPressed: widget.onOpenCompleted,
+                        icon: Icons.history,
+                        label: completedLabel,
+                      ),
+                    if (widget.showWorkflowPlan && widget.onOpenWorkflow != null)
+                      actionButton(
+                        onPressed: widget.onOpenWorkflow,
+                        icon: Icons.view_timeline,
+                        label: workflowLabel,
+                      ),
+                    if (widget.onOpenPomodoro != null)
+                      actionButton(
+                        onPressed: widget.onOpenPomodoro,
+                        icon: Icons.timer,
+                        label: pomodoroLabel,
+                      ),
+                    actionButton(
+                      onPressed: widget.onToggleTheme,
+                      icon: widget.themeMode == ThemeMode.dark
+                          ? Icons.light_mode
+                          : Icons.dark_mode,
+                      label: themeLabel,
+                    ),
+                    const _ViewModeMenu(),
+                    if (widget.onToggleMinimal != null)
+                      actionButton(
+                        onPressed: widget.onToggleMinimal,
+                        icon: widget.minimal
+                            ? Icons.visibility
+                            : Icons.filter_b_and_w,
+                        label: minimalLabel,
+                      ),
+                    if (widget.onOpenProfile != null)
+                      actionButton(
+                        onPressed: widget.onOpenProfile,
+                        icon: Icons.account_circle,
+                        label: profileLabel,
+                      ),
+                  ];
+
+                  // Wider: keep logo at start with actions to the right.
+                  return Row(
+                    children: [
+                      SizedBox(width: AppSpacing.sm * r.spacingScale),
+                      Padding(
+                        padding:
+                            EdgeInsets.only(right: AppSpacing.sm * r.spacingScale),
+                        child: logo,
+                      ),
+                      ...actions,
+                      SizedBox(width: AppSpacing.xs * r.spacingScale),
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
           ),
         ),
       ),
@@ -190,11 +312,37 @@ class _ViewModeMenuState extends ConsumerState<_ViewModeMenu> {
     final current = prefs.viewMode; // 'treemap' | 'list'
     final width = MediaQuery.sizeOf(context).width;
     final isCompactBar = width < 1100;
+    final isMobileTopBar = width < 600;
     final isEs = Localizations.localeOf(context).languageCode == 'es';
     final label = isEs ? 'Vista' : 'View';
     final icon = const Icon(Icons.view_agenda_outlined);
 
     if (isCompactBar) {
+      if (isMobileTopBar) {
+        final theme = Theme.of(context);
+        return PopupMenuButton<String>(
+          tooltip: label,
+          initialValue: current,
+          onSelected: (v) =>
+              ref.read(uiPrefsControllerProvider.notifier).setViewMode(v),
+          itemBuilder: (ctx) => _entries(ctx, current),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                icon,
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: theme.textTheme.labelSmall,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        );
+      }
       return PopupMenuButton<String>(
         tooltip: label,
         icon: icon,
