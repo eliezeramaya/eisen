@@ -1,5 +1,4 @@
 import 'package:eisen/core/providers/locale_provider.dart';
-import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/l10n/app_localizations_en.dart';
@@ -34,9 +33,8 @@ class SettingsSheet extends ConsumerWidget {
         Localizations.of<AppLocalizations>(context, AppLocalizations) ??
             AppLocalizationsEn();
     final currentLocale = ref.watch(localeProvider);
-    final prefs = ref.watch(uiPrefsControllerProvider);
     final cs = Theme.of(context).colorScheme;
-    final bottomPad = MediaQuery.paddingOf(context).bottom + AppSpacing.md;
+    final bottomPad = MediaQuery.paddingOf(context).bottom + 16;
 
     return Container(
       decoration: BoxDecoration(
@@ -46,7 +44,7 @@ class SettingsSheet extends ConsumerWidget {
       child: SafeArea(
         top: false,
         child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, bottomPad),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPad),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,207 +52,190 @@ class SettingsSheet extends ConsumerWidget {
               Row(
                 children: [
                   const Icon(Icons.settings, size: 22),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(l10n.settingsTitle,
-                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.settingsTitle,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.sm),
-              const ListTile(
-                leading: Icon(Icons.palette_outlined, size: 22),
-                minLeadingWidth: 32,
-                title: Text('Estilo visual'),
-                subtitle: Text('Tema, densidad y leyendas de ejes'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.brightness_6, size: 22),
-                minLeadingWidth: 32,
-                title: Text(l10n.settingsTheme),
-                onTap: () {
-                  onToggleTheme();
-                  Navigator.of(context).pop();
-                },
-              ),
-              // Density preset (Comfy / Compact / Ultra / Auto)
-              const SizedBox(height: AppSpacing.xs),
-              Builder(builder: (context) {
-                final isEs = Localizations.localeOf(context).languageCode == 'es';
-                return ListTile(
-                  leading: const Icon(Icons.density_medium, size: 22),
-                  minLeadingWidth: 32,
-                  title: Text(isEs ? 'Densidad' : 'Density'),
-                  subtitle: Text(isEs
-                      ? 'Cómodo / Compacto / Ultra / Auto'
-                      : 'Comfy / Compact / Ultra / Auto'),
-                );
-              }),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Builder(builder: (context) {
-                  final isEs = Localizations.localeOf(context).languageCode == 'es';
-                  return SegmentedButton<String>(
-                    segments: [
-                      ButtonSegment(value: 'comfy', label: Text(isEs ? 'Cómodo' : 'Comfy')),
-                      ButtonSegment(value: 'compact', label: Text(isEs ? 'Compacto' : 'Compact')),
-                      ButtonSegment(value: 'ultra', label: const Text('Ultra')),
-                      ButtonSegment(value: 'auto', label: const Text('Auto')),
-                    ],
-                  selected: {prefs.densityPreset},
-                  onSelectionChanged: (s) => ref
-                      .read(uiPrefsControllerProvider.notifier)
-                      .setDensityPreset(s.first),
-                  );
-                }),
-              ),
-              SwitchListTile(
-                value: compact,
-                onChanged: (_) {
-                  onToggleDensity();
-                  Navigator.of(context).pop();
-                },
-                secondary: const Icon(Icons.density_medium, size: 22),
-                title: Text(compact
-                    ? l10n.settingsDensityCompact
-                    : l10n.settingsDensityComfortable),
-              ),
-              _SliderTile<int>(
-                sliderKey: const Key('slider_text_scale'),
-                label: 'Tamaño de texto',
-                value: prefs.textScaleLevel,
-                min: 1,
-                max: 5,
-                divisions: 4,
-                helper: 'Escala del texto en la aplicación (1–5).',
-                toDouble: (v) => v.toDouble(),
-                fromDouble: (d) => d.round().clamp(1, 5),
-                onChanged: (v) => ref
-                    .read(uiPrefsControllerProvider.notifier)
-                    .setTextScaleLevel(v),
-              ),
-              SwitchListTile(
-                value: showAxisLegends,
-                onChanged: (_) {
-                  onToggleAxisLegends();
-                  Navigator.of(context).pop();
-                },
-                secondary: const Icon(Icons.label_outline, size: 22),
-                title: Text(l10n.settingsShowAxisLegends),
-              ),
-              if (minimal != null && onToggleMinimal != null)
-                SwitchListTile(
-                  value: minimal!,
-                  onChanged: (_) {
-                    onToggleMinimal!();
-                    Navigator.of(context).pop();
-                  },
-                  secondary: const Icon(Icons.filter_b_and_w, size: 22),
-                  title: Text(l10n.settingsMinimalMode),
-                ),
-              ListTile(
-                leading: const Icon(Icons.language, size: 22),
-                minLeadingWidth: 32,
-                title: Text(l10n.settingsLanguage),
-                subtitle: Text(_getLanguageLabel(currentLocale, l10n)),
-                onTap: () => _showLanguageDialog(context, ref, l10n),
-              ),
-              const Divider(height: AppSpacing.lg),
-              const ListTile(
-                leading: Icon(Icons.grid_view_rounded, size: 22),
-                minLeadingWidth: 32,
-                title: Text('Treemap · Layout'),
-                subtitle: Text('Ajusta proporcionalidad y densidad visual'),
-              ),
-              _SliderTile<int>(
-                sliderKey: const Key('slider_topk'),
-                label: 'Top-K por cuadrante',
-                value: prefs.topKPerQuadrant,
-                min: 5,
-                max: 60,
-                divisions: 55,
-                helper: 'Más alto = más tareas visibles, menos “+N”.',
-                toDouble: (v) => v.toDouble(),
-                fromDouble: (d) => d.round(),
-                onChanged: (v) =>
-                    ref.read(uiPrefsControllerProvider.notifier).setTopK(v),
-              ),
-              _SliderTile<double>(
-                sliderKey: const Key('slider_gamma'),
-                label: 'Gamma (suavizado de pesos)',
-                value: prefs.gamma,
-                min: 0.70,
-                max: 1.00,
-                divisions: 30,
-                helper: '0.70 reduce dominantes; 1.00 = lineal.',
-                toDouble: (v) => v,
-                fromDouble: (d) => double.parse(d.toStringAsFixed(2)),
-                onChanged: (v) =>
-                    ref.read(uiPrefsControllerProvider.notifier).setGamma(v),
-              ),
-              _SliderTile<double>(
-                sliderKey: const Key('slider_min_area'),
-                label: 'Área mínima normalizada',
-                value: prefs.minAreaNormalized,
-                min: 0.00002,
-                max: 0.00020,
-                divisions: 20,
-                helper: 'Más alto = menos micro-tiles, más “+N”.',
-                toDouble: (v) => v,
-                fromDouble: (d) => double.parse(d.toStringAsExponential(5)),
-                onChanged: (v) =>
-                    ref.read(uiPrefsControllerProvider.notifier).setMinArea(v),
-              ),
-              _SliderTile<double>(
-                sliderKey: const Key('slider_padding'),
-                label: 'Padding interno de cuadrante',
-                value: prefs.quadrantPadding,
-                min: 0.0,
-                max: 0.02,
-                divisions: 20,
-                helper: 'Separación interna para legibilidad.',
-                toDouble: (v) => v,
-                fromDouble: (d) => double.parse(d.toStringAsFixed(3)),
-                onChanged: (v) =>
-                    ref.read(uiPrefsControllerProvider.notifier).setPadding(v),
-              ),
-              if (onResetToDemo != null) ...[
-                const Divider(height: 24),
-                ListTile(
-                  leading:
-                      const Icon(Icons.refresh, size: 22, color: Colors.orange),
-                  minLeadingWidth: 32,
-                  title: Text(l10n.settingsResetDemo),
-                  subtitle: Text(l10n.settingsResetDemoSubtitle),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: Text(l10n.settingsResetDemoDialogTitle),
-                        content: Text(l10n.settingsResetDemoDialogContent),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(),
-                            child: Text(l10n.settingsCancel),
-                          ),
-                          FilledButton(
-                            onPressed: () {
-                              Navigator.of(ctx).pop();
-                              onResetToDemo!();
-                            },
-                            child: Text(l10n.settingsRestore),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ],
-              const SizedBox(height: AppSpacing.xs),
+              const SizedBox(height: 12),
+              ..._buildFullMenu(context, ref, l10n, currentLocale),
+              const SizedBox(height: 8),
             ],
           ),
         ),
       ),
     );
+  }
+
+  List<Widget> _buildFullMenu(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+    Locale? currentLocale,
+  ) {
+    final prefs = ref.watch(uiPrefsControllerProvider);
+    return [
+      const ListTile(
+        leading: Icon(Icons.palette_outlined, size: 22),
+        minLeadingWidth: 32,
+        title: Text('Estilo visual'),
+        subtitle: Text('Tema, densidad y leyendas de ejes'),
+      ),
+      ListTile(
+        leading: const Icon(Icons.brightness_6, size: 22),
+        minLeadingWidth: 32,
+        title: Text(l10n.settingsTheme),
+        onTap: () {
+          onToggleTheme();
+          Navigator.of(context).pop();
+        },
+      ),
+      SwitchListTile(
+        value: compact,
+        onChanged: (_) {
+          onToggleDensity();
+          Navigator.of(context).pop();
+        },
+        secondary: const Icon(Icons.density_medium, size: 22),
+        title: Text(
+          compact
+              ? l10n.settingsDensityCompact
+              : l10n.settingsDensityComfortable,
+        ),
+      ),
+      _SliderTile<int>(
+        sliderKey: const Key('slider_text_scale'),
+        label: 'Tamaño de texto',
+        value: prefs.textScaleLevel,
+        min: 1,
+        max: 5,
+        divisions: 4,
+        helper: 'Escala del texto en la aplicación (1–5).',
+        toDouble: (v) => v.toDouble(),
+        fromDouble: (d) => d.round().clamp(1, 5),
+        onChanged: (v) =>
+            ref.read(uiPrefsControllerProvider.notifier).setTextScaleLevel(v),
+      ),
+      SwitchListTile(
+        value: showAxisLegends,
+        onChanged: (_) {
+          onToggleAxisLegends();
+          Navigator.of(context).pop();
+        },
+        secondary: const Icon(Icons.label_outline, size: 22),
+        title: Text(l10n.settingsShowAxisLegends),
+      ),
+      if (minimal != null && onToggleMinimal != null)
+        SwitchListTile(
+          value: minimal!,
+          onChanged: (_) {
+            onToggleMinimal!();
+            Navigator.of(context).pop();
+          },
+          secondary: const Icon(Icons.filter_b_and_w, size: 22),
+          title: Text(l10n.settingsMinimalMode),
+        ),
+      ListTile(
+        leading: const Icon(Icons.language, size: 22),
+        minLeadingWidth: 32,
+        title: Text(l10n.settingsLanguage),
+        subtitle: Text(_getLanguageLabel(currentLocale, l10n)),
+        onTap: () => _showLanguageDialog(context, ref, l10n),
+      ),
+      const Divider(height: 24),
+      const ListTile(
+        leading: Icon(Icons.grid_view_rounded, size: 22),
+        minLeadingWidth: 32,
+        title: Text('Treemap · Layout'),
+        subtitle: Text('Ajusta proporcionalidad y densidad visual'),
+      ),
+      _SliderTile<int>(
+        sliderKey: const Key('slider_topk'),
+        label: 'Top-K por cuadrante',
+        value: prefs.topKPerQuadrant,
+        min: 5,
+        max: 60,
+        divisions: 55,
+        helper: 'Más alto = más tareas visibles, menos “+N”.',
+        toDouble: (v) => v.toDouble(),
+        fromDouble: (d) => d.round(),
+        onChanged: (v) =>
+            ref.read(uiPrefsControllerProvider.notifier).setTopK(v),
+      ),
+      _SliderTile<double>(
+        sliderKey: const Key('slider_gamma'),
+        label: 'Gamma (suavizado de pesos)',
+        value: prefs.gamma,
+        min: 0.70,
+        max: 1.00,
+        divisions: 30,
+        helper: '0.70 reduce dominantes; 1.00 = lineal.',
+        toDouble: (v) => v,
+        fromDouble: (d) => double.parse(d.toStringAsFixed(2)),
+        onChanged: (v) =>
+            ref.read(uiPrefsControllerProvider.notifier).setGamma(v),
+      ),
+      _SliderTile<double>(
+        sliderKey: const Key('slider_min_area'),
+        label: 'Área mínima normalizada',
+        value: prefs.minAreaNormalized,
+        min: 0.00002,
+        max: 0.00020,
+        divisions: 20,
+        helper: 'Más alto = menos micro-tiles, más “+N”.',
+        toDouble: (v) => v,
+        fromDouble: (d) => double.parse(d.toStringAsExponential(5)),
+        onChanged: (v) =>
+            ref.read(uiPrefsControllerProvider.notifier).setMinArea(v),
+      ),
+      _SliderTile<double>(
+        sliderKey: const Key('slider_padding'),
+        label: 'Padding interno de cuadrante',
+        value: prefs.quadrantPadding,
+        min: 0.0,
+        max: 0.02,
+        divisions: 20,
+        helper: 'Separación interna para legibilidad.',
+        toDouble: (v) => v,
+        fromDouble: (d) => double.parse(d.toStringAsFixed(3)),
+        onChanged: (v) =>
+            ref.read(uiPrefsControllerProvider.notifier).setPadding(v),
+      ),
+      if (onResetToDemo != null) ...[
+        const Divider(height: 24),
+        ListTile(
+          leading: const Icon(Icons.refresh, size: 22, color: Colors.orange),
+          minLeadingWidth: 32,
+          title: Text(l10n.settingsResetDemo),
+          subtitle: Text(l10n.settingsResetDemoSubtitle),
+          onTap: () {
+            Navigator.of(context).pop();
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(l10n.settingsResetDemoDialogTitle),
+                content: Text(l10n.settingsResetDemoDialogContent),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text(l10n.settingsCancel),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      onResetToDemo!();
+                    },
+                    child: Text(l10n.settingsRestore),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    ];
   }
 
   String _getLanguageLabel(Locale? locale, AppLocalizations l10n) {
@@ -270,7 +251,10 @@ class SettingsSheet extends ConsumerWidget {
   }
 
   void _showLanguageDialog(
-      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) {
     final currentLocale = ref.read(localeProvider);
 
     showDialog(
@@ -349,7 +333,7 @@ class _SliderTile<T extends num> extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
           title: Text(label),
           subtitle: Slider(
             key: sliderKey,
@@ -362,7 +346,7 @@ class _SliderTile<T extends num> extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
           child: Text(helper, style: Theme.of(context).textTheme.bodySmall),
         ),
       ],

@@ -51,7 +51,10 @@ class UiPrefsData {
   final String dailyReminderTime; // 'HH:mm' 24h; '' = disabled
   final bool endOfDaySummary; // switch
   final String endOfDayTime; // 'HH:mm' or ''
-  final String pomodoroAlert; // 'sound' | 'vibration' | 'silent'
+  // Pomodoro alert channel: 'none' | 'sound' | 'visual'
+  // Backwards‑compat note: legacy values 'silent' and 'vibration' are mapped
+  // to 'none' and 'visual' respectively in [fromJson].
+  final String pomodoroAlert;
   final String notificationTone; // 'default' | 'chime' | 'bell'
   // Workflow plan (show Gantt-like CTA in toolbar)
   final bool workflowPlanEnabled;
@@ -181,7 +184,23 @@ class UiPrefsData {
       dailyReminderTime: (json['dailyReminderTime'] as String?) ?? '',
       endOfDaySummary: (json['endOfDaySummary'] as bool?) ?? false,
       endOfDayTime: (json['endOfDayTime'] as String?) ?? '',
-      pomodoroAlert: (json['pomodoroAlert'] as String?) ?? 'sound',
+      pomodoroAlert: (() {
+        // Normalize legacy values to the new set: none | sound | visual.
+        // Treat missing/null as 'sound' to preserve previous default.
+        final raw = (json['pomodoroAlert'] as String?) ?? 'sound';
+        switch (raw) {
+          case 'none':
+          case 'sound':
+          case 'visual':
+            return raw;
+          case 'silent':
+            return 'none';
+          case 'vibration':
+            return 'visual';
+          default:
+            return 'sound';
+        }
+      })(),
       notificationTone: (json['notificationTone'] as String?) ?? 'default',
       workflowPlanEnabled: (json['workflowPlanEnabled'] as bool?) ?? false,
       textScaleLevel: (json['textScaleLevel'] as int?) ?? 3,

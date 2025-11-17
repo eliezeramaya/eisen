@@ -1,15 +1,13 @@
-import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:eisen/core/theme/ui_tokens.dart';
 import 'package:flutter/material.dart';
 
 /// A task tile widget with built-in accessibility support.
-/// 
+///
 /// Features:
 /// - Semantic labels for screen readers
 /// - Focus indication for keyboard navigation
 /// - High contrast support
 class TaskTile extends StatelessWidget {
-  
   const TaskTile({
     super.key,
     required this.title,
@@ -25,21 +23,21 @@ class TaskTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Semantics(
       label: 'Task: $title, $subtitle',
       button: true,
       enabled: true,
       selected: selected,
       child: Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.xs * 0.75), // 6px
+        padding: const EdgeInsets.symmetric(vertical: 6),
         child: _HoverScale(
           child: Focus(
             child: Builder(
               builder: (context) {
                 final focusNode = Focus.of(context);
                 final isFocused = focusNode.hasFocus;
-                
+
                 return AnimatedContainer(
                   duration: kAnimFast,
                   curve: Curves.easeInOut,
@@ -47,10 +45,7 @@ class TaskTile extends StatelessWidget {
                     color: theme.colorScheme.surface.withValues(alpha: 0.75),
                     borderRadius: BorderRadius.circular(kRadius),
                     border: isFocused
-                        ? Border.all(
-                            color: theme.colorScheme.primary,
-                            width: 2,
-                          )
+                        ? Border.all(color: theme.colorScheme.primary, width: 2)
                         : null,
                     boxShadow: [
                       BoxShadow(
@@ -65,15 +60,22 @@ class TaskTile extends StatelessWidget {
                     child: InkWell(
                       onTap: onTap,
                       borderRadius: BorderRadius.circular(kRadius),
-                      focusColor: theme.colorScheme.primary.withValues(alpha: 0.2),
-                      hoverColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                      focusColor: theme.colorScheme.primary.withValues(
+                        alpha: 0.2,
+                      ),
+                      hoverColor: theme.colorScheme.primary.withValues(
+                        alpha: 0.1,
+                      ),
                       child: ListTile(
                         title: Text(title, style: theme.textTheme.titleMedium),
-                        subtitle: Text(subtitle, style: theme.textTheme.bodySmall),
+                        subtitle: Text(
+                          subtitle,
+                          style: theme.textTheme.bodySmall,
+                        ),
                         dense: true,
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: AppSpacing.xxs,
+                          horizontal: 12,
+                          vertical: 4,
                         ),
                         selected: selected,
                       ),

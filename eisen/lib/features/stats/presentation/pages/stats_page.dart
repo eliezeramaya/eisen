@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/stats_controller.dart';
@@ -23,10 +24,16 @@ class StatsPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Estadísticas'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+        leadingWidth: 120,
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 12),
+          child: Row(
+            children: [
+              AppLogoHomeButton(),
+              SizedBox(width: 8),
+              Text('Estadísticas'),
+            ],
+          ),
         ),
       ),
       body: AnimatedSwitcher(

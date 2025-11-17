@@ -5,6 +5,7 @@ import 'package:eisen/features/completed_tasks/presentation/widgets/completed_ma
 import 'package:eisen/features/completed_tasks/domain/filters.dart';
 import 'package:eisen/features/completed_tasks/domain/project_category.dart';
 import 'package:eisen/features/completed_tasks/data/completed_tasks_repository.dart';
+import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 
 /// Completed tasks matrix page.
 ///
@@ -40,7 +41,17 @@ class _CompletedMatrixPageState extends ConsumerState<CompletedMatrixPage> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Tareas Completadas'),
+        leadingWidth: 180,
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 12),
+          child: Row(
+            children: [
+              AppLogoHomeButton(),
+              SizedBox(width: 8),
+              Text('Tareas Completadas'),
+            ],
+          ),
+        ),
         backgroundColor: colorScheme.surfaceContainer,
         actions: [
           // Filter button (opens bottom sheet)

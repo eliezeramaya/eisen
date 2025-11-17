@@ -1,10 +1,6 @@
-import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
-import 'package:eisen/core/services/ui_prefs.dart';
-import 'package:eisen/core/ui/app_text_scale.dart';
-import 'package:eisen/core/responsive/responsive_wrapper.dart';
-import 'package:eisen/core/responsive/app_breakpoints.dart';
+import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -46,15 +42,16 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
   @override
   Widget build(BuildContext context) {
     final ctrl = ref.read(matrixControllerProvider.notifier);
-    final detailsLabel = Localizations.localeOf(context).languageCode == 'es' ? 'Detalles' : 'Details';
-    final r = Responsive.of(context);
-    final prefs = ref.watch(uiPrefsProvider);
-    final uiTsf = AppTextScale.of(context, prefs); // AppTextScale applied
-    final isExtreme = AppTextScale.isExtreme(context, prefs);
-    final pad = EdgeInsets.all(AppSpacing.md * r.paddingScale);
-
+    final detailsLabel = Localizations.localeOf(context).languageCode == 'es'
+        ? 'Detalles'
+        : 'Details';
     return Scaffold(
       appBar: AppBar(
+        leadingWidth: 140,
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 12),
+          child: AppLogoHomeButton(),
+        ),
         title: const Text('Edit task'),
         actions: [
           TextButton.icon(
@@ -69,78 +66,73 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
         ],
       ),
       body: SafeArea(
-        child: MediaQuery(
-          // AppTextScale applied
-          data: MediaQuery.of(context).copyWith(textScaleFactor: uiTsf),
-          child: SingleChildScrollView(
-            padding: pad,
-            child: LayoutBuilder(builder: (context, c) {
-              final isTwoColumn = r.bp == BreakpointSize.md || r.isDesktop;
-              final vGap = isExtreme ? AppSpacing.md : AppSpacing.sm;
-
-              Widget buildLeftColumn() => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextField(
-                        controller: _title,
-                        decoration: const InputDecoration(labelText: 'Title'),
-                        textInputAction: TextInputAction.next,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _title,
+                decoration: const InputDecoration(labelText: 'Title'),
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Text('Priority'),
+                  Expanded(
+                    child: Slider(
+                      value: _priority.toDouble(),
+                      min: 1,
+                      max: 10,
+                      divisions: 9,
+                      label: '$_priority',
+                      onChanged: (v) => setState(() => _priority = v.toInt()),
+                    ),
+                  ),
+                ],
+              ),
+              TextField(
+                controller: _minutes,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Minutes'),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<Quadrant>(
+                initialValue: _quadrant,
+                decoration: const InputDecoration(labelText: 'Quadrant'),
+                items: Quadrant.values
+                    .map(
+                      (q) => DropdownMenuItem(
+                        value: q,
+                        child: Text(q.name.toUpperCase()),
                       ),
-                      SizedBox(height: vGap),
-                      Row(
-                        children: [
-                          const Text('Priority'),
-                          Expanded(
-                            child: Slider(
-                              value: _priority.toDouble(),
-                              min: 1,
-                              max: 10,
-                              divisions: 9,
-                              label: '$_priority',
-                              onChanged: (v) => setState(() => _priority = v.toInt()),
-                            ),
-                          ),
-                        ],
-                      ),
-                      TextField(
-                        controller: _minutes,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Minutes'),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      DropdownButtonFormField<Quadrant>(
-                        initialValue: _quadrant,
-                        decoration: const InputDecoration(labelText: 'Quadrant'),
-                        items: Quadrant.values
-                            .map((q) => DropdownMenuItem(value: q, child: Text(q.name.toUpperCase())))
-                            .toList(),
-                        onChanged: (q) => setState(() => _quadrant = q ?? _quadrant),
-                      ),
-                      SizedBox(height: vGap),
-                      // Categories selector
-                      _CategoriesSelector(
-                        selected: _categories,
-                        onChanged: (sel) => setState(() => _categories = sel),
-                      ),
-                    ],
-                  );
-
-              final notesField = TextField(
+                    )
+                    .toList(),
+                onChanged: (q) => setState(() => _quadrant = q ?? _quadrant),
+              ),
+              const SizedBox(height: 16),
+              // Categories selector
+              _CategoriesSelector(
+                selected: _categories,
+                onChanged: (sel) => setState(() => _categories = sel),
+              ),
+              const SizedBox(height: 16),
+              TextField(
                 controller: _notes,
                 decoration: InputDecoration(labelText: detailsLabel),
-                minLines: isTwoColumn ? 12 : 4,
-                maxLines: 18,
-              );
-
-              final actions = Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.xs,
+                minLines: 4,
+                maxLines: 10,
+              ),
+              const SizedBox(height: 24),
+              Row(
                 children: [
                   OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).maybePop(),
                     icon: const Icon(Icons.close),
                     label: const Text('Cancel'),
                   ),
+                  const SizedBox(width: 12),
                   FilledButton.icon(
                     onPressed: () {
                       final updated = _buildTask();
@@ -151,39 +143,8 @@ class _TaskEditorPageState extends ConsumerState<TaskEditorPage> {
                     label: const Text('Save'),
                   ),
                 ],
-              );
-
-              if (!isTwoColumn) {
-                // Mobile/compact: single column
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    buildLeftColumn(),
-                    SizedBox(height: vGap),
-                    notesField,
-                    const SizedBox(height: AppSpacing.lg),
-                    actions,
-                  ],
-                );
-              }
-
-              // Tablet/Desktop: two columns
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: buildLeftColumn()),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(child: notesField),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  actions,
-                ],
-              );
-            }),
+              ),
+            ],
           ),
         ),
       ),
@@ -214,10 +175,12 @@ class _CategoriesSelector extends ConsumerWidget {
     return Row(
       children: [
         const Icon(Icons.label_outline, size: 18),
-        const SizedBox(width: AppSpacing.xs),
-        Text(Theme.of(context).brightness == Brightness.dark
-            ? 'Categories coming soon'
-            : 'Categorías próximamente'),
+        const SizedBox(width: 8),
+        Text(
+          Theme.of(context).brightness == Brightness.dark
+              ? 'Categories coming soon'
+              : 'Categorías próximamente',
+        ),
       ],
     );
   }

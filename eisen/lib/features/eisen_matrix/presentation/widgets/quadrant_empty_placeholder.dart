@@ -1,8 +1,11 @@
-import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:flutter/material.dart';
 
 class QuadrantEmptyPlaceholder extends StatelessWidget {
-  const QuadrantEmptyPlaceholder({super.key, required this.title, required this.hint});
+  const QuadrantEmptyPlaceholder({
+    super.key,
+    required this.title,
+    required this.hint,
+  });
   final String title;
   final String hint;
 
@@ -11,19 +14,22 @@ class QuadrantEmptyPlaceholder extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final c = Theme.of(context).colorScheme;
     return Container(
-      margin: const EdgeInsets.all(AppSpacing.xs),
-      padding: const EdgeInsets.all(AppSpacing.md),
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: c.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: c.outlineVariant.withValues(alpha: .18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(title, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-          SizedBox(height: AppSpacing.xs * 0.75), // 6px
+          Text(
+            title,
+            style: t.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
           Text(hint, style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
         ],
       ),

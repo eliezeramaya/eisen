@@ -9,6 +9,65 @@ import 'package:equatable/equatable.dart';
 /// - [q4]: Not urgent & Not important (Eliminate)
 enum Quadrant { q1, q2, q3, q4 }
 
+/// Task status for detailed workflow tracking
+enum TaskStatus {
+  pending, // Not started yet
+  inProgress, // Currently being worked on
+  blocked, // Waiting on external dependency
+  completed, // Finished
+  cancelled, // Cancelled or abandoned
+}
+
+/// Recurrence pattern for repeating tasks
+enum RecurrencePattern {
+  none, // One-time task
+  daily, // Repeats every day
+  weekly, // Repeats every week
+  biweekly, // Repeats every 2 weeks
+  monthly, // Repeats every month
+  quarterly, // Repeats every 3 months
+  yearly, // Repeats every year
+}
+
+/// Effort level for task estimation
+enum EffortLevel {
+  low, // Quick task, minimal effort
+  medium, // Moderate effort required
+  high, // Significant effort needed
+  veryHigh, // Complex, time-intensive task
+}
+
+/// Subtask within a parent task
+class Subtask extends Equatable {
+  const Subtask({
+    required this.id,
+    required this.title,
+    this.completed = false,
+    this.completedAt,
+  });
+
+  final String id;
+  final String title;
+  final bool completed;
+  final DateTime? completedAt;
+
+  Subtask copyWith({
+    String? title,
+    bool? completed,
+    DateTime? completedAt,
+  }) {
+    return Subtask(
+      id: id,
+      title: title ?? this.title,
+      completed: completed ?? this.completed,
+      completedAt: completedAt ?? this.completedAt,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, title, completed, completedAt];
+}
+
 /// Extension providing urgency and importance flags for quadrants.
 extension QuadrantX on Quadrant {
   bool get isUrgent => this == Quadrant.q1 || this == Quadrant.q3;
@@ -43,6 +102,17 @@ class Task extends Equatable {
     this.snoozeCount = 0,
     this.normalizedPriority,
     this.normalizedMinutes,
+    this.subtasks = const [],
+    this.status = TaskStatus.pending,
+    this.recurrence = RecurrencePattern.none,
+    this.projectId,
+    this.assignedTo,
+    this.attachments = const [],
+    this.effort = EffortLevel.medium,
+    this.actualMinutes,
+    this.startedAt,
+    this.blockedReason,
+    this.dependencies = const [],
   });
   final String id;
   final String title;
@@ -67,6 +137,19 @@ class Task extends Equatable {
   final double? normalizedPriority;
   final double? normalizedMinutes;
 
+  // Enhanced metadata
+  final List<Subtask> subtasks;
+  final TaskStatus status;
+  final RecurrencePattern recurrence;
+  final String? projectId;
+  final String? assignedTo;
+  final List<String> attachments; // URLs or file paths
+  final EffortLevel effort;
+  final int? actualMinutes; // Actual time spent (for tracking accuracy)
+  final DateTime? startedAt; // When work began
+  final String? blockedReason; // Why task is blocked
+  final List<String> dependencies; // IDs of tasks this depends on
+
   Task copyWith({
     String? title,
     Quadrant? quadrant,
@@ -84,6 +167,17 @@ class Task extends Equatable {
     int? snoozeCount,
     double? normalizedPriority,
     double? normalizedMinutes,
+    List<Subtask>? subtasks,
+    TaskStatus? status,
+    RecurrencePattern? recurrence,
+    String? projectId,
+    String? assignedTo,
+    List<String>? attachments,
+    EffortLevel? effort,
+    int? actualMinutes,
+    DateTime? startedAt,
+    String? blockedReason,
+    List<String>? dependencies,
   }) {
     return Task(
       id: id,
@@ -103,6 +197,17 @@ class Task extends Equatable {
       snoozeCount: snoozeCount ?? this.snoozeCount,
       normalizedPriority: normalizedPriority ?? this.normalizedPriority,
       normalizedMinutes: normalizedMinutes ?? this.normalizedMinutes,
+      subtasks: subtasks ?? this.subtasks,
+      status: status ?? this.status,
+      recurrence: recurrence ?? this.recurrence,
+      projectId: projectId ?? this.projectId,
+      assignedTo: assignedTo ?? this.assignedTo,
+      attachments: attachments ?? this.attachments,
+      effort: effort ?? this.effort,
+      actualMinutes: actualMinutes ?? this.actualMinutes,
+      startedAt: startedAt ?? this.startedAt,
+      blockedReason: blockedReason ?? this.blockedReason,
+      dependencies: dependencies ?? this.dependencies,
     );
   }
 
@@ -110,6 +215,26 @@ class Task extends Equatable {
   bool get isUrgent => quadrant.isUrgent;
   bool get isImportant => quadrant.isImportant;
   bool get isCompleted => completedAt != null;
+
+  /// Progress tracking
+  double get subtaskProgress {
+    if (subtasks.isEmpty) return 0.0;
+    final completed = subtasks.where((s) => s.completed).length;
+    return completed / subtasks.length;
+  }
+
+  bool get hasSubtasks => subtasks.isNotEmpty;
+  int get completedSubtaskCount => subtasks.where((s) => s.completed).length;
+
+  bool get isBlocked => status == TaskStatus.blocked;
+  bool get isInProgress => status == TaskStatus.inProgress;
+  bool get isRecurring => recurrence != RecurrencePattern.none;
+
+  bool get hasOverrun => actualMinutes != null && actualMinutes! > minutes;
+  double? get timeAccuracy {
+    if (actualMinutes == null || minutes == 0) return null;
+    return (minutes - actualMinutes!).abs() / minutes;
+  }
 
   /// Clamped projections used by layout/weighting.
   double get priorityClamped => priority.clamp(1, 10).toDouble();
@@ -144,6 +269,17 @@ class Task extends Equatable {
         snoozeCount,
         normalizedPriority,
         normalizedMinutes,
+        subtasks,
+        status,
+        recurrence,
+        projectId,
+        assignedTo,
+        attachments,
+        effort,
+        actualMinutes,
+        startedAt,
+        blockedReason,
+        dependencies,
       ];
 }
 

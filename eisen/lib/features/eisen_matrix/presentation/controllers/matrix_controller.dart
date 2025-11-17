@@ -27,7 +27,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// - [zoom]: Zoomed quadrant (null for full 4-quadrant view)
 /// - [presentQuadrant]: Current quadrant in presentation mode
 /// - [themeMode]: Light, dark, or system theme
-/// - [query]: Search/filter query
+/// - [query]: Legacy search/filter query (kept for tests/backward compat)
+/// - [searchQuery]: Advanced search query (drives live filtering)
+/// - [isSearchOpen]: Whether the advanced search UI is visible
 /// - [compact]: Compact UI mode flag
 /// - [showAxisLegends]: Show urgency/importance axis labels
 /// - [minimal]: Minimal UI mode (hide extra chrome)
@@ -39,8 +41,13 @@ class MatrixState {
     required this.tasks,
     this.selectedId,
     this.zoom,
+    this.zoomScale = 1.0,
+    this.zoomOffset = Offset.zero,
+    this.zoomQuadrant,
     this.themeMode = ThemeMode.system,
     this.query = '',
+    this.searchQuery = '',
+    this.isSearchOpen = false,
     this.compact = false,
     this.showAxisLegends = true,
     this.minimal = false,
@@ -53,9 +60,14 @@ class MatrixState {
   final List<Task> tasks;
   final String? selectedId;
   final Quadrant? zoom;
+  final double zoomScale;
+  final Offset zoomOffset;
+  final Quadrant? zoomQuadrant;
   final Quadrant? presentQuadrant;
   final ThemeMode themeMode;
   final String query;
+  final String searchQuery;
+  final bool isSearchOpen;
   final bool compact;
   final bool showAxisLegends;
   final bool minimal;
@@ -69,9 +81,14 @@ class MatrixState {
     List<Task>? tasks,
     String? selectedId,
     Quadrant? zoom,
+    double? zoomScale,
+    Offset? zoomOffset,
+    Quadrant? zoomQuadrant,
     Quadrant? presentQuadrant,
     ThemeMode? themeMode,
     String? query,
+    String? searchQuery,
+    bool? isSearchOpen,
     bool? compact,
     bool? showAxisLegends,
     bool? minimal,
@@ -84,9 +101,14 @@ class MatrixState {
         tasks: tasks ?? this.tasks,
         selectedId: selectedId ?? this.selectedId,
         zoom: zoom ?? this.zoom,
+        zoomScale: zoomScale ?? this.zoomScale,
+        zoomOffset: zoomOffset ?? this.zoomOffset,
+        zoomQuadrant: zoomQuadrant ?? this.zoomQuadrant,
         presentQuadrant: presentQuadrant ?? this.presentQuadrant,
         themeMode: themeMode ?? this.themeMode,
         query: query ?? this.query,
+        searchQuery: searchQuery ?? this.searchQuery,
+        isSearchOpen: isSearchOpen ?? this.isSearchOpen,
         compact: compact ?? this.compact,
         showAxisLegends: showAxisLegends ?? this.showAxisLegends,
         minimal: minimal ?? this.minimal,
@@ -124,6 +146,7 @@ class MatrixController extends Notifier<MatrixState> {
   LayoutConfig? _lastDynamicCfg;
   static const _customTaskLimitKey = 'customTaskLimit';
   static const _viewModeKey = 'matrixViewMode';
+  Timer? _searchDebounce;
 
   @override
   MatrixState build() {
@@ -232,32 +255,142 @@ class MatrixController extends Notifier<MatrixState> {
     _saveUi();
   }
 
-  void setQuery(String q) => state = state.copyWith(query: q);
+  void _applySearchQuery(String raw) {
+    final trimmed = raw.trim();
+    state = state.copyWith(
+      query: trimmed,
+      searchQuery: trimmed,
+    );
+  }
+
+  /// Legacy API used by some tests; keeps [query] and [searchQuery] in sync.
+  void setQuery(String q) => _applySearchQuery(q);
+
+  /// Toggle the advanced search UI. When closing, clears the query so the
+  /// matrix returns to its full state.
+  void toggleSearch([bool? open]) {
+    final shouldOpen = open ?? !state.isSearchOpen;
+    if (!shouldOpen) {
+      _searchDebounce?.cancel();
+      state = state.copyWith(
+        isSearchOpen: false,
+        searchQuery: '',
+        query: '',
+      );
+    } else {
+      state = state.copyWith(isSearchOpen: true);
+    }
+  }
+
+  /// Debounced search query update for live search UX from the toolbar.
+  void setSearchQuery(String query) {
+    _searchDebounce?.cancel();
+    final value = query;
+    _searchDebounce = Timer(const Duration(milliseconds: 220), () {
+      _applySearchQuery(value);
+    });
+  }
+
   void toggleAxisLegends() {
     state = state.copyWith(showAxisLegends: !state.showAxisLegends);
     _saveUi();
+  }
+
+  /// Set continuous zoom scale (0.8–3.0) and update dominant quadrant.
+  ///
+  /// [focalPoint], if provided, is expected to be in normalized (0..1) coordinates
+  /// relative to the matrix viewport.
+  void setZoomScale(double newScale, {Offset? focalPoint}) {
+    final clamped = newScale.clamp(0.8, 3.0);
+    final quadrant =
+        clamped > 1.1 ? _detectQuadrantFromOffset(focalPoint) : null;
+    state = state.copyWith(
+      zoomScale: clamped,
+      zoomQuadrant: quadrant,
+    );
+    _syncTopKWithZoom();
+  }
+
+  /// Set pan offset for the zoomed matrix.
+  void setZoomOffset(Offset offset) {
+    state = state.copyWith(zoomOffset: offset);
+  }
+
+  /// Animate smoothly to a target zoom scale.
+  Future<void> animateToScale(double targetScale, {Quadrant? quadrant}) async {
+    final start = state.zoomScale;
+    final clampedTarget = targetScale.clamp(0.8, 3.0);
+    if ((clampedTarget - start).abs() < 0.001) return;
+
+    const duration = Duration(milliseconds: 220);
+    final begin = DateTime.now();
+    final end = begin.add(duration);
+    while (true) {
+      final now = DateTime.now();
+      final tRaw =
+          now.difference(begin).inMilliseconds / duration.inMilliseconds;
+      if (tRaw >= 1.0) break;
+      final t = Curves.easeOutCubic.transform(tRaw.clamp(0.0, 1.0));
+      final value = start + (clampedTarget - start) * t;
+      final q = value > 1.1
+          ? (quadrant ?? state.zoomQuadrant ?? state.presentQuadrant)
+          : null;
+      state = state.copyWith(
+        zoomScale: value,
+        zoomQuadrant: q,
+      );
+      _syncTopKWithZoom();
+      await Future<void>.delayed(const Duration(milliseconds: 16));
+    }
+
+    final finalQ = clampedTarget > 1.1
+        ? (quadrant ?? state.zoomQuadrant ?? state.presentQuadrant)
+        : null;
+    state = state.copyWith(
+      zoomScale: clampedTarget,
+      zoomQuadrant: finalQ,
+    );
+    _syncTopKWithZoom();
+  }
+
+  /// Reset continuous zoom/pan state to defaults.
+  void resetZoom() {
+    state = state.copyWith(
+      zoomScale: 1.0,
+      zoomOffset: Offset.zero,
+      zoomQuadrant: null,
+    );
+    _syncTopKWithZoom();
+  }
+
+  Quadrant? _detectQuadrantFromOffset(Offset? focalPoint) {
+    if (focalPoint == null) {
+      return state.zoomQuadrant ?? state.presentQuadrant;
+    }
+    final x = focalPoint.dx.clamp(0.0, 1.0);
+    final y = focalPoint.dy.clamp(0.0, 1.0);
+    if (x < 0.5 && y < 0.5) return Quadrant.q1;
+    if (x >= 0.5 && y < 0.5) return Quadrant.q2;
+    if (x < 0.5 && y >= 0.5) return Quadrant.q3;
+    return Quadrant.q4;
   }
 
   /// Sets the task view mode (top10/top25/top50/all/custom) and synchronizes
   /// treemap layout topK with the effective limit.
   void setViewMode(MatrixViewMode mode) {
     state = state.copyWith(viewMode: mode);
-    _syncTopKWithViewMode(mode, state.customTaskLimit);
+    _syncTopKWithZoom();
     SharedPreferences.getInstance()
         .then((prefs) => prefs.setInt(_viewModeKey, mode.index));
   }
 
   /// Updates custom top‑K limit (10–100) and persists it.
-  /// When the active [viewMode] is [MatrixViewMode.custom], this also updates
-  /// the treemap layout topK preference.
   void setCustomTaskLimit(int newLimit) {
     final clamped = newLimit.clamp(10, 100);
     state = state.copyWith(customTaskLimit: clamped);
     SharedPreferences.getInstance()
         .then((prefs) => prefs.setInt(_customTaskLimitKey, clamped));
-    if (state.viewMode == MatrixViewMode.custom) {
-      _syncTopKWithViewMode(MatrixViewMode.custom, clamped);
-    }
+    _syncTopKWithZoom();
   }
 
   Future<void> _saveUi() async {
@@ -294,7 +427,7 @@ class MatrixController extends Notifier<MatrixState> {
     // Only override existing layout prefs when there is an explicit
     // saved view mode or custom limit from a previous session.
     if (hasMode || hasLimit) {
-      _syncTopKWithViewMode(mode, savedLimit);
+      _syncTopKWithZoom();
     }
   }
 
@@ -321,6 +454,21 @@ class MatrixController extends Notifier<MatrixState> {
     }
     // Synchronize with layout prefs so treemap uses the effective topK
     ref.read(uiPrefsControllerProvider.notifier).setTopK(k);
+  }
+
+  void _syncTopKWithZoom() {
+    final scale = state.zoomScale;
+    if (scale > 2.0) {
+      ref.read(uiPrefsControllerProvider.notifier).setTopK(100);
+      return;
+    }
+    if (scale > 1.2) {
+      ref
+          .read(uiPrefsControllerProvider.notifier)
+          .setTopK(state.customTaskLimit.clamp(10, 100));
+      return;
+    }
+    _syncTopKWithViewMode(state.viewMode, state.customTaskLimit);
   }
 
   String createTask(
@@ -390,10 +538,86 @@ class MatrixController extends Notifier<MatrixState> {
     updateTask(id, (t) => t.copyWith(completedAt: DateTime.now()));
   }
 
+  /// Resets the matrix view to the initial "home" state.
+  ///
+  /// - Clears zoom and selection
+  /// - Resets search/query and closes the advanced search UI
+  /// - Ensures the presentation quadrant is Q2 (full 4-quadrant view)
+  /// - Invalidates layout so the treemap recomputes for the full matrix
+  void resetHomeView() {
+    _searchDebounce?.cancel();
+    state = state.copyWith(
+      zoom: null,
+      zoomScale: 1.0,
+      zoomOffset: Offset.zero,
+      zoomQuadrant: null,
+      presentQuadrant: Quadrant.q2,
+      selectedId: null,
+      query: '',
+      searchQuery: '',
+      isSearchOpen: false,
+    );
+    invalidateLayout();
+  }
+
+  /// Normaliza texto para búsqueda: minúsculas y sin acentos básicos.
+  String _normalizeSearchText(String input) {
+    final lower = input.toLowerCase();
+    const mapping = {
+      'á': 'a',
+      'à': 'a',
+      'ä': 'a',
+      'â': 'a',
+      'ã': 'a',
+      'é': 'e',
+      'è': 'e',
+      'ë': 'e',
+      'ê': 'e',
+      'í': 'i',
+      'ì': 'i',
+      'ï': 'i',
+      'î': 'i',
+      'ó': 'o',
+      'ò': 'o',
+      'ö': 'o',
+      'ô': 'o',
+      'õ': 'o',
+      'ú': 'u',
+      'ù': 'u',
+      'ü': 'u',
+      'û': 'u',
+      'ñ': 'n',
+      'ç': 'c',
+    };
+    final buffer = StringBuffer();
+    for (final codeUnit in lower.runes) {
+      final ch = String.fromCharCode(codeUnit);
+      buffer.write(mapping[ch] ?? ch);
+    }
+    return buffer.toString();
+  }
+
   /// Computes the treemap layout with filtering and delegates to use case.
   List<TreemapRect> layout({Quadrant? only, Size? viewport}) {
-    // Filter out completed tasks
-    final filtered = state.tasks.where((t) => t.completedAt == null).toList();
+    // Filter out completed tasks first.
+    var filtered = state.tasks.where((t) => t.completedAt == null).toList();
+
+    // Apply advanced text search before layout/top‑K.
+    final q = _normalizeSearchText(state.searchQuery.trim());
+    if (q.isNotEmpty) {
+      filtered = filtered.where((t) {
+        final title = _normalizeSearchText(t.title);
+        final notes = _normalizeSearchText(t.notes ?? '');
+        final category = _normalizeSearchText(t.category ?? '');
+        final categories = _normalizeSearchText(t.categories.join(' '));
+        final tags = _normalizeSearchText(t.tags.join(' '));
+        return title.contains(q) ||
+            notes.contains(q) ||
+            category.contains(q) ||
+            categories.contains(q) ||
+            tags.contains(q);
+      }).toList();
+    }
 
     final layout = _computeLayoutUseCase.execute(
       tasks: filtered,

@@ -16,6 +16,8 @@ import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet.
 import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet_compact.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/toolbar.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_canvas.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/matrix_interactive_wrapper.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/zoom_indicator.dart';
 import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/l10n/app_localizations_en.dart';
@@ -24,6 +26,7 @@ import 'package:eisen/ui/matrix/matrix_desktop.dart';
 import 'package:eisen/utils/breakpoints.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 // Removed FAB + coachmark imports; using single CTA in bottom bar
@@ -110,69 +113,49 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
     final prefsUi = ref.watch(uiPrefsProvider);
     final uiTsf = AppTextScale.of(context, prefsUi);
     final isExtremeScale = AppTextScale.isExtreme(context, prefsUi);
-    final axisHeaderHeight = isExtremeScale ? 48.0 : 40.0;
-
+    // Slightly increased to avoid 1px overflow in the axis header row on mobile.
+    final axisHeaderHeight = isExtremeScale ? 52.0 : 42.0;
     final viewMode = ref.watch(uiPrefsProvider).viewMode; // 'treemap' | 'list'
     final isDesktopGrid = screenWidth >= bpDesktop && viewMode == 'list';
+    final workflowPlanEnabled = ref
+        .watch(uiPrefsProvider.select((p) => p.workflowPlanEnabled));
+    final isSearchOpen =
+        ref.watch(matrixControllerProvider.select((s) => s.isSearchOpen));
+    final searchQuery =
+        ref.watch(matrixControllerProvider.select((s) => s.searchQuery));
     // Show top-level navigation actions on all sizes; layout adapts inside AppToolbar.
-    final showTopStats = true;
     final showTopSettings = true;
-    final showTopWorkflow = true;
 
     return Scaffold(
       key: _scaffoldKey,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(70),
+        preferredSize: Size.fromHeight(isSearchOpen ? 135 : 72),
         child: SafeArea(
           top: true,
           bottom: false,
           child: AppToolbar(
             onToggleTheme: ctrl.toggleTheme,
-            onQuery: ctrl.setQuery,
+            onQuery: ctrl.setSearchQuery,
             themeMode: themeMode,
             minimal: minimal,
             onToggleMinimal: ctrl.toggleMinimal,
-            // Always allow Workflow in the top menu on wide layouts.
-            // On mobile, we only keep the bottom-nav entry.
-            showWorkflowPlan: true,
-            onOpenWorkflow: showTopWorkflow
-                ? () {
-                    if (!ref.read(uiPrefsProvider).workflowPlanEnabled) {
-                      final isEs =
-                          Localizations.localeOf(context).languageCode == 'es';
-                      final msg = isEs
-                          ? 'Activa \"Workflow plan\" en Ajustes'
-                          : 'Enable \"Workflow plan\" in Settings';
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(SnackBar(content: Text(msg)));
-                      return;
-                    }
-                    context.push('/list-mode');
-                  }
-                : null,
-            onOpenStats: showTopStats
-                ? () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const StatsPage(),
-                      ),
-                    )
-                : null,
-            onOpenCompletedTasks:
-                showTopSettings ? () => context.go('/completed-matrix') : null,
+            isSearchOpen: isSearchOpen,
+            searchQuery: searchQuery,
+            onToggleSearch: () => ctrl.toggleSearch(),
             onOpenProfile: () => showModalBottomSheet(
               context: context,
               showDragHandle: true,
               useSafeArea: true,
               builder: (_) => const ProfileSheet(),
             ),
-            onExitZoom: () {
-              ctrl.setZoom(null);
-              ctrl.setPresentQuadrant(Quadrant.q2);
-              ctrl.select(null);
-              ctrl.setQuery('');
-              ctrl.invalidateLayout();
-            },
+            onExitZoom: ctrl.resetHomeView,
             canExitZoom: zoom != null,
+            // When workflow plan is enabled in Settings > General, show the
+            // Gantt/Workflow action in the top toolbar.
+            showWorkflowPlan: workflowPlanEnabled,
+            onOpenWorkflow: workflowPlanEnabled
+                ? () => context.push('/workflow-plan')
+                : null,
             onOpenSettings: showTopSettings
                 ? () {
                     if (isDesktop) {
@@ -352,112 +335,125 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                         Curves.easeOutCubic,
                                                     switchOutCurve:
                                                         Curves.easeOutCubic,
-                                                    child: TreemapCanvas(
+                                                    child:
+                                                        MatrixInteractiveWrapper(
                                                       key: ValueKey(
                                                           '${zoom}_${dynamicLayout.length}_${suggested.length}'),
-                                                      tasks: tasks,
-                                                      layout: dynamicLayout,
-                                                      compact: compact,
-                                                      suggestedIds: suggested,
-                                                      minimal: minimal,
-                                                      selectedId: selectedId,
-                                                      zoom: zoom,
-                                                      presentQuadrant: zoom ??
-                                                          ref
-                                                              .read(
-                                                                  matrixControllerProvider)
-                                                              .presentQuadrant,
-                                                      textScale: tileTsf,
-                                                      inlineEditId:
-                                                          _inlineEditId,
-                                                      onInlineSubmit:
-                                                          (id, title) {
-                                                        ctrl.updateTask(
-                                                            id,
-                                                            (t) => t.copyWith(
-                                                                title: title));
-                                                        setState(() =>
-                                                            _inlineEditId =
-                                                                null);
-                                                      },
-                                                      onInlineCancel: (id) {
-                                                        final idx = tasks
-                                                            .indexWhere((e) =>
-                                                                e.id == id);
-                                                        if (idx != -1) {
-                                                          final t = tasks[idx];
-                                                          if (t.title ==
-                                                                  'New Task' &&
-                                                              (t.notes ==
-                                                                      null ||
-                                                                  t.notes!
-                                                                      .isEmpty)) {
-                                                            ctrl.deleteTask(id);
+                                                      child: TreemapCanvas(
+                                                        tasks: tasks,
+                                                        layout: dynamicLayout,
+                                                        compact: compact,
+                                                        suggestedIds: suggested,
+                                                        minimal: minimal,
+                                                        selectedId: selectedId,
+                                                        zoom: zoom,
+                                                        presentQuadrant: zoom ??
+                                                            ref
+                                                                .read(
+                                                                    matrixControllerProvider)
+                                                                .presentQuadrant,
+                                                        textScale: tileTsf,
+                                                        inlineEditId:
+                                                            _inlineEditId,
+                                                        onInlineSubmit:
+                                                            (id, title) {
+                                                          ctrl.updateTask(
+                                                              id,
+                                                              (t) => t.copyWith(
+                                                                  title:
+                                                                      title));
+                                                          setState(() =>
+                                                              _inlineEditId =
+                                                                  null);
+                                                        },
+                                                        onInlineCancel: (id) {
+                                                          final idx = tasks
+                                                              .indexWhere((e) =>
+                                                                  e.id == id);
+                                                          if (idx != -1) {
+                                                            final t =
+                                                                tasks[idx];
+                                                            if (t.title ==
+                                                                    'New Task' &&
+                                                                (t.notes ==
+                                                                        null ||
+                                                                    t.notes!
+                                                                        .isEmpty)) {
+                                                              ctrl.deleteTask(
+                                                                  id);
+                                                            }
                                                           }
-                                                        }
-                                                        setState(() =>
-                                                            _inlineEditId =
-                                                                null);
-                                                      },
-                                                      onTap: (id) {
-                                                        ctrl.select(id);
-                                                        if (id != null) {
-                                                          WidgetsBinding
-                                                              .instance
-                                                              .addPostFrameCallback(
-                                                                  (_) => _scaffoldKey
-                                                                      .currentState
-                                                                      ?.openEndDrawer());
-                                                        }
-                                                      },
-                                                      onDropToQuadrant:
-                                                          (id, q) {
-                                                        final idx = tasks
-                                                            .indexWhere((t) =>
-                                                                t.id == id);
-                                                        if (idx == -1) return;
-                                                        final prev =
-                                                            tasks[idx].quadrant;
-                                                        if (prev == q) {
-                                                          return; // no-op
-                                                        }
-                                                        ctrl.moveTaskToQuadrant(
-                                                            id, q);
-                                                        final qName = q.name
-                                                            .toUpperCase();
-                                                        ScaffoldMessenger.of(
-                                                                context)
-                                                            .hideCurrentSnackBar();
-                                                        ScaffoldMessenger.of(
-                                                                context)
-                                                            .showSnackBar(
-                                                          SnackBar(
-                                                            content: Text(
-                                                                'Tarea movida a $qName'),
-                                                            action:
-                                                                SnackBarAction(
-                                                              label: 'Deshacer',
-                                                              onPressed: () {
-                                                                ctrl.moveTaskToQuadrant(
-                                                                    id, prev);
-                                                              },
+                                                          setState(() =>
+                                                              _inlineEditId =
+                                                                  null);
+                                                        },
+                                                        onTap: (id) {
+                                                          ctrl.select(id);
+                                                          if (id != null) {
+                                                            WidgetsBinding
+                                                                .instance
+                                                                .addPostFrameCallback((_) =>
+                                                                    _scaffoldKey
+                                                                        .currentState
+                                                                        ?.openEndDrawer());
+                                                          }
+                                                        },
+                                                        onDropToQuadrant:
+                                                            (id, q) {
+                                                          final idx = tasks
+                                                              .indexWhere((t) =>
+                                                                  t.id == id);
+                                                          if (idx == -1) {
+                                                            return;
+                                                          }
+                                                          final prev =
+                                                              tasks[idx]
+                                                                  .quadrant;
+                                                          if (prev == q) {
+                                                            return; // no-op
+                                                          }
+                                                          ctrl.moveTaskToQuadrant(
+                                                              id, q);
+                                                          final qName = q.name
+                                                              .toUpperCase();
+                                                          ScaffoldMessenger.of(
+                                                                  context)
+                                                              .hideCurrentSnackBar();
+                                                          ScaffoldMessenger.of(
+                                                                  context)
+                                                              .showSnackBar(
+                                                            SnackBar(
+                                                              content: Text(
+                                                                  'Tarea movida a $qName'),
+                                                              action:
+                                                                  SnackBarAction(
+                                                                label:
+                                                                    'Deshacer',
+                                                                onPressed: () {
+                                                                  ctrl.moveTaskToQuadrant(
+                                                                      id, prev);
+                                                                },
+                                                              ),
+                                                              duration:
+                                                                  const Duration(
+                                                                      seconds:
+                                                                          4),
                                                             ),
-                                                            duration:
-                                                                const Duration(
-                                                                    seconds: 4),
-                                                          ),
-                                                        );
-                                                      },
-                                                      onDoubleTapQuadrant: (q) {
-                                                        ctrl.setZoom(zoom == q
-                                                            ? null
-                                                            : q);
-                                                        ctrl.setPresentQuadrant(
-                                                            q);
-                                                        ctrl.invalidateLayout();
-                                                      },
+                                                          );
+                                                        },
+                                                        onDoubleTapQuadrant:
+                                                            (q) {
+                                                          ctrl.setZoom(zoom == q
+                                                              ? null
+                                                              : q);
+                                                          ctrl.setPresentQuadrant(
+                                                              q);
+                                                          ctrl.invalidateLayout();
+                                                        },
+                                                      ),
                                                     ),
                                                   ),
+                                                  const ZoomIndicator(),
                                                   if (dynamicLayout
                                                       .isEmpty) ...[
                                                     // Quadrant-specific placeholders to guide first use
@@ -672,8 +668,28 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
     }();
 
     final theme = Theme.of(context);
-    final filtered =
+    var filtered =
         tasks.where((t) => t.completedAt == null).toList(growable: false);
+
+    // Apply the same advanced search filter used by the treemap layout so
+    // list/grid mode stays in sync with the matrix view.
+    final searchQuery =
+        ref.watch(matrixControllerProvider.select((s) => s.searchQuery));
+    final q = searchQuery.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      filtered = filtered.where((t) {
+        final title = t.title.toLowerCase();
+        final notes = (t.notes ?? '').toLowerCase();
+        final category = (t.category ?? '').toLowerCase();
+        final categories = t.categories.map((c) => c.toLowerCase()).join(' ');
+        final tags = t.tags.map((c) => c.toLowerCase()).join(' ');
+        return title.contains(q) ||
+            notes.contains(q) ||
+            category.contains(q) ||
+            categories.contains(q) ||
+            tags.contains(q);
+      }).toList(growable: false);
+    }
     final q1 = filtered
         .where((t) => t.quadrant == Quadrant.q1)
         .toList(growable: false);
@@ -742,7 +758,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
       ),
       child: SafeArea(
         child: SizedBox(
-          height: 70,
+          height: 56,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -756,7 +772,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
               _NavBarItem(
                 icon: Icons.history,
                 label: isEs ? 'Completas' : 'Completed',
-                onTap: () => context.go('/completed-matrix'),
+                onTap: () => context.push('/completed-matrix'),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -865,7 +881,7 @@ class _NavBarItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,

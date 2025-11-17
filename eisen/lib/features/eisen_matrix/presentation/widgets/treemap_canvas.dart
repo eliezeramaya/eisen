@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui' as ui show lerpDouble;
 
 import 'package:eisen/core/constants/layout_constants.dart';
-import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:eisen/core/services/telemetry.dart';
 import 'package:eisen/core/theme/animation_tokens.dart';
 import 'package:eisen/core/theme/app_theme.dart';
@@ -16,7 +15,6 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 class TreemapCanvas extends StatefulWidget {
-
   const TreemapCanvas({
     super.key,
     required this.tasks,
@@ -60,7 +58,8 @@ class TreemapCanvas extends StatefulWidget {
   State<TreemapCanvas> createState() => _TreemapCanvasState();
 }
 
-class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateMixin {
+class _TreemapCanvasState extends State<TreemapCanvas>
+    with TickerProviderStateMixin {
   String? _draggingId;
   Offset? _lastPos;
   Quadrant? _hoverQuadrant;
@@ -196,7 +195,7 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
       _lastStableRectById.removeWhere((id, _) => !alive.contains(id));
     }
     if (oldWidget.inlineEditId != widget.inlineEditId) {
-        if (widget.inlineEditId != null) {
+      if (widget.inlineEditId != null) {
         // Prefill with current title (defensive)
         final idx = widget.tasks.indexWhere((e) => e.id == widget.inlineEditId);
         if (idx != -1) {
@@ -245,63 +244,77 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
         // Provide a safe fallback for theme tokens so tests that don't install the app theme don't crash
-        final glassTokens = Theme.of(context).extension<GlassTokens>() ?? const GlassTokens(
-          glassBg: Color(0xCCFFFFFF),
-          blur: 12,
-          radius: 20,
-          q1: Color(0xFFD92D20),
-          q2: Color(0xFF12B76A),
-          q3: Color(0xFFF79009),
-          q4: Color(0xFF2E90FA),
-          halo: Color(0x332E90FA),
-        );
+        final glassTokens = Theme.of(context).extension<GlassTokens>() ??
+            const GlassTokens(
+              glassBg: Color(0xCCFFFFFF),
+              blur: 12,
+              radius: 20,
+              q1: Color(0xFFD92D20),
+              q2: Color(0xFF12B76A),
+              q3: Color(0xFFF79009),
+              q4: Color(0xFF2E90FA),
+              halo: Color(0x332E90FA),
+            );
         final overlay = <Widget>[];
         // If layout already contains stack tiles, skip overlay fallback
-        final hasStackTiles = widget.layout.any((e) => e.stackChildren.isNotEmpty);
+        final hasStackTiles = widget.layout.any(
+          (e) => e.stackChildren.isNotEmpty,
+        );
         // Compute tiny tiles per quadrant only if no integrated stacks present
         // Adjust minimum area threshold based on density mode to make the change noticeable
-        final double minAreaPx = LayoutConstants.minTileAreaPx * (widget.compact ? 0.7 : 1.0);
+        final double minAreaPx =
+            LayoutConstants.minTileAreaPx * (widget.compact ? 0.7 : 1.0);
         final tinyByQ = <Quadrant, List<TreemapRect>>{
-          Quadrant.q1: [], Quadrant.q2: [], Quadrant.q3: [], Quadrant.q4: []
+          Quadrant.q1: [],
+          Quadrant.q2: [],
+          Quadrant.q3: [],
+          Quadrant.q4: [],
         };
         if (!hasStackTiles) {
           for (final tr in widget.layout) {
             final r = _px(tr.rect01, size);
             // Represent as tiny if smaller than min interactive area (squared)
-            if (r.width < LayoutConstants.minTileSize || r.height < LayoutConstants.minTileSize || r.width * r.height < minAreaPx) {
+            if (r.width < LayoutConstants.minTileSize ||
+                r.height < LayoutConstants.minTileSize ||
+                r.width * r.height < minAreaPx) {
               tinyByQ[tr.task.quadrant]!.add(tr);
             }
           }
         }
         if (widget.onEditTask != null || widget.onMarkDone != null) {
           // Adjust button visibility threshold by density
-          final double minAreaForButtons = LayoutConstants.minAreaForButtons * (widget.compact ? 0.85 : 1.0);
+          final double minAreaForButtons =
+              LayoutConstants.minAreaForButtons * (widget.compact ? 0.85 : 1.0);
           for (final tr in widget.layout) {
             final r = _px(tr.rect01, size);
             // Show edit button only for reasonably large tiles
             if (r.width * r.height < minAreaForButtons) continue;
             const btn = 28.0;
             if (widget.onMarkDone != null) {
-              overlay.add(Positioned(
-                left: r.left + 6,
+              overlay.add(
+                Positioned(
+                  left: r.left + 6,
+                  top: r.top + 6,
+                  width: btn,
+                  height: btn,
+                  child: _CheckDot(
+                    onPressed: () => widget.onMarkDone?.call(tr.task.id),
+                    minimal: widget.minimal,
+                  ),
+                ),
+              );
+            }
+            overlay.add(
+              Positioned(
+                left: r.right - btn - 6,
                 top: r.top + 6,
                 width: btn,
                 height: btn,
-                child: _CheckDot(
-                  onPressed: () => widget.onMarkDone?.call(tr.task.id),
-                  minimal: widget.minimal,
+                child: _EditDot(
+                  onPressed: () => widget.onEditTask?.call(tr.task.id),
                 ),
-              ));
-            }
-            overlay.add(Positioned(
-              left: r.right - btn - 6,
-              top: r.top + 6,
-              width: btn,
-              height: btn,
-              child: _EditDot(
-                onPressed: () => widget.onEditTask?.call(tr.task.id),
               ),
-            ));
+            );
           }
         }
 
@@ -315,28 +328,33 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
             final r01To = _nextRects01[id] ?? tr.rect01;
             final r01 = _lerpSnapRect(r01From, r01To, curveT);
             final r = _px(r01, size);
-            if (r.width >= LayoutConstants.minTileSize && r.height >= LayoutConstants.minTileSize) {
-              overlay.add(Positioned(
-                key: ValueKey('tile_$id'),
-                left: r.left,
-                top: r.top,
-                width: r.width,
-                height: r.height,
-                child: const IgnorePointer(child: SizedBox.expand()),
-              ));
+            if (r.width >= LayoutConstants.minTileSize &&
+                r.height >= LayoutConstants.minTileSize) {
+              overlay.add(
+                Positioned(
+                  key: ValueKey('tile_$id'),
+                  left: r.left,
+                  top: r.top,
+                  width: r.width,
+                  height: r.height,
+                  child: const IgnorePointer(child: SizedBox.expand()),
+                ),
+              );
             }
           }
           // Quadrant dropzone keys for testing
           for (final q in Quadrant.values) {
             final qRect = _quadrantRect(q, size);
-            overlay.add(Positioned(
-              key: ValueKey('quadrant_${q.name}_dropzone'),
-              left: qRect.left,
-              top: qRect.top,
-              width: qRect.width,
-              height: qRect.height,
-              child: const IgnorePointer(child: SizedBox.expand()),
-            ));
+            overlay.add(
+              Positioned(
+                key: ValueKey('quadrant_${q.name}_dropzone'),
+                left: qRect.left,
+                top: qRect.top,
+                width: qRect.width,
+                height: qRect.height,
+                child: const IgnorePointer(child: SizedBox.expand()),
+              ),
+            );
           }
           return true;
         }());
@@ -345,81 +363,112 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
           children: [
             Positioned.fill(
               child: MouseRegion(
-                cursor: _draggingId != null ? SystemMouseCursors.grabbing : SystemMouseCursors.basic,
+                cursor: _draggingId != null
+                    ? SystemMouseCursors.grabbing
+                    : SystemMouseCursors.basic,
                 child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTapDown: (d) {
-                  final id = _hitTest(d.localPosition, size);
-                  if (id != null) {
-                    final idx = widget.layout.indexWhere((e) => e.task.id == id);
-                    final tr = idx == -1 ? null : widget.layout[idx];
-                    if (tr != null && tr.stackChildren.isNotEmpty) {
-                      // Open stack sheet for this quadrant
-                      Telemetry.stackOpen(tr.task.quadrant.name, tr.stackChildren.length);
-                      _openStackSheet(context, tr.task.quadrant, tr.stackChildren);
-                      return;
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (d) {
+                    final id = _hitTest(d.localPosition, size);
+                    if (id != null) {
+                      final idx = widget.layout.indexWhere(
+                        (e) => e.task.id == id,
+                      );
+                      final tr = idx == -1 ? null : widget.layout[idx];
+                      if (tr != null && tr.stackChildren.isNotEmpty) {
+                        // Open stack sheet for this quadrant
+                        Telemetry.stackOpen(
+                          tr.task.quadrant.name,
+                          tr.stackChildren.length,
+                        );
+                        _openStackSheet(
+                          context,
+                          tr.task.quadrant,
+                          tr.stackChildren,
+                        );
+                        return;
+                      }
+                      Telemetry.tileTap(id);
                     }
-                    Telemetry.tileTap(id);
-                  }
-                  widget.onTap?.call(id);
-                },
-                onTapUp: (d) {
-                  final id = _hitTest(d.localPosition, size);
-                  if (id != null) {
-                    final idx = widget.layout.indexWhere((e) => e.task.id == id);
-                    final tr = idx == -1 ? null : widget.layout[idx];
-                    if (tr != null && tr.stackChildren.isNotEmpty) {
-                      Telemetry.stackOpen(tr.task.quadrant.name, tr.stackChildren.length);
-                      _openStackSheet(context, tr.task.quadrant, tr.stackChildren);
-                      return;
+                    widget.onTap?.call(id);
+                  },
+                  onTapUp: (d) {
+                    final id = _hitTest(d.localPosition, size);
+                    if (id != null) {
+                      final idx = widget.layout.indexWhere(
+                        (e) => e.task.id == id,
+                      );
+                      final tr = idx == -1 ? null : widget.layout[idx];
+                      if (tr != null && tr.stackChildren.isNotEmpty) {
+                        Telemetry.stackOpen(
+                          tr.task.quadrant.name,
+                          tr.stackChildren.length,
+                        );
+                        _openStackSheet(
+                          context,
+                          tr.task.quadrant,
+                          tr.stackChildren,
+                        );
+                        return;
+                      }
+                      Telemetry.tileTap(id);
                     }
-                    Telemetry.tileTap(id);
-                  }
-                  widget.onTap?.call(id);
-                },
-                onDoubleTapDown: (d) {
-                  final q = _quadrantAt(d.localPosition, size);
-                  if (q != null) {
-                    Telemetry.zoomQuadrant(q.name);
-                    widget.onDoubleTapQuadrant?.call(q);
-                  }
-                },
-                onLongPressStart: (d) {
-                  final id = _hitTest(d.localPosition, size);
-                  if (id == null) return;
-                  final idx = widget.tasks.indexWhere((e) => e.id == id);
-                  final t = idx == -1 ? null : widget.tasks[idx];
-                  final msg = t == null ? 'Tarea' : '${t.title} • P${t.priority} • ${t.minutes}m';
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(msg), duration: const Duration(milliseconds: 1200)),
-                  );
-                },
-                onPanStart: (d) {
-                  if (widget.inlineEditId != null) return; // disable drag while editing
-                  setState(() {
-                    _draggingId = _hitTest(d.localPosition, size);
-                    _lastPos = d.localPosition;
-                    _hoverQuadrant = _quadrantAt(_lastPos!, size);
-                  });
-                  if (_draggingId != null) Telemetry.tileDragStart(_draggingId!);
-                },
-                onPanEnd: (d) {
-                  if (widget.inlineEditId == null && _draggingId != null && widget.zoom == null) {
-                    final q = _quadrantAt(_lastPos ?? Offset.zero, size);
+                    widget.onTap?.call(id);
+                  },
+                  onDoubleTapDown: (d) {
+                    final q = _quadrantAt(d.localPosition, size);
                     if (q != null) {
-                      widget.onDropToQuadrant?.call(_draggingId!, q);
-                      Telemetry.tileDrop(_draggingId!, q.name);
-                      _pulseQuadrant = q;
-                      _pulse.forward(from: 0);
-                      HapticFeedback.lightImpact();
+                      Telemetry.zoomQuadrant(q.name);
+                      widget.onDoubleTapQuadrant?.call(q);
                     }
-                  }
-                  setState(() {
-                    _draggingId = null;
-                    _hoverQuadrant = null;
-                    _lastPos = null;
-                  });
-                },
+                  },
+                  onLongPressStart: (d) {
+                    final id = _hitTest(d.localPosition, size);
+                    if (id == null) return;
+                    final idx = widget.tasks.indexWhere((e) => e.id == id);
+                    final t = idx == -1 ? null : widget.tasks[idx];
+                    final msg = t == null
+                        ? 'Tarea'
+                        : '${t.title} • P${t.priority} • ${t.minutes}m';
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(msg),
+                        duration: const Duration(milliseconds: 1200),
+                      ),
+                    );
+                  },
+                  onPanStart: (d) {
+                    if (widget.inlineEditId != null) {
+                      return; // disable drag while editing
+                    }
+                    setState(() {
+                      _draggingId = _hitTest(d.localPosition, size);
+                      _lastPos = d.localPosition;
+                      _hoverQuadrant = _quadrantAt(_lastPos!, size);
+                    });
+                    if (_draggingId != null) {
+                      Telemetry.tileDragStart(_draggingId!);
+                    }
+                  },
+                  onPanEnd: (d) {
+                    if (widget.inlineEditId == null &&
+                        _draggingId != null &&
+                        widget.zoom == null) {
+                      final q = _quadrantAt(_lastPos ?? Offset.zero, size);
+                      if (q != null) {
+                        widget.onDropToQuadrant?.call(_draggingId!, q);
+                        Telemetry.tileDrop(_draggingId!, q.name);
+                        _pulseQuadrant = q;
+                        _pulse.forward(from: 0);
+                        HapticFeedback.lightImpact();
+                      }
+                    }
+                    setState(() {
+                      _draggingId = null;
+                      _hoverQuadrant = null;
+                      _lastPos = null;
+                    });
+                  },
                   onPanUpdate: (d) {
                     if (widget.inlineEditId != null) return;
                     setState(() {
@@ -427,132 +476,159 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
                       _hoverQuadrant = _quadrantAt(_lastPos!, size);
                     });
                   },
-                child: RepaintBoundary(
-                  child: CustomPaint(
-                    painter: _TreemapPainter(
-                    widget.layout,
-                    draggingId: _draggingId,
-                    pointer: _lastPos,
-                    hoverQuadrant: widget.zoom == null ? _hoverQuadrant : null,
-                    presentQuadrant: widget.presentQuadrant,
-                    zoom: widget.zoom,
-                    prevRects01: _prevRects01,
-                    nextRects01: _nextRects01,
-                    t: _t,
-                    tokens: glassTokens,
-                    minimal: widget.minimal,
-                    pulseQuadrant: _pulseQuadrant,
-                    pulseT: _pulseT,
-                    suggested: widget.suggestedIds,
-                    layoutVersion: _layoutVersion,
-                    selectedId: widget.selectedId,
-                    appearingIds: _appearingIds,
-                    outros: _pendingOutros,
-                    outrosVersion: _outrosVersion,
-                    outlineColor: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.28),
-                    tileBorderColor: UiTokens.stroke(Theme.of(context).colorScheme),
-                    onSurface: Theme.of(context).colorScheme.onSurface,
-                    onSurfaceVariant: Theme.of(context).colorScheme.onSurfaceVariant,
-                    tileFillColor: UiTokens.fill(Theme.of(context).colorScheme),
-                    textScale: widget.textScale,
+                  child: RepaintBoundary(
+                    child: CustomPaint(
+                      painter: _TreemapPainter(
+                        widget.layout,
+                        draggingId: _draggingId,
+                        pointer: _lastPos,
+                        hoverQuadrant:
+                            widget.zoom == null ? _hoverQuadrant : null,
+                        presentQuadrant: widget.presentQuadrant,
+                        zoom: widget.zoom,
+                        prevRects01: _prevRects01,
+                        nextRects01: _nextRects01,
+                        t: _t,
+                        tokens: glassTokens,
+                        minimal: widget.minimal,
+                        pulseQuadrant: _pulseQuadrant,
+                        pulseT: _pulseT,
+                        suggested: widget.suggestedIds,
+                        layoutVersion: _layoutVersion,
+                        selectedId: widget.selectedId,
+                        appearingIds: _appearingIds,
+                        outros: _pendingOutros,
+                        outrosVersion: _outrosVersion,
+                        outlineColor: Theme.of(
+                          context,
+                        ).colorScheme.outlineVariant.withValues(alpha: 0.28),
+                        tileBorderColor: UiTokens.stroke(
+                          Theme.of(context).colorScheme,
+                        ),
+                        onSurface: Theme.of(context).colorScheme.onSurface,
+                        onSurfaceVariant: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant,
+                        tileFillColor: UiTokens.fill(
+                          Theme.of(context).colorScheme,
+                        ),
+                        textScale: widget.textScale,
+                      ),
+                      isComplex: true,
+                      willChange: true,
+                      child: const SizedBox.expand(),
+                    ),
                   ),
-                    isComplex: true,
-                    willChange: true,
-                    child: const SizedBox.expand(),
-                  ),
-                ),
                 ),
               ),
             ),
             // Stack overlays per quadrant (place at bottom-right of each quadrant)
-            if (!hasStackTiles) ...Quadrant.values.map((q) {
-              final count = tinyByQ[q]!.length;
-              if (count == 0) return const SizedBox.shrink();
-              const m = 16.0;
-              // Compute anchors so the chip sits at the bottom-right of each quadrant
-              double? right;
-              double? bottom;
-              switch (q) {
-                case Quadrant.q1:
-                  right = size.width / 2 + m; // anchor to Q1 right edge minus margin
-                  bottom = size.height / 2 + m; // anchor to Q1 bottom edge minus margin
-                  break;
-                case Quadrant.q2:
-                  right = m; // right edge of parent minus margin
-                  bottom = size.height / 2 + m; // Q2 bottom edge minus margin
-                  break;
-                case Quadrant.q3:
-                  right = size.width / 2 + m; // Q3 right edge minus margin
-                  bottom = m; // parent bottom minus margin
-                  break;
-                case Quadrant.q4:
-                  right = m;
-                  bottom = m;
-                  break;
-              }
-              return Positioned(
-                key: ValueKey('stack_${q.name}'),
-                right: right,
-                bottom: bottom,
-                child: RepaintBoundary(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        Telemetry.stackOpen(q.name, count);
-                        _openStackSheet(context, q, tinyByQ[q]!.map((e) => e.task).toList());
-                      },
-                      borderRadius: BorderRadius.circular(LayoutConstants.tileBorderRadius),
-                      child: Builder(builder: (context) {
-                        // Render as a small square tile, styled like other tiles
-                        final Color qColor;
-                        switch (q) {
-                          case Quadrant.q1:
-                            qColor = glassTokens.q1;
-                            break;
-                          case Quadrant.q2:
-                            qColor = glassTokens.q2;
-                            break;
-                          case Quadrant.q3:
-                            qColor = glassTokens.q3;
-                            break;
-                          case Quadrant.q4:
-                            qColor = glassTokens.q4;
-                            break;
-                        }
-                        final tileSize = LayoutConstants.minTileSize; // square small size
-                        final fillAlpha = widget.minimal ? 0.25 : 0.18;
-                        final borderColor = widget.minimal
-                            ? Colors.black.withValues(alpha: 0.20)
-                            : Colors.white.withValues(alpha: 0.18);
-                        // Use dark gray text in minimal mode for better visibility on light surfaces
-                        final textColor = widget.minimal ? const Color(0xFF424242) : Colors.white;
-                        return Container(
-                          width: tileSize,
-                          height: tileSize,
-                          decoration: BoxDecoration(
-                            color: qColor.withValues(alpha: fillAlpha),
-                            borderRadius: BorderRadius.circular(LayoutConstants.tileBorderRadius),
-                            border: Border.all(color: borderColor, width: 1),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            '+$count',
-                            style: TextStyle(
-                              color: textColor,
-                              fontWeight: FontWeight.w700,
-                              fontSize: LayoutConstants.stackBadgeFontSize,
-                            ),
-                          ),
-                        );
-                      }),
+            if (!hasStackTiles)
+              ...Quadrant.values.map((q) {
+                final count = tinyByQ[q]!.length;
+                if (count == 0) return const SizedBox.shrink();
+                const m = 16.0;
+                // Compute anchors so the chip sits at the bottom-right of each quadrant
+                double? right;
+                double? bottom;
+                switch (q) {
+                  case Quadrant.q1:
+                    right = size.width / 2 +
+                        m; // anchor to Q1 right edge minus margin
+                    bottom = size.height / 2 +
+                        m; // anchor to Q1 bottom edge minus margin
+                    break;
+                  case Quadrant.q2:
+                    right = m; // right edge of parent minus margin
+                    bottom = size.height / 2 + m; // Q2 bottom edge minus margin
+                    break;
+                  case Quadrant.q3:
+                    right = size.width / 2 + m; // Q3 right edge minus margin
+                    bottom = m; // parent bottom minus margin
+                    break;
+                  case Quadrant.q4:
+                    right = m;
+                    bottom = m;
+                    break;
+                }
+                return Positioned(
+                  key: ValueKey('stack_${q.name}'),
+                  right: right,
+                  bottom: bottom,
+                  child: RepaintBoundary(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          Telemetry.stackOpen(q.name, count);
+                          _openStackSheet(
+                            context,
+                            q,
+                            tinyByQ[q]!.map((e) => e.task).toList(),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(
+                          LayoutConstants.tileBorderRadius,
+                        ),
+                        child: Builder(
+                          builder: (context) {
+                            // Render as a small square tile, styled like other tiles
+                            final Color qColor;
+                            switch (q) {
+                              case Quadrant.q1:
+                                qColor = glassTokens.q1;
+                                break;
+                              case Quadrant.q2:
+                                qColor = glassTokens.q2;
+                                break;
+                              case Quadrant.q3:
+                                qColor = glassTokens.q3;
+                                break;
+                              case Quadrant.q4:
+                                qColor = glassTokens.q4;
+                                break;
+                            }
+                            final tileSize = LayoutConstants
+                                .minTileSize; // square small size
+                            final fillAlpha = widget.minimal ? 0.25 : 0.18;
+                            final borderColor = widget.minimal
+                                ? Colors.black.withValues(alpha: 0.20)
+                                : Colors.white.withValues(alpha: 0.18);
+                            // Use dark gray text in minimal mode for better visibility on light surfaces
+                            final textColor = widget.minimal
+                                ? const Color(0xFF424242)
+                                : Colors.white;
+                            return Container(
+                              width: tileSize,
+                              height: tileSize,
+                              decoration: BoxDecoration(
+                                color: qColor.withValues(alpha: fillAlpha),
+                                borderRadius: BorderRadius.circular(
+                                  LayoutConstants.tileBorderRadius,
+                                ),
+                                border: Border.all(
+                                  color: borderColor,
+                                  width: 1,
+                                ),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                '+$count',
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: LayoutConstants.stackBadgeFontSize,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              );
-            }),
-            if (widget.inlineEditId != null)
-              _buildInlineEditor(context, size),
+                );
+              }),
+            if (widget.inlineEditId != null) _buildInlineEditor(context, size),
             ...overlay,
           ],
         );
@@ -565,7 +641,10 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
     for (final tr in widget.layout) {
       final r = _px(tr.rect01, size);
       // enforce minimum interactive size
-      if (r.width < LayoutConstants.minTileSize || r.height < LayoutConstants.minTileSize) continue;
+      if (r.width < LayoutConstants.minTileSize ||
+          r.height < LayoutConstants.minTileSize) {
+        continue;
+      }
       if (r.contains(pos)) return tr.task.id;
     }
     return null;
@@ -597,13 +676,18 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
     }
   }
 
-  Rect _px(Rect r01, Size size) => Rect.fromLTWH(r01.left * size.width, r01.top * size.height, r01.width * size.width, r01.height * size.height);
+  Rect _px(Rect r01, Size size) => Rect.fromLTWH(
+        r01.left * size.width,
+        r01.top * size.height,
+        r01.width * size.width,
+        r01.height * size.height,
+      );
 
   Map<String, Rect> _rectMap(List<TreemapRect> layout) {
     final m = <String, Rect>{};
     // Reorder paint z-order: if a suggested id exists in a tie group (±5% area)
     // within its quadrant, paint it last so it sits "on top". Geometry is not changed.
-  final paintList = reorderForTieBreak(layout, widget.suggestedIds);
+    final paintList = reorderForTieBreak(layout, widget.suggestedIds);
     for (final tr in paintList) {
       m[tr.task.id] = tr.rect01;
     }
@@ -639,31 +723,55 @@ class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateM
             itemBuilder: (context, i) {
               final t = tasks[i];
               return ListTile(
-                title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text('P${t.priority} • ${t.minutes}m${t.due != null ? ' • due' : ''}'),
-                trailing: Wrap(spacing: AppSpacing.xs, children: [
-                  IconButton(
-                    tooltip: '+15m',
-                    icon: const Icon(Icons.add_alarm),
-                    onPressed: widget.onEditTask == null ? null : () => widget.onEditTask!(t.id),
-                  ),
-                  PopupMenuButton<Quadrant>(
-                    tooltip: 'Mover a',
-                    onSelected: (dest) => widget.onDropToQuadrant?.call(t.id, dest),
-                    itemBuilder: (_) => [
-                      const PopupMenuItem(value: Quadrant.q1, child: Text('Q1')),
-                      const PopupMenuItem(value: Quadrant.q2, child: Text('Q2')),
-                      const PopupMenuItem(value: Quadrant.q3, child: Text('Q3')),
-                      const PopupMenuItem(value: Quadrant.q4, child: Text('Q4')),
-                    ],
-                    child: const Icon(Icons.open_in_full),
-                  ),
-                  IconButton(
-                    tooltip: 'Marcar done',
-                    icon: const Icon(Icons.check_circle_outline),
-                    onPressed: () => widget.onEditTask?.call(t.id),
-                  ),
-                ]),
+                title: Text(
+                  t.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  'P${t.priority} • ${t.minutes}m${t.due != null ? ' • due' : ''}',
+                ),
+                trailing: Wrap(
+                  spacing: 8,
+                  children: [
+                    IconButton(
+                      tooltip: '+15m',
+                      icon: const Icon(Icons.add_alarm),
+                      onPressed: widget.onEditTask == null
+                          ? null
+                          : () => widget.onEditTask!(t.id),
+                    ),
+                    PopupMenuButton<Quadrant>(
+                      tooltip: 'Mover a',
+                      onSelected: (dest) =>
+                          widget.onDropToQuadrant?.call(t.id, dest),
+                      itemBuilder: (_) => [
+                        const PopupMenuItem(
+                          value: Quadrant.q1,
+                          child: Text('Q1'),
+                        ),
+                        const PopupMenuItem(
+                          value: Quadrant.q2,
+                          child: Text('Q2'),
+                        ),
+                        const PopupMenuItem(
+                          value: Quadrant.q3,
+                          child: Text('Q3'),
+                        ),
+                        const PopupMenuItem(
+                          value: Quadrant.q4,
+                          child: Text('Q4'),
+                        ),
+                      ],
+                      child: const Icon(Icons.open_in_full),
+                    ),
+                    IconButton(
+                      tooltip: 'Marcar done',
+                      icon: const Icon(Icons.check_circle_outline),
+                      onPressed: () => widget.onEditTask?.call(t.id),
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -680,7 +788,7 @@ extension on _TreemapCanvasState {
     final id = widget.inlineEditId!;
     final r01 = _nextRects01[id] ?? _prevRects01[id];
     if (r01 == null) return const SizedBox.shrink();
-    final rect = _px(r01, size).deflate(AppSpacing.xs * 0.75); // 6px
+    final rect = _px(r01, size).deflate(6);
 
     return Positioned(
       left: rect.left,
@@ -689,13 +797,13 @@ extension on _TreemapCanvasState {
       height: 56,
       child: Material(
         color: Colors.black.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
+        borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
             children: [
               const Icon(Icons.edit, size: 16, color: Colors.white70),
-              SizedBox(width: AppSpacing.xs * 0.75), // 6px
+              const SizedBox(width: 6),
               Expanded(
                 child: TextField(
                   controller: _inlineController,
@@ -720,12 +828,12 @@ extension on _TreemapCanvasState {
                 visualDensity: VisualDensity.compact,
                 onPressed: () => widget.onInlineCancel?.call(id),
               ),
-              const SizedBox(width: AppSpacing.xxs),
+              const SizedBox(width: 4),
               FilledButton(
                 style: FilledButton.styleFrom(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm - AppSpacing.xxs / 2, // 12 - 2 = 10
-                    vertical: AppSpacing.xs, // 8
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
                   ),
                 ),
                 onPressed: () {
@@ -759,7 +867,10 @@ class _EditDot extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.45),
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.25),
+              width: 1,
+            ),
           ),
           child: IconButton(
             onPressed: onPressed,
@@ -786,15 +897,26 @@ class _CheckDot extends StatelessWidget {
         color: Colors.transparent,
         child: Container(
           decoration: BoxDecoration(
-            color: minimal ? Colors.white.withValues(alpha: 0.9) : Colors.black.withValues(alpha: 0.45),
+            color: minimal
+                ? Colors.white.withValues(alpha: 0.9)
+                : Colors.black.withValues(alpha: 0.45),
             shape: BoxShape.circle,
-            border: Border.all(color: minimal ? Colors.black26 : Colors.white.withValues(alpha: 0.25), width: 1),
+            border: Border.all(
+              color: minimal
+                  ? Colors.black26
+                  : Colors.white.withValues(alpha: 0.25),
+              width: 1,
+            ),
           ),
           child: IconButton(
             onPressed: onPressed,
             padding: EdgeInsets.zero,
             splashRadius: 16,
-            icon: Icon(Icons.check, size: 16, color: minimal ? Colors.black : Colors.white),
+            icon: Icon(
+              Icons.check,
+              size: 16,
+              color: minimal ? Colors.black : Colors.white,
+            ),
             tooltip: 'Completar',
           ),
         ),
@@ -856,18 +978,18 @@ class _TreemapPainter extends CustomPainter {
   final Color onSurface;
   final Color onSurfaceVariant;
   final double textScale;
-  
+
   /// Tile path cache for performance optimization.
-  /// 
+  ///
   /// Memoizes rounded rectangle paths by (task.id + rect01 hash) to avoid
   /// redundant path calculations when layout is stable. Cache is static and
   /// shared across painter instances.
-  /// 
+  ///
   /// Benefits:
   /// - Reduces CPU overhead during animation frames
   /// - Prevents path recalculation for stable tiles
   /// - Improves paint performance when only dragging/hovering changes
-  /// 
+  ///
   /// Cache invalidation: Automatic via key = '${task.id}_${rect.hashCode}'
   /// When rect changes, new key is generated and old entry is orphaned.
   static final Map<String, Path> _pathCache = {};
@@ -877,21 +999,33 @@ class _TreemapPainter extends CustomPainter {
     final paint = Paint()..isAntiAlias = true;
     final double gap = LayoutConstants.tileGap; // uniform gap between tiles
 
-    // Always draw subtle quadrant grid (center cross) so the matrix is visible even with no tiles
-    final centerLine = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = outlineColor;
     final halfW = size.width / 2;
     final halfH = size.height / 2;
-    // Vertical center line
-    canvas.drawLine(Offset(halfW, 0), Offset(halfW, size.height), centerLine);
-    // Horizontal center line
-    canvas.drawLine(Offset(0, halfH), Offset(size.width, halfH), centerLine);
+
+    // Only draw center cross when NOT zoomed into a single quadrant
+    if (zoom == null) {
+      // Draw subtle quadrant grid (center cross) so the matrix is visible even with no tiles
+      final centerLine = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = outlineColor;
+      // Vertical center line
+      canvas.drawLine(Offset(halfW, 0), Offset(halfW, size.height), centerLine);
+      // Horizontal center line
+      canvas.drawLine(Offset(0, halfH), Offset(size.width, halfH), centerLine);
+    } else {
+      // When zoomed, draw corner indicators to show quadrant position
+      _drawQuadrantCornerIndicators(canvas, size, zoom!);
+    }
 
     // Quadrant labels when no tiles or demo mode
     if (layout.isEmpty) {
-      const labels = ['Q1\nUrgente\nImportante', 'Q2\nNo Urgente\nImportante', 'Q3\nUrgente\nNo Importante', 'Q4\nNo Urgente\nNo Importante'];
+      const labels = [
+        'Q1\nUrgente\nImportante',
+        'Q2\nNo Urgente\nImportante',
+        'Q3\nUrgente\nNo Importante',
+        'Q4\nNo Urgente\nNo Importante',
+      ];
       final centers = [
         Offset(halfW / 2, halfH / 2),
         Offset(halfW + halfW / 2, halfH / 2),
@@ -899,17 +1033,39 @@ class _TreemapPainter extends CustomPainter {
         Offset(halfW + halfW / 2, halfH + halfH / 2),
       ];
       for (int i = 0; i < 4; i++) {
-  final tp = _textPainter(labels[i], Rect.fromCenter(center: centers[i], width: halfW, height: halfH), 16, FontWeight.w600, textColor: minimal ? const Color(0xFF424242) : Colors.white, maxLines: 3);
-        tp.paint(canvas, Offset(centers[i].dx - tp.width / 2, centers[i].dy - tp.height / 2));
+        final tp = _textPainter(
+          labels[i],
+          Rect.fromCenter(center: centers[i], width: halfW, height: halfH),
+          16,
+          FontWeight.w600,
+          textColor: minimal ? const Color(0xFF424242) : Colors.white,
+          maxLines: 3,
+        );
+        tp.paint(
+          canvas,
+          Offset(centers[i].dx - tp.width / 2, centers[i].dy - tp.height / 2),
+        );
       }
     }
 
     // Debug: quadrant bounds in blue (disabled in minimal to keep visuals stable)
     if (debugTreemap && !minimal) {
-      TreemapDebugOverlay.drawQuadrantBounds(canvas, Rect.fromLTWH(0, 0, halfW, halfH));
-      TreemapDebugOverlay.drawQuadrantBounds(canvas, Rect.fromLTWH(halfW, 0, halfW, halfH));
-      TreemapDebugOverlay.drawQuadrantBounds(canvas, Rect.fromLTWH(0, halfH, halfW, halfH));
-      TreemapDebugOverlay.drawQuadrantBounds(canvas, Rect.fromLTWH(halfW, halfH, halfW, halfH));
+      TreemapDebugOverlay.drawQuadrantBounds(
+        canvas,
+        Rect.fromLTWH(0, 0, halfW, halfH),
+      );
+      TreemapDebugOverlay.drawQuadrantBounds(
+        canvas,
+        Rect.fromLTWH(halfW, 0, halfW, halfH),
+      );
+      TreemapDebugOverlay.drawQuadrantBounds(
+        canvas,
+        Rect.fromLTWH(0, halfH, halfW, halfH),
+      );
+      TreemapDebugOverlay.drawQuadrantBounds(
+        canvas,
+        Rect.fromLTWH(halfW, halfH, halfW, halfH),
+      );
       // HUD: area sums per quadrant
       final quadRects = [
         Rect.fromLTWH(0, 0, halfW, halfH),
@@ -919,11 +1075,19 @@ class _TreemapPainter extends CustomPainter {
       ];
       for (int i = 0; i < 4; i++) {
         final q = Quadrant.values[i];
-        final areaSum = layout.where((e) => e.task.quadrant == q).fold<double>(0, (a, e) => a + (e.rect01.width * e.rect01.height));
+        final areaSum = layout
+            .where((e) => e.task.quadrant == q)
+            .fold<double>(0, (a, e) => a + (e.rect01.width * e.rect01.height));
         final quadArea = 0.5 * 0.5; // normalized
         final pct = (areaSum / quadArea * 100).clamp(0.0, 999.0);
         final label = '${q.name}: ${pct.toStringAsFixed(1)}%';
-        final tp = TextPainter(text: TextSpan(text: label, style: TextStyle(fontSize: 10, color: Colors.blueAccent)), textDirection: TextDirection.ltr)..layout();
+        final tp = TextPainter(
+          text: TextSpan(
+            text: label,
+            style: TextStyle(fontSize: 10, color: Colors.blueAccent),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
         final pos = Offset(quadRects[i].left + 6, quadRects[i].top + 6);
         tp.paint(canvas, pos);
       }
@@ -937,13 +1101,17 @@ class _TreemapPainter extends CustomPainter {
       final qColor = minimal ? Colors.black : _byQuadrant(hoverQuadrant!);
       final overlay = Paint()
         ..style = PaintingStyle.fill
-        ..color = minimal ? Colors.black.withValues(alpha: 0.06) : qColor.withValues(alpha: 0.08);
+        ..color = minimal
+            ? Colors.black.withValues(alpha: 0.06)
+            : qColor.withValues(alpha: 0.08);
       canvas.drawRect(qRect, overlay);
 
       // Soft border glow
       final border = Paint()
         ..style = PaintingStyle.stroke
-        ..color = minimal ? Colors.black.withValues(alpha: 0.25) : qColor.withValues(alpha: 0.25)
+        ..color = minimal
+            ? Colors.black.withValues(alpha: 0.25)
+            : qColor.withValues(alpha: 0.25)
         ..strokeWidth = 2;
       canvas.drawRect(qRect.deflate(1), border);
     }
@@ -954,7 +1122,7 @@ class _TreemapPainter extends CustomPainter {
       final qRect = _quadrantRect(pulseQuadrant!, size);
       final c = qRect.center;
       final color = minimal ? Colors.black : _byQuadrant(pulseQuadrant!);
-  final r = ui.lerpDouble(8, 28, Curves.easeOut.transform(pulseT))!;
+      final r = ui.lerpDouble(8, 28, Curves.easeOut.transform(pulseT))!;
       final a = (1.0 - pulseT).clamp(0.0, 1.0);
       final ring = Paint()
         ..style = PaintingStyle.stroke
@@ -964,9 +1132,16 @@ class _TreemapPainter extends CustomPainter {
     }
     // Prepare shelf clusters for debug overlay
     if (debugTreemap && !minimal && layout.isNotEmpty) {
-      final byQ = <Quadrant, List<Rect>>{for (final q in Quadrant.values) q: []};
+      final byQ = <Quadrant, List<Rect>>{
+        for (final q in Quadrant.values) q: [],
+      };
       for (final tr in layout) {
-        final rr = Rect.fromLTWH(tr.rect01.left * size.width, tr.rect01.top * size.height, tr.rect01.width * size.width, tr.rect01.height * size.height);
+        final rr = Rect.fromLTWH(
+          tr.rect01.left * size.width,
+          tr.rect01.top * size.height,
+          tr.rect01.width * size.width,
+          tr.rect01.height * size.height,
+        );
         byQ[tr.task.quadrant]!.add(rr);
       }
       for (final q in Quadrant.values) {
@@ -982,7 +1157,12 @@ class _TreemapPainter extends CustomPainter {
       final r01From = prevRects01[id] ?? tr.rect01;
       final r01To = nextRects01[id] ?? tr.rect01;
       final r01 = Rect.lerp(r01From, r01To, curveT)!;
-      final r0 = Rect.fromLTWH(r01.left * size.width, r01.top * size.height, r01.width * size.width, r01.height * size.height);
+      final r0 = Rect.fromLTWH(
+        r01.left * size.width,
+        r01.top * size.height,
+        r01.width * size.width,
+        r01.height * size.height,
+      );
       final r = _snapRect(r0);
       // Flat design: do not color tiles by quadrant
 
@@ -997,7 +1177,9 @@ class _TreemapPainter extends CustomPainter {
           final v = pointer! - scaled.center;
           final len = v.distance;
           final maxShift = 6.0;
-          shift += len > 0 ? Offset(v.dx / len * maxShift, v.dy / len * maxShift) : Offset.zero;
+          shift += len > 0
+              ? Offset(v.dx / len * maxShift, v.dy / len * maxShift)
+              : Offset.zero;
         }
         // Magnetism: bias towards center of hovered quadrant
         if (hoverQuadrant != null) {
@@ -1006,7 +1188,9 @@ class _TreemapPainter extends CustomPainter {
           final mlen = mv.distance;
           final mMax = 8.0;
           final bias = 0.12; // fraction towards center
-          final mshift = mlen > 0 ? Offset(mv.dx / mlen * mMax * bias, mv.dy / mlen * mMax * bias) : Offset.zero;
+          final mshift = mlen > 0
+              ? Offset(mv.dx / mlen * mMax * bias, mv.dy / mlen * mMax * bias)
+              : Offset.zero;
           shift += mshift;
         }
         drawRect = scaled.shift(shift);
@@ -1017,7 +1201,10 @@ class _TreemapPainter extends CustomPainter {
       }
       // Deflate to create a gutter around each tile so rounded borders are visible
       // Clamp gutter so we don't invert tiny rects, then snap to pixel grid to avoid gaps
-      final safeGap = math.min(gap, math.max(0.0, math.min(drawRect.width, drawRect.height) * 0.5 - 0.5));
+      final safeGap = math.min(
+        gap,
+        math.max(0.0, math.min(drawRect.width, drawRect.height) * 0.5 - 0.5),
+      );
       drawRect = _snapRect(drawRect.deflate(safeGap));
       // Single geometry: flat fill + 1dp stroke
       final rr = RRect.fromRectAndRadius(
@@ -1034,16 +1221,40 @@ class _TreemapPainter extends CustomPainter {
         ..color = tileBorderColor
         ..strokeWidth = UiTokens.tileStroke;
       canvas.drawRRect(rr, paint);
-      
+
       // If this is a stack tile, render a centered +N label and skip details
       if (tr.stackChildren.isNotEmpty) {
         final label = '+${tr.stackChildren.length}';
         if (minimal) {
-          final tp = _textPainter(label, drawRect, 12, FontWeight.w700, textColor: onSurface);
-          tp.paint(canvas, Offset(drawRect.right - tp.width - 6, drawRect.bottom - tp.height - 4));
+          final tp = _textPainter(
+            label,
+            drawRect,
+            12,
+            FontWeight.w700,
+            textColor: onSurface,
+          );
+          tp.paint(
+            canvas,
+            Offset(
+              drawRect.right - tp.width - 6,
+              drawRect.bottom - tp.height - 4,
+            ),
+          );
         } else {
-          final tp = _textPainter(label, drawRect, 14, FontWeight.w700, textColor: onSurface);
-          tp.paint(canvas, Offset(drawRect.center.dx - tp.width / 2, drawRect.center.dy - tp.height / 2));
+          final tp = _textPainter(
+            label,
+            drawRect,
+            14,
+            FontWeight.w700,
+            textColor: onSurface,
+          );
+          tp.paint(
+            canvas,
+            Offset(
+              drawRect.center.dx - tp.width / 2,
+              drawRect.center.dy - tp.height / 2,
+            ),
+          );
         }
         continue;
       }
@@ -1057,38 +1268,71 @@ class _TreemapPainter extends CustomPainter {
       final pointerInside = pointer != null && drawRect.contains(pointer!);
       final isSelected = selectedId != null && selectedId == tr.task.id;
       final showLabel = !minimal || isDragging || pointerInside || isSelected;
+
+      // Calculate priority/time metadata height for bottom positioning
+      final responsiveMetaSize =
+          typography.metaFontSize(size).toDouble() * textScale;
+      final meta = 'P${tr.task.priority} • ${tr.task.minutes}m';
+      final metaPainter = _textPainter(
+        meta,
+        drawRect,
+        responsiveMetaSize,
+        FontWeight.w500,
+        alpha: 0.95,
+        maxLines: 1,
+        textColor: onSurfaceVariant,
+      );
+      final metaHeight = metaPainter.height;
+
+      // Reserve space at bottom for priority/time (always shown if space allows)
+      final reserveBottomSpace = showLabel && area > 12000 && !debugTreemap;
+      final bottomReserved = reserveBottomSpace ? metaHeight + 8 : 0.0;
+
+      // Title
       if (showLabel && canShowTitle) {
-  final responsiveTitleSize = (debugTreemap ? 16.0 : typography.titleFontSize(size).toDouble()) * textScale;
-        final tp = _textPainter(tr.task.title, drawRect, responsiveTitleSize, FontWeight.w700, textColor: onSurface, maxLines: debugTreemap ? 3 : 1);
+        final responsiveTitleSize =
+            (debugTreemap ? 16.0 : typography.titleFontSize(size).toDouble()) *
+                textScale;
+        final tp = _textPainter(
+          tr.task.title,
+          drawRect,
+          responsiveTitleSize,
+          FontWeight.w700,
+          textColor: onSurface,
+          maxLines: debugTreemap ? 3 : 1,
+        );
         tp.paint(canvas, Offset(drawRect.left + 8, currentY));
         currentY += tp.height + 2;
       }
-      
-      // Priority and time (if medium+ size)
-      if (showLabel && area > 12000 && currentY + 14 < drawRect.bottom - 6 && !debugTreemap) {
-  final responsiveMetaSize = typography.metaFontSize(size).toDouble() * textScale;
-        final meta = 'P${tr.task.priority} • ${tr.task.minutes}m';
-        final tp2 = _textPainter(
-          meta,
-          drawRect,
-          responsiveMetaSize,
-          FontWeight.w500,
-          alpha: 0.95,
-          maxLines: 1,
-          textColor: onSurfaceVariant,
-        );
-        tp2.paint(canvas, Offset(drawRect.left + 8, currentY));
-        currentY += tp2.height + 2;
-      }
-      
-      // Notes preview (if large size and has notes)
-      if (showLabel && area > 26000 && tr.task.notes != null && tr.task.notes!.isNotEmpty && currentY + 14 < drawRect.bottom - 6 && !debugTreemap) {
-  final responsiveNotesSize = typography.metaFontSize(size).toDouble() * textScale;
-        final notesPreview = tr.task.notes!.length > 50 
-            ? '${tr.task.notes!.substring(0, 50)}...' 
+
+      // Notes preview (if large size and has notes) - now goes after title
+      if (showLabel &&
+          area > 26000 &&
+          tr.task.notes != null &&
+          tr.task.notes!.isNotEmpty &&
+          currentY + 14 < drawRect.bottom - bottomReserved - 6 &&
+          !debugTreemap) {
+        final responsiveNotesSize =
+            typography.metaFontSize(size).toDouble() * textScale;
+        final notesPreview = tr.task.notes!.length > 50
+            ? '${tr.task.notes!.substring(0, 50)}...'
             : tr.task.notes!;
-  final tp3 = _textPainter(notesPreview, drawRect, responsiveNotesSize, FontWeight.w400, alpha: minimal ? 0.9 : 0.85, maxLines: 2, textColor: minimal ? const Color(0xFF424242) : Colors.white);
+        final tp3 = _textPainter(
+          notesPreview,
+          drawRect,
+          responsiveNotesSize,
+          FontWeight.w400,
+          alpha: minimal ? 0.9 : 0.85,
+          maxLines: 2,
+          textColor: minimal ? const Color(0xFF424242) : Colors.white,
+        );
         tp3.paint(canvas, Offset(drawRect.left + 8, currentY));
+      }
+
+      // Priority and time - ALWAYS at bottom if space allows
+      if (reserveBottomSpace) {
+        final bottomY = drawRect.bottom - metaHeight - 6;
+        metaPainter.paint(canvas, Offset(drawRect.left + 8, bottomY));
       }
 
       // Removed quadrant color indicator for flat design
@@ -1099,40 +1343,52 @@ class _TreemapPainter extends CustomPainter {
       //   star.paint(canvas, Offset(drawRect.left + 6, drawRect.top + 4));
       // }
 
-    // Debug labels for each tile
-    if (debugTreemap && !minimal) {
-      final area = (drawRect.width * drawRect.height) / (size.width * size.height);
-      final ratio = drawRect.width == 0 || drawRect.height == 0
-          ? 0.0
-          : (drawRect.width / drawRect.height).abs();
-      final rr = ratio < 1 ? 1 / (ratio == 0.0 ? 1.0 : ratio) : ratio;
-      TreemapDebugOverlay.labelTile(canvas, drawRect, tr.task.id, area, rr);
-    }
-
-    // Draw fade-out outros on top
-    if (outros.isNotEmpty) {
-      final now = DateTime.now();
-      for (final entry in outros.entries) {
-        final o = entry.value;
-        final prog = o.progress(now);
-        if (prog >= 1.0) continue;
-        final alpha = (1.0 - prog).clamp(0.0, 1.0);
-        final r0 = Rect.fromLTWH(o.rect.left * size.width, o.rect.top * size.height, o.rect.width * size.width, o.rect.height * size.height);
-        final r = _snapRect(r0);
-        final rr = RRect.fromRectAndRadius(r, const Radius.circular(12));
-        final baseColor = o.quadrant == null ? (minimal ? Colors.black : Colors.white) : _byQuadrant(o.quadrant!);
-        final baseAlpha = (debugTreemap && !minimal) ? 0.28 : (minimal ? 0.25 : 0.18);
-        final fill = Paint()
-          ..style = PaintingStyle.fill
-          ..color = baseColor.withValues(alpha: baseAlpha * alpha);
-        canvas.drawRRect(rr, fill);
-        final stroke = Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = (debugTreemap && !minimal) ? 2.0 : 1.0
-          ..color = (minimal ? Colors.black.withValues(alpha: 0.20) : Colors.white.withValues(alpha: 0.18)).withValues(alpha: (minimal ? 0.20 : 0.18) * alpha);
-        canvas.drawRRect(rr, stroke);
+      // Debug labels for each tile
+      if (debugTreemap && !minimal) {
+        final area =
+            (drawRect.width * drawRect.height) / (size.width * size.height);
+        final ratio = drawRect.width == 0 || drawRect.height == 0
+            ? 0.0
+            : (drawRect.width / drawRect.height).abs();
+        final rr = ratio < 1 ? 1 / (ratio == 0.0 ? 1.0 : ratio) : ratio;
+        TreemapDebugOverlay.labelTile(canvas, drawRect, tr.task.id, area, rr);
       }
-    }
+
+      // Draw fade-out outros on top
+      if (outros.isNotEmpty) {
+        final now = DateTime.now();
+        for (final entry in outros.entries) {
+          final o = entry.value;
+          final prog = o.progress(now);
+          if (prog >= 1.0) continue;
+          final alpha = (1.0 - prog).clamp(0.0, 1.0);
+          final r0 = Rect.fromLTWH(
+            o.rect.left * size.width,
+            o.rect.top * size.height,
+            o.rect.width * size.width,
+            o.rect.height * size.height,
+          );
+          final r = _snapRect(r0);
+          final rr = RRect.fromRectAndRadius(r, const Radius.circular(12));
+          final baseColor = o.quadrant == null
+              ? (minimal ? Colors.black : Colors.white)
+              : _byQuadrant(o.quadrant!);
+          final baseAlpha =
+              (debugTreemap && !minimal) ? 0.28 : (minimal ? 0.25 : 0.18);
+          final fill = Paint()
+            ..style = PaintingStyle.fill
+            ..color = baseColor.withValues(alpha: baseAlpha * alpha);
+          canvas.drawRRect(rr, fill);
+          final stroke = Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = (debugTreemap && !minimal) ? 2.0 : 1.0
+            ..color = (minimal
+                    ? Colors.black.withValues(alpha: 0.20)
+                    : Colors.white.withValues(alpha: 0.18))
+                .withValues(alpha: (minimal ? 0.20 : 0.18) * alpha);
+          canvas.drawRRect(rr, stroke);
+        }
+      }
     }
 
     // Debug: visualize inferred shelves after tiles are drawn
@@ -1154,23 +1410,22 @@ class _TreemapPainter extends CustomPainter {
   }
 
   /// Determines whether the CustomPainter should repaint.
-  /// 
+  ///
   /// Uses deep comparison of layout, animation state, and interaction state.
   /// Comparison is efficient because:
   /// - `layout` uses List equality (identity or content comparison)
   /// - `prevRects01`/`nextRects01` use Map equality
   /// - Primitive comparisons (t, pulseT, draggingId) are cheap
-  /// 
+  ///
   /// Performance note: If adding complex overlays/tooltips per tile that cause
   /// jank, consider wrapping individual tiles with `RepaintBoundary` to isolate
   /// repaints. Only do this if profiling shows significant paint overhead.
-  /// 
+  ///
   /// Path caching via `_pathCache` reduces redundant path calculations when
   /// layout is stable but other properties change (e.g., pointer movement).
   @override
   bool shouldRepaint(covariant _TreemapPainter oldDelegate) {
-    final repaint =
-        oldDelegate.layout != layout ||
+    final repaint = oldDelegate.layout != layout ||
         oldDelegate.draggingId != draggingId ||
         oldDelegate.pointer != pointer ||
         oldDelegate.hoverQuadrant != hoverQuadrant ||
@@ -1202,22 +1457,29 @@ class _TreemapPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRebuildSemantics(covariant _TreemapPainter oldDelegate) => oldDelegate.layout != layout;
+  bool shouldRebuildSemantics(covariant _TreemapPainter oldDelegate) =>
+      oldDelegate.layout != layout;
 
   @override
   SemanticsBuilderCallback get semanticsBuilder => (Size size) {
         final nodes = <CustomPainterSemantics>[];
         for (final tr in layout) {
-          final r = Rect.fromLTWH(tr.rect01.left * size.width, tr.rect01.top * size.height, tr.rect01.width * size.width, tr.rect01.height * size.height);
-          
+          final r = Rect.fromLTWH(
+            tr.rect01.left * size.width,
+            tr.rect01.top * size.height,
+            tr.rect01.width * size.width,
+            tr.rect01.height * size.height,
+          );
+
           // Skip tiles with zero or negative dimensions (invisible to users)
           if (r.width <= 0 || r.height <= 0) continue;
-          
+
           // Enhanced semantic label with complete task context
           final String label;
           if (tr.stackChildren.isNotEmpty) {
             // Stack tile: announce group size and quadrant
-            label = 'Group of ${tr.stackChildren.length + 1} tasks in quadrant ${tr.task.quadrant.name.toUpperCase()}, tap to expand';
+            label =
+                'Group of ${tr.stackChildren.length + 1} tasks in quadrant ${tr.task.quadrant.name.toUpperCase()}, tap to expand';
           } else {
             // Individual tile: full task details for screen readers
             final parts = <String>[
@@ -1226,7 +1488,7 @@ class _TreemapPainter extends CustomPainter {
               'Duration: ${tr.task.minutes} minutes',
               'Quadrant: ${_quadrantName(tr.task.quadrant)}',
             ];
-            
+
             // Add due date if present
             if (tr.task.due != null) {
               final daysUntil = tr.task.due!.difference(DateTime.now()).inDays;
@@ -1240,28 +1502,30 @@ class _TreemapPainter extends CustomPainter {
                 parts.add('Due in $daysUntil days');
               }
             }
-            
+
             // Add suggestion status
             if (suggested?.contains(tr.task.id) ?? false) {
               parts.add('Suggested task');
             }
-            
+
             label = parts.join(', ');
           }
-          
-          nodes.add(CustomPainterSemantics(
-            rect: r,
-            properties: SemanticsProperties(
-              label: label,
-              button: true,
-              textDirection: TextDirection.ltr,
-              hint: 'Double tap to edit, or drag to move to another quadrant',
+
+          nodes.add(
+            CustomPainterSemantics(
+              rect: r,
+              properties: SemanticsProperties(
+                label: label,
+                button: true,
+                textDirection: TextDirection.ltr,
+                hint: 'Double tap to edit, or drag to move to another quadrant',
+              ),
             ),
-          ));
+          );
         }
         return nodes;
       };
-  
+
   /// Get human-readable quadrant name for semantics.
   String _quadrantName(Quadrant q) {
     switch (q) {
@@ -1313,7 +1577,8 @@ class _TreemapPainter extends CustomPainter {
 
   // Snap rect coordinates to pixel grid to reduce hairline gaps.
   Rect _snapRect(Rect r) {
-    double snap(double v) => (v + 0.5).floorToDouble() + 0.0; // prefer whole-pixel alignment
+    double snap(double v) =>
+        (v + 0.5).floorToDouble() + 0.0; // prefer whole-pixel alignment
     final l = snap(r.left);
     final t = snap(r.top);
     final rr = snap(r.right);
@@ -1322,38 +1587,144 @@ class _TreemapPainter extends CustomPainter {
     final h = (bb - t).clamp(0.0, double.infinity);
     return Rect.fromLTWH(l, t, w, h);
   }
-  
+
   /// Get or create a cached rounded rectangle path for the given rect.
-  /// 
+  ///
   /// Memoizes paths by (taskId + rect hash) to avoid redundant path creation
   /// when layout is stable. This improves performance during interaction-only
   /// repaints (e.g., pointer movement, dragging state changes).
-  /// 
+  ///
   /// Cache key invalidation: When rect changes, hashCode changes, creating a
   /// new cache entry. Old entries are orphaned but remain until GC.
   /// Cache is bounded implicitly by task count (max ~500 tasks × 2 states).
   Path _getCachedPath(String taskId, Rect rect, double radius) {
     final key = '${taskId}_${rect.hashCode}_$radius#v$layoutVersion';
     return _pathCache.putIfAbsent(key, () {
-      return Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
+      return Path()
+        ..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
     });
   }
 
-  TextPainter _textPainter(String text, Rect r, double size, FontWeight fw, {double alpha = 0.92, int maxLines = 2, Color? textColor}) {
+  /// Draw corner indicators when zoomed into a specific quadrant.
+  /// Shows L-shaped markers in corners to indicate quadrant boundaries.
+  void _drawQuadrantCornerIndicators(
+      Canvas canvas, Size size, Quadrant zoomedQuadrant) {
+    final cornerPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round
+      ..color = outlineColor.withValues(alpha: 0.25);
+
+    const cornerLength = 20.0;
+    const margin = 16.0;
+
+    // Determine which corners to draw based on quadrant
+    // Q1 (top-left): draw bottom-right corner
+    // Q2 (top-right): draw bottom-left corner
+    // Q3 (bottom-left): draw top-right corner
+    // Q4 (bottom-right): draw top-left corner
+
+    switch (zoomedQuadrant) {
+      case Quadrant.q1:
+        // Bottom-right corner (connects to Q2, Q3, Q4)
+        final brX = size.width - margin;
+        final brY = size.height - margin;
+        canvas.drawLine(
+          Offset(brX - cornerLength, brY),
+          Offset(brX, brY),
+          cornerPaint,
+        );
+        canvas.drawLine(
+          Offset(brX, brY - cornerLength),
+          Offset(brX, brY),
+          cornerPaint,
+        );
+        break;
+
+      case Quadrant.q2:
+        // Bottom-left corner (connects to Q1, Q3, Q4)
+        final blX = margin;
+        final blY = size.height - margin;
+        canvas.drawLine(
+          Offset(blX, blY),
+          Offset(blX + cornerLength, blY),
+          cornerPaint,
+        );
+        canvas.drawLine(
+          Offset(blX, blY - cornerLength),
+          Offset(blX, blY),
+          cornerPaint,
+        );
+        break;
+
+      case Quadrant.q3:
+        // Top-right corner (connects to Q1, Q2, Q4)
+        final trX = size.width - margin;
+        final trY = margin;
+        canvas.drawLine(
+          Offset(trX - cornerLength, trY),
+          Offset(trX, trY),
+          cornerPaint,
+        );
+        canvas.drawLine(
+          Offset(trX, trY),
+          Offset(trX, trY + cornerLength),
+          cornerPaint,
+        );
+        break;
+
+      case Quadrant.q4:
+        // Top-left corner (connects to Q1, Q2, Q3)
+        final tlX = margin;
+        final tlY = margin;
+        canvas.drawLine(
+          Offset(tlX, tlY),
+          Offset(tlX + cornerLength, tlY),
+          cornerPaint,
+        );
+        canvas.drawLine(
+          Offset(tlX, tlY),
+          Offset(tlX, tlY + cornerLength),
+          cornerPaint,
+        );
+        break;
+    }
+  }
+
+  TextPainter _textPainter(
+    String text,
+    Rect r,
+    double size,
+    FontWeight fw, {
+    double alpha = 0.92,
+    int maxLines = 2,
+    Color? textColor,
+  }) {
     final maxW = math.max(0.0, r.width - 16);
     final tp = TextPainter(
-      text: TextSpan(text: text, style: TextStyle(fontSize: size, fontWeight: fw, color: (textColor ?? Colors.white).withValues(alpha: alpha))),
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          fontSize: size,
+          fontWeight: fw,
+          color: (textColor ?? Colors.white).withValues(alpha: alpha),
+        ),
+      ),
       textDirection: TextDirection.ltr,
       maxLines: maxLines,
       ellipsis: '…',
     )..layout(maxWidth: maxW);
     return tp;
   }
-
 }
 
 class _OutroState {
-  _OutroState({required this.rect, required this.quadrant, required this.startedAt, required this.duration});
+  _OutroState({
+    required this.rect,
+    required this.quadrant,
+    required this.startedAt,
+    required this.duration,
+  });
   final Rect rect; // normalized 0..1
   final Quadrant? quadrant;
   final DateTime startedAt;
@@ -1368,9 +1739,14 @@ class _OutroState {
 }
 
 // Top-level helper: reorder paint z-order so suggested ids in tie groups paint last per quadrant.
-List<TreemapRect> reorderForTieBreak(List<TreemapRect> items, Set<String>? suggested) {
+List<TreemapRect> reorderForTieBreak(
+  List<TreemapRect> items,
+  Set<String>? suggested,
+) {
   if (suggested == null || suggested.isEmpty) return items;
-  final byQ = <Quadrant, List<TreemapRect>>{for (final q in Quadrant.values) q: []};
+  final byQ = <Quadrant, List<TreemapRect>>{
+    for (final q in Quadrant.values) q: [],
+  };
   for (final it in items) {
     byQ[it.task.quadrant]!.add(it);
   }
@@ -1381,7 +1757,10 @@ List<TreemapRect> reorderForTieBreak(List<TreemapRect> items, Set<String>? sugge
     final areas = list.map((e) => e.rect01.width * e.rect01.height).toList();
     String sid = '';
     for (final s in suggested) {
-      if (list.any((e) => e.task.id == s)) { sid = s; break; }
+      if (list.any((e) => e.task.id == s)) {
+        sid = s;
+        break;
+      }
     }
     if (sid.isEmpty) {
       out.addAll(list);
@@ -1393,7 +1772,9 @@ List<TreemapRect> reorderForTieBreak(List<TreemapRect> items, Set<String>? sugge
       continue;
     }
     final aS = areas[idx];
-    final hasTie = areas.asMap().entries.any((e) => e.key != idx && aS > 0 && ((e.value - aS).abs() / aS) <= 0.05);
+    final hasTie = areas.asMap().entries.any(
+          (e) => e.key != idx && aS > 0 && ((e.value - aS).abs() / aS) <= 0.05,
+        );
     if (!hasTie) {
       out.addAll(list);
       continue;
@@ -1420,10 +1801,14 @@ List<Rect> _clusterShelves(List<Rect> rects) {
     for (var j = i + 1; j < rects.length; j++) {
       if (used[j]) continue;
       final rj = rects[j];
-      final sameRow = ( (rj.top - base.top).abs() < eps && (rj.height - base.height).abs() < eps ) ||
-                      ( (rj.bottom - base.bottom).abs() < eps && (rj.height - base.height).abs() < eps );
-      final sameCol = ( (rj.left - base.left).abs() < eps && (rj.width - base.width).abs() < eps ) ||
-                      ( (rj.right - base.right).abs() < eps && (rj.width - base.width).abs() < eps );
+      final sameRow = ((rj.top - base.top).abs() < eps &&
+              (rj.height - base.height).abs() < eps) ||
+          ((rj.bottom - base.bottom).abs() < eps &&
+              (rj.height - base.height).abs() < eps);
+      final sameCol = ((rj.left - base.left).abs() < eps &&
+              (rj.width - base.width).abs() < eps) ||
+          ((rj.right - base.right).abs() < eps &&
+              (rj.width - base.width).abs() < eps);
       if (sameRow || sameCol) {
         group.add(rj);
         used[j] = true;

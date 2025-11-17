@@ -1,4 +1,3 @@
-import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/l10n/app_localizations_en.dart';
@@ -6,13 +5,14 @@ import 'package:flutter/material.dart';
 
 class Minimap extends StatelessWidget {
   // optional: heat density by weights
-  const Minimap(
-      {super.key,
-      required this.zoom,
-      this.onSelectQuadrant,
-      this.onFullView,
-      this.minimal = false,
-      this.tasks});
+  const Minimap({
+    super.key,
+    required this.zoom,
+    this.onSelectQuadrant,
+    this.onFullView,
+    this.minimal = false,
+    this.tasks,
+  });
   final Quadrant? zoom;
   final void Function(Quadrant q)? onSelectQuadrant;
   final VoidCallback? onFullView;
@@ -55,7 +55,7 @@ class Minimap extends StatelessWidget {
         }
       },
       child: Container(
-        padding: EdgeInsets.all(AppSpacing.xs * 0.75), // 6px
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: minimal
               ? Colors.white.withValues(alpha: 0.85)
@@ -66,8 +66,14 @@ class Minimap extends StatelessWidget {
         child: CustomPaint(
           size: const Size(80, 80),
           painter: _MinimapPainter(
-              zoom, doLabel, decideLabel, delegateLabel, deleteLabel,
-              minimal: minimal, tasks: tasks),
+            zoom,
+            doLabel,
+            decideLabel,
+            delegateLabel,
+            deleteLabel,
+            minimal: minimal,
+            tasks: tasks,
+          ),
         ),
       ),
     );
@@ -75,9 +81,15 @@ class Minimap extends StatelessWidget {
 }
 
 class _MinimapPainter extends CustomPainter {
-  _MinimapPainter(this.zoom, this.doLabel, this.decideLabel, this.delegateLabel,
-      this.deleteLabel,
-      {this.minimal = false, this.tasks});
+  _MinimapPainter(
+    this.zoom,
+    this.doLabel,
+    this.decideLabel,
+    this.delegateLabel,
+    this.deleteLabel, {
+    this.minimal = false,
+    this.tasks,
+  });
   final Quadrant? zoom;
   final String doLabel;
   final String decideLabel;
@@ -126,11 +138,13 @@ class _MinimapPainter extends CustomPainter {
     // Prepare label painters helper
     TextPainter tp(String text) => TextPainter(
           text: TextSpan(
-              style: TextStyle(
-                  color: minimal ? const Color(0xFF424242) : Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600),
-              text: text),
+            style: TextStyle(
+              color: minimal ? const Color(0xFF424242) : Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+            text: text,
+          ),
           textDirection: TextDirection.ltr,
           maxLines: 1,
           ellipsis: '…',

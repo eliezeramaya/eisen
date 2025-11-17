@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 
 /// Simple placeholder page for a Pomodoro timer.
 ///
@@ -17,7 +18,17 @@ class PomodoroPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        leadingWidth: 140,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: Row(
+            children: [
+              const AppLogoHomeButton(),
+              const SizedBox(width: 8),
+              Text(title),
+            ],
+          ),
+        ),
       ),
       body: Center(
         child: Text(
@@ -29,4 +40,3 @@ class PomodoroPage extends StatelessWidget {
     );
   }
 }
-

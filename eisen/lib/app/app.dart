@@ -12,7 +12,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../core/providers/locale_provider.dart';
 import '../core/theme/app_theme.dart';
 import 'router.dart';
 
@@ -27,7 +26,6 @@ class EisenApp extends ConsumerWidget {
     final minimal = ref.watch(
       matrixControllerProvider.select((s) => s.minimal),
     );
-    final userLocale = ref.watch(localeProvider);
 
     final light = buildAppTheme(Brightness.light);
     final dark = buildAppTheme(Brightness.dark);

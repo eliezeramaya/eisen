@@ -4,6 +4,7 @@ import 'package:eisen/features/settings/presentation/live_preview_pane.dart';
 import 'package:eisen/features/settings/presentation/section_bus.dart';
 import 'package:eisen/features/settings/presentation/settings_content.dart';
 import 'package:eisen/features/settings/presentation/settings_search.dart';
+import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -94,6 +95,11 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       jumpTo: (s) => setState(() => _section = s),
       child: Scaffold(
         appBar: AppBar(
+          leadingWidth: 140,
+          leading: const Padding(
+            padding: EdgeInsets.only(left: 12),
+            child: AppLogoHomeButton(),
+          ),
           title: const Text('Settings'),
           actions: [
             IconButton(

@@ -20,3 +20,6 @@ Treemap
 - computeSquarifiedLayout groups by quadrant when not zoomed and lays out each quadrant independently within its quadrant cell.
 - When zoom is set, the selected quadrant consumes the entire canvas.
 
+Settings · General
+- UiPrefsData in `lib/core/services/ui_prefs.dart` centralizes UI preferences (language, region, date/time formats, text scale, notifications, workflow plan, layout sliders).
+- Settings > General (`lib/features/settings/presentation/sections/general_panel.dart`) reads/writes UiPrefs via `uiPrefsControllerProvider`, including Workflow Plan which toggles the Gantt/Workflow button in the main toolbar.

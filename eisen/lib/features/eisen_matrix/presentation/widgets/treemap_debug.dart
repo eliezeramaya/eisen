@@ -1,4 +1,3 @@
-import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:flutter/material.dart';
 
 /// Debug overlay helpers for the treemap. Lightweight and pure static.
@@ -26,13 +25,24 @@ class TreemapDebugOverlay {
     c.drawRect(shelfBounds.deflate(0.5), border);
   }
 
-  static void labelTile(Canvas c, Rect r, String id, double area, double ratio) {
+  static void labelTile(
+    Canvas c,
+    Rect r,
+    String id,
+    double area,
+    double ratio,
+  ) {
     final short = id.length <= 6 ? id : id.substring(id.length - 6);
-    final text = '$short  ${area.toStringAsFixed(3)}  r=${ratio.toStringAsFixed(2)}';
+    final text =
+        '$short  ${area.toStringAsFixed(3)}  r=${ratio.toStringAsFixed(2)}';
     final tp = TextPainter(
       text: TextSpan(
         text: text,
-        style: const TextStyle(fontSize: 9, color: Colors.black87, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+          fontSize: 9,
+          color: Colors.black87,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       textDirection: TextDirection.ltr,
       maxLines: 1,
@@ -41,11 +51,13 @@ class TreemapDebugOverlay {
     final bg = Paint()
       ..style = PaintingStyle.fill
       ..color = Colors.yellow.withValues(alpha: 0.75);
-    final pad = EdgeInsets.symmetric(
-      horizontal: AppSpacing.xxs / 2, // 2px
-      vertical: AppSpacing.xxs / 4, // 1px
+    final pad = const EdgeInsets.symmetric(horizontal: 2, vertical: 1);
+    final rect = Rect.fromLTWH(
+      r.left + 2,
+      r.top + 2,
+      tp.width + pad.horizontal,
+      tp.height + pad.vertical,
     );
-    final rect = Rect.fromLTWH(r.left + 2, r.top + 2, tp.width + pad.horizontal, tp.height + pad.vertical);
     c.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(3)), bg);
     tp.paint(c, Offset(rect.left + pad.left, rect.top + pad.top));
   }
