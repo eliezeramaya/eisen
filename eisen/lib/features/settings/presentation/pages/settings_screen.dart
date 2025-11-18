@@ -1,3 +1,4 @@
+import 'package:eisen/features/settings/presentation/pages/settings_mobile_scaffold.dart';
 import 'package:eisen/features/settings/presentation/settings_page_desktop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,13 +16,9 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final width = MediaQuery.sizeOf(context).width;
-    // In the future, a dedicated mobile scaffold can be used here when
-    // width < 720 (category list + breadcrumbs). For now we reuse the
-    // responsive SettingsPageDesktop to keep behaviour consistent.
     if (width < 720) {
-      return const SettingsPageDesktop();
+      return const SettingsMobileScaffold();
     }
     return const SettingsPageDesktop();
   }
 }
-
