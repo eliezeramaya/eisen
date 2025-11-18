@@ -1,5 +1,6 @@
 import 'package:eisen/core/notifications/notifications_service.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/features/settings/application/appearance_preview_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -39,6 +40,7 @@ class _TextScaleCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(uiPrefsControllerProvider.notifier);
+    final preview = ref.read(appearancePreviewProvider.notifier);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -58,7 +60,11 @@ class _TextScaleCard extends ConsumerWidget {
               max: 5,
               divisions: 4,
               label: prefs.textScaleLevel.toString(),
-              onChanged: (d) => ctrl.setTextScaleLevel(d.round()),
+              onChanged: (d) {
+                final level = d.round().clamp(1, 5);
+                ctrl.setTextScaleLevel(level);
+                preview.setTextScaleLevel(level);
+              },
             ),
             Align(
               alignment: Alignment.centerRight,

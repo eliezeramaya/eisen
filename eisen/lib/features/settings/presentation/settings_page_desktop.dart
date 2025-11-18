@@ -1,5 +1,7 @@
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/features/settings/application/appearance_preview_controller.dart';
+import 'package:eisen/features/settings/application/settings_controller.dart';
 import 'package:eisen/features/settings/presentation/live_preview_pane.dart';
 import 'package:eisen/features/settings/presentation/section_bus.dart';
 import 'package:eisen/features/settings/presentation/settings_content.dart';
@@ -90,99 +92,95 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final wide = MediaQuery.sizeOf(context).width >= 1280;
+    final size = MediaQuery.sizeOf(context);
+    final isWide = size.width >= 1280;
+    final isNarrow = size.width < 900;
     return SettingsSectionBus(
       jumpTo: (s) => setState(() => _section = s),
       child: Scaffold(
-        appBar: AppBar(
-          leadingWidth: 140,
-          leading: const Padding(
-            padding: EdgeInsets.only(left: 12),
-            child: AppLogoHomeButton(),
-          ),
-          title: const Text('Settings'),
-          actions: [
-            IconButton(
-              tooltip: 'Search',
-              icon: const Icon(Icons.search),
-              onPressed: () => showSearch(
-                context: context,
-                delegate: SettingsSearchDelegate(
-                    onJumpTo: (s) => setState(() => _section = s)),
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 8),
+              const Center(child: AppLogoHomeButton()),
+              const SizedBox(height: 8),
+              Text(
+                'Settings',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
-            ),
-          ],
-        ),
-        body: Row(
-          children: [
-            Container(
-              width: 240,
-              color: cs.surfaceContainerHigh,
-              child: _SettingsSidebar(
-                  selected: _section,
-                  onSelect: (s) => setState(() => _section = s)),
-            ),
-            Container(
-                width: 1, color: cs.outlineVariant.withValues(alpha: 0.28)),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                child: SettingsContent(
-                  section: _section,
-                  onDirty: (v) => setState(() => _dirty = _dirty || v),
-                  themeMode: _stagedTheme,
-                  compact: _stagedCompact,
-                  minimal: _stagedMinimal,
-                  showAxisLegends: _stagedAxis,
-                  densityPreset: _stagedDensity,
-                  onThemeChanged: (m) => setState(() => _stagedTheme = m),
-                  onCompactChanged: (v) => setState(() => _stagedCompact = v),
-                  onMinimalChanged: (v) => setState(() => _stagedMinimal = v),
-                  onAxisLegendsChanged: (v) => setState(() => _stagedAxis = v),
-                  onDensityPresetChanged: (v) => setState(() => _stagedDensity = v),
-                  topK: _stagedTopK,
-                  gamma: _stagedGamma,
-                  minAreaNormalized: _stagedMinArea,
-                  quadrantPadding: _stagedPadding,
-                  onTopKChanged: (v) => setState(() => _stagedTopK = v),
-                  onGammaChanged: (v) => setState(() => _stagedGamma = v),
-                  onMinAreaChanged: (v) => setState(() => _stagedMinArea = v),
-                  onPaddingChanged: (v) => setState(() => _stagedPadding = v),
-                  previewEnabled: _previewEnabled,
-                  onPreviewChanged: (v) => setState(() => _previewEnabled = v),
-                  // Gantt staged
-                  ganttTimeScale: _stagedGanttScale,
-                  ganttShowBadges: _stagedGanttBadges,
-                  ganttCompactLanes: _stagedGanttCompact,
-                  ganttWorkweekOnly: _stagedGanttWorkweek,
-                  ganttShowTodayLine: _stagedGanttToday,
-                  onGanttTimeScaleChanged: (v) =>
-                      setState(() => _stagedGanttScale = v),
-                  onGanttShowBadgesChanged: (v) =>
-                      setState(() => _stagedGanttBadges = v),
-                  onGanttCompactLanesChanged: (v) =>
-                      setState(() => _stagedGanttCompact = v),
-                  onGanttWorkweekOnlyChanged: (v) =>
-                      setState(() => _stagedGanttWorkweek = v),
-                  onGanttShowTodayLineChanged: (v) =>
-                      setState(() => _stagedGanttToday = v),
-                ),
-              ),
-            ),
-            if (wide) ...[
-              const VerticalDivider(width: 1),
-              SizedBox(
-                width: 320,
-                child: LivePreviewPane(
-                  enabled: _previewEnabled,
-                  topK: _stagedTopK,
-                  gamma: _stagedGamma,
-                  minArea: _stagedMinArea,
-                  qPad: _stagedPadding,
-                ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: isNarrow
+                    // Mobile/narrow: categorías arriba, contenido apilado debajo.
+                    ? Column(
+                        children: [
+                          SizedBox(
+                            height: 220,
+                            child: _SettingsSidebar(
+                              selected: _section,
+                              onSelect: (s) =>
+                                  setState(() => _section = s),
+                            ),
+                          ),
+                          Container(
+                            height: 1,
+                            color: cs.outlineVariant
+                                .withValues(alpha: 0.28),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                              child: _buildSettingsContent(),
+                            ),
+                          ),
+                        ],
+                      )
+                    // Desktop/wide: sidebar + panel maestro-detalle.
+                    : Row(
+                        children: [
+                          Container(
+                            width: 240,
+                            color: cs.surfaceContainerHigh,
+                            child: _SettingsSidebar(
+                                selected: _section,
+                                onSelect: (s) =>
+                                    setState(() => _section = s)),
+                          ),
+                          Container(
+                              width: 1,
+                              color: cs.outlineVariant
+                                  .withValues(alpha: 0.28)),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                  24, 16, 24, 16),
+                              child: _buildSettingsContent(),
+                            ),
+                          ),
+                          if (isWide) ...[
+                            const VerticalDivider(width: 1),
+                            SizedBox(
+                              width: 320,
+                              child: LivePreviewPane(
+                                enabled: _previewEnabled,
+                                topK: _stagedTopK,
+                                gamma: _stagedGamma,
+                                minArea: _stagedMinArea,
+                                qPad: _stagedPadding,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
               ),
             ],
-          ],
+          ),
         ),
         bottomNavigationBar: SafeArea(
           top: false,
@@ -262,6 +260,8 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
             ))
         .whenComplete(() {
       ref.read(matrixControllerProvider.notifier).notifyLayoutRecompute();
+      // Keep SettingsController in sync with the latest persisted UiPrefs.
+      ref.read(settingsControllerProvider.notifier).applyChanges();
       setState(() {
         _dirty = false;
         // Refresh originals to current staged (now applied)
@@ -296,21 +296,69 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       _stagedDensity = _origDensity ?? 'auto';
       _dirty = false;
     });
+    // Re-synchronize settings preview and domain controller with persisted prefs.
+    ref.read(appearancePreviewProvider.notifier).resetFromPrefs();
+    ref.read(settingsControllerProvider.notifier).reload();
   }
 
   void _resetToDefaults() {
+    final defaults =
+        ref.read(settingsControllerProvider.notifier).resetToDefaultsDraft();
     setState(() {
-      _stagedTheme = ThemeMode.system;
-      _stagedCompact = false;
-      _stagedMinimal = false;
-      _stagedAxis = true;
-      _stagedTopK = const UiPrefsData().topKPerQuadrant;
-      _stagedGamma = const UiPrefsData().gamma;
-      _stagedMinArea = const UiPrefsData().minAreaNormalized;
-      _stagedPadding = const UiPrefsData().quadrantPadding;
-      _stagedDensity = const UiPrefsData().densityPreset;
+      _stagedTheme = defaults.themeMode;
+      _stagedCompact = defaults.compact;
+      _stagedMinimal = defaults.minimal;
+      _stagedAxis = defaults.showAxisLegends;
+      _stagedTopK = defaults.topKPerQuadrant;
+      _stagedGamma = defaults.gamma;
+      _stagedMinArea = defaults.minAreaNormalized;
+      _stagedPadding = defaults.quadrantPadding;
+      _stagedDensity = defaults.densityPreset;
       _dirty = true;
     });
+  }
+
+  SettingsContent _buildSettingsContent() {
+    return SettingsContent(
+      section: _section,
+      onDirty: (v) => setState(() => _dirty = _dirty || v),
+      themeMode: _stagedTheme,
+      compact: _stagedCompact,
+      minimal: _stagedMinimal,
+      showAxisLegends: _stagedAxis,
+      densityPreset: _stagedDensity,
+      onThemeChanged: (m) => setState(() => _stagedTheme = m),
+      onCompactChanged: (v) => setState(() => _stagedCompact = v),
+      onMinimalChanged: (v) => setState(() => _stagedMinimal = v),
+      onAxisLegendsChanged: (v) => setState(() => _stagedAxis = v),
+      onDensityPresetChanged: (v) => setState(() => _stagedDensity = v),
+      topK: _stagedTopK,
+      gamma: _stagedGamma,
+      minAreaNormalized: _stagedMinArea,
+      quadrantPadding: _stagedPadding,
+      onTopKChanged: (v) => setState(() => _stagedTopK = v),
+      onGammaChanged: (v) => setState(() => _stagedGamma = v),
+      onMinAreaChanged: (v) => setState(() => _stagedMinArea = v),
+      onPaddingChanged: (v) => setState(() => _stagedPadding = v),
+      previewEnabled: _previewEnabled,
+      onPreviewChanged: (v) => setState(() => _previewEnabled = v),
+      // Gantt staged
+      ganttTimeScale: _stagedGanttScale,
+      ganttShowBadges: _stagedGanttBadges,
+      ganttCompactLanes: _stagedGanttCompact,
+      ganttWorkweekOnly: _stagedGanttWorkweek,
+      ganttShowTodayLine: _stagedGanttToday,
+      onGanttTimeScaleChanged: (v) =>
+          setState(() => _stagedGanttScale = v),
+      onGanttShowBadgesChanged: (v) =>
+          setState(() => _stagedGanttBadges = v),
+      onGanttCompactLanesChanged: (v) =>
+          setState(() => _stagedGanttCompact = v),
+      onGanttWorkweekOnlyChanged: (v) =>
+          setState(() => _stagedGanttWorkweek = v),
+      onGanttShowTodayLineChanged: (v) =>
+          setState(() => _stagedGanttToday = v),
+    );
   }
 }
 
@@ -330,25 +378,22 @@ class _SettingsSidebar extends StatelessWidget {
       ('Data & Privacy', Icons.privacy_tip_outlined),
       ('About', Icons.info_outline),
     ];
-    return SizedBox(
-      width: 240,
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-        itemBuilder: (_, i) {
-          final (label, icon) = items[i];
-          final sel = label == selected;
-          return ListTile(
-            leading: Icon(icon),
-            title: Text(label),
-            selected: sel,
-            selectedTileColor:
-                Theme.of(context).colorScheme.surfaceContainerHighest,
-            onTap: () => onSelect(label),
-          );
-        },
-        separatorBuilder: (_, __) => const SizedBox(height: 4),
-        itemCount: items.length,
-      ),
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      itemBuilder: (_, i) {
+        final (label, icon) = items[i];
+        final sel = label == selected;
+        return ListTile(
+          leading: Icon(icon),
+          title: Text(label),
+          selected: sel,
+          selectedTileColor:
+              Theme.of(context).colorScheme.surfaceContainerHighest,
+          onTap: () => onSelect(label),
+        );
+      },
+      separatorBuilder: (_, __) => const SizedBox(height: 4),
+      itemCount: items.length,
     );
   }
 }

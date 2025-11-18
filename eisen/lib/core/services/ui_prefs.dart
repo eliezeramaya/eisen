@@ -260,6 +260,14 @@ class UiPrefsController extends Notifier<UiPrefsData> {
 
   Future<void> _save() => _repo.save(state);
 
+  /// Overwrites all UI prefs at once and persists them.
+  ///
+  /// Used by higher-level Settings flows that stage changes before applying.
+  Future<void> overwrite(UiPrefsData data) async {
+    state = data;
+    await _save();
+  }
+
   Future<void> setTopK(int value) async {
     final v = value.clamp(5, 100);
     state = state.copyWith(topKPerQuadrant: v);

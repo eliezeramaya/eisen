@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:eisen/features/settings/application/appearance_preview_controller.dart';
+import 'package:eisen/features/settings/presentation/widgets/appearance_preview_card.dart';
 import 'sections/general_panel.dart';
 
 class SettingsContent extends StatelessWidget {
@@ -175,7 +178,7 @@ class SettingsContent extends StatelessWidget {
 
 // GeneralPanel UI moved to sections/general_panel.dart
 
-class _AppearancePanel extends StatelessWidget {
+class _AppearancePanel extends ConsumerWidget {
   const _AppearancePanel({
     required this.themeMode,
     required this.compact,
@@ -199,9 +202,11 @@ class _AppearancePanel extends StatelessWidget {
   final ValueChanged<bool> onAxisLegendsChanged;
   final ValueChanged<String> onDensityPresetChanged;
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
       children: [
+        const AppearancePreviewCard(),
+        const SizedBox(height: 16),
         const ListTile(
           leading: Icon(Icons.palette_outlined),
           title: Text('Theme'),
@@ -225,7 +230,13 @@ class _AppearancePanel extends StatelessWidget {
                   label: Text('System')),
             ],
             selected: {themeMode},
-            onSelectionChanged: (s) => onThemeChanged(s.first),
+            onSelectionChanged: (s) {
+              final mode = s.first;
+              onThemeChanged(mode);
+              ref
+                  .read(appearancePreviewProvider.notifier)
+                  .setThemeMode(mode);
+            },
           ),
         ),
         const Divider(height: 24),
@@ -244,19 +255,31 @@ class _AppearancePanel extends StatelessWidget {
               ButtonSegment(value: 'auto', label: Text('Auto')),
             ],
             selected: {densityPreset},
-            onSelectionChanged: (s) => onDensityPresetChanged(s.first),
+            onSelectionChanged: (s) {
+              final preset = s.first;
+              onDensityPresetChanged(preset);
+              ref
+                  .read(appearancePreviewProvider.notifier)
+                  .setDensityPreset(preset);
+            },
           ),
         ),
         const Divider(height: 24),
         SwitchListTile(
           value: compact,
-          onChanged: onCompactChanged,
+          onChanged: (v) {
+            onCompactChanged(v);
+            ref.read(appearancePreviewProvider.notifier).setCompact(v);
+          },
           secondary: const Icon(Icons.density_medium),
           title: const Text('Compact density'),
         ),
         SwitchListTile(
           value: minimal,
-          onChanged: onMinimalChanged,
+          onChanged: (v) {
+            onMinimalChanged(v);
+            ref.read(appearancePreviewProvider.notifier).setMinimal(v);
+          },
           secondary: const Icon(Icons.filter_b_and_w),
           title: const Text('Minimal mode'),
         ),

@@ -1,7 +1,7 @@
 import 'package:eisen/features/calendar_gantt/presentation/pages/workflow_plan_page.dart';
 import 'package:eisen/features/completed_tasks/presentation/pages/completed_matrix_page.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/matrix_page.dart';
-import 'package:eisen/features/settings/presentation/settings_page_desktop.dart';
+import 'package:eisen/features/settings/presentation/pages/settings_screen.dart';
 import 'package:eisen/ui/list_mode/list_mode_screen.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,7 +17,7 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/settings',
       name: 'settings',
-      builder: (context, state) => const SettingsPageDesktop(),
+      builder: (context, state) => const SettingsScreen(),
     ),
     GoRoute(
       path: '/workflow-plan',

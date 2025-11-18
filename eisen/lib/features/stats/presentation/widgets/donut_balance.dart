@@ -30,7 +30,7 @@ class _DonutPainter extends CustomPainter {
     final base = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 12
-      ..color = Colors.grey.withValues(alpha: 0.2);
+      ..color = Colors.grey.withValues(alpha: 0.12);
     canvas.drawCircle(center, r, base);
 
     if (b == null) return;
@@ -40,22 +40,22 @@ class _DonutPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 12
         ..strokeCap = StrokeCap.round
-        ..color = const Color(0xFFE84545),
+        ..color = const Color(0xFFE84545).withValues(alpha: 0.85),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 12
         ..strokeCap = StrokeCap.round
-        ..color = const Color(0xFFF4996E),
+        ..color = const Color(0xFFF4996E).withValues(alpha: 0.85),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 12
         ..strokeCap = StrokeCap.round
-        ..color = const Color(0xFFF2B705),
+        ..color = const Color(0xFFF2B705).withValues(alpha: 0.85),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 12
         ..strokeCap = StrokeCap.round
-        ..color = const Color(0xFF9CA3AF),
+        ..color = const Color(0xFF9CA3AF).withValues(alpha: 0.85),
     ];
     final values = [b!.q1, b!.q2, b!.q3, b!.q4];
     double start = -math.pi / 2;
