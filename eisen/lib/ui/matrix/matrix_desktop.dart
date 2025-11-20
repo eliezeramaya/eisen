@@ -1,4 +1,5 @@
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/eisen_quadrant_drop_area.dart';
 import 'package:eisen/theme/density.dart';
 import 'package:eisen/ui/lists/quadrant_list.dart';
 import 'package:flutter/material.dart';
@@ -91,16 +92,19 @@ class MatrixDesktop extends StatelessWidget {
     List<Task> tasks,
     Widget header,
   ) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: QuadrantList(
-        tasks: tasks,
-        header: header,
-        onToggle: onToggle,
-        onOpen: onOpen,
+    return EisenQuadrantDropArea(
+      quadrant: q,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(color: Theme.of(context).dividerColor, width: 1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: QuadrantList(
+          tasks: tasks,
+          header: header,
+          onToggle: onToggle,
+          onOpen: onOpen,
+        ),
       ),
     );
   }

@@ -1,3 +1,6 @@
+import 'package:eisen/core/design_system/eisen_tokens.dart';
+import 'package:eisen/core/design_system/widgets/eisen_card.dart';
+import 'package:eisen/core/design_system/widgets/eisen_section_header.dart';
 import 'package:eisen/core/notifications/notifications_service.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/features/settings/application/appearance_preview_controller.dart';
@@ -11,26 +14,80 @@ class GeneralPanel extends ConsumerWidget {
     final prefs = ref.watch(uiPrefsProvider);
     return ListView(
       children: [
-        const _SectionHeader(
-            title: 'Language & Region',
-            subtitle: 'Idioma, región y formatos de fecha/hora'),
+        const EisenSectionHeader(
+          title: 'Language & Region',
+          subtitle: 'Idioma, región y formatos de fecha/hora',
+        ),
         _LanguageRegionCard(prefs: prefs),
         const SizedBox(height: 24),
-        const _SectionHeader(
-            title: 'Text & Readability',
-            subtitle: 'Escala de texto y legibilidad'),
+        const EisenSectionHeader(
+          title: 'Text & Readability',
+          subtitle: 'Escala de texto y legibilidad',
+        ),
         _TextScaleCard(prefs: prefs),
         const SizedBox(height: 24),
-        const _SectionHeader(
-            title: 'Notifications',
-            subtitle: 'Recordatorios diarios y alertas'),
+        const EisenSectionHeader(
+          title: 'Notifications',
+          subtitle: 'Recordatorios diarios y alertas',
+        ),
         _NotificationsCard(prefs: prefs),
         const SizedBox(height: 24),
-        const _SectionHeader(
-            title: 'Workflow', subtitle: 'Activa el modo plan de trabajo'),
+        const EisenSectionHeader(
+          title: 'Workflow',
+          subtitle: 'Activa el modo plan de trabajo',
+        ),
         _WorkflowCard(prefs: prefs),
       ],
     );
+  }
+}
+
+/// Standalone panel for Language & Region settings (used on mobile).
+class LanguageRegionPanel extends ConsumerWidget {
+  const LanguageRegionPanel({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prefs = ref.watch(uiPrefsProvider);
+    return ListView(
+      children: [
+        const _SectionHeader(
+          title: 'Language & Region',
+          subtitle: 'Idioma, región y formatos de fecha/hora',
+        ),
+        _LanguageRegionCard(prefs: prefs),
+      ],
+    );
+  }
+}
+
+/// Standalone panel for Notifications settings (used on mobile).
+class NotificationsPanel extends ConsumerWidget {
+  const NotificationsPanel({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prefs = ref.watch(uiPrefsProvider);
+    return ListView(
+      children: [
+        const _SectionHeader(
+          title: 'Notifications',
+          subtitle: 'Recordatorios diarios y alertas',
+        ),
+        _NotificationsCard(prefs: prefs),
+      ],
+    );
+  }
+}
+
+/// Standalone text scale card (used in Accessibility).
+class TextScaleCard extends ConsumerWidget {
+  const TextScaleCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prefs = ref.watch(uiPrefsProvider);
+    return _TextScaleCard(prefs: prefs);
   }
 }
 
@@ -41,38 +98,37 @@ class _TextScaleCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(uiPrefsControllerProvider.notifier);
     final preview = ref.read(appearancePreviewProvider.notifier);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.text_fields),
-              title: const Text('Tamaño de texto'),
-              subtitle: const Text(
-                  'Ajusta la escala del texto en toda la app (1–5).'),
+    return EisenCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.text_fields),
+            title: Text('Tamaño de texto'),
+            subtitle:
+                Text('Ajusta la escala del texto en toda la app (1–5).'),
+          ),
+          Slider(
+            value: prefs.textScaleLevel.toDouble(),
+            min: 1,
+            max: 5,
+            divisions: 4,
+            label: prefs.textScaleLevel.toString(),
+            onChanged: (d) {
+              final level = d.round().clamp(1, 5);
+              ctrl.setTextScaleLevel(level);
+              preview.setTextScaleLevel(level);
+            },
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              'Actual: ${prefs.textScaleLevel}/5',
+              style: Theme.of(context).textTheme.labelSmall,
             ),
-            Slider(
-              value: prefs.textScaleLevel.toDouble(),
-              min: 1,
-              max: 5,
-              divisions: 4,
-              label: prefs.textScaleLevel.toString(),
-              onChanged: (d) {
-                final level = d.round().clamp(1, 5);
-                ctrl.setTextScaleLevel(level);
-                preview.setTextScaleLevel(level);
-              },
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text('Actual: ${prefs.textScaleLevel}/5',
-                  style: Theme.of(context).textTheme.labelSmall),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -84,10 +140,10 @@ class _LanguageRegionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(uiPrefsControllerProvider.notifier);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    return EisenCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           _DropdownRow(
             label: 'Idioma',
             value: prefs.languageCode,
@@ -127,7 +183,7 @@ class _LanguageRegionCard extends ConsumerWidget {
             value: prefs.use24h,
             onChanged: ctrl.setUse24h,
           ),
-        ]),
+        ],
       ),
     );
   }
@@ -235,12 +291,10 @@ class _WorkflowCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(uiPrefsControllerProvider.notifier);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return EisenCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
             SwitchListTile(
               title: const Text('Workflow plan'),
               subtitle: const Text(
@@ -255,8 +309,7 @@ class _WorkflowCard extends ConsumerWidget {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }

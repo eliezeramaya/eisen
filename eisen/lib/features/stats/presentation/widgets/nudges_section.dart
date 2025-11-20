@@ -1,16 +1,24 @@
+import 'package:eisen/core/design_system/widgets/eisen_card.dart';
+import 'package:eisen/core/design_system/widgets/eisen_section_header.dart';
+import 'package:eisen/features/completed_tasks/domain/project_category.dart';
 import 'package:eisen/features/stats/domain/models.dart';
 import 'package:flutter/material.dart';
 
 class NudgesSection extends StatelessWidget {
-  const NudgesSection({super.key, required this.weekly});
+  const NudgesSection({
+    super.key,
+    required this.weekly,
+    required this.range,
+    required this.project,
+  });
 
   final WeeklyStats? weekly;
+  final StatsRange range;
+  final ProjectCategory project;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final bg = cs.surfaceContainerLow;
-    final radius = BorderRadius.circular(12);
     final w = weekly;
 
     final msgs = <String>[];
@@ -20,7 +28,9 @@ class NudgesSection extends StatelessWidget {
       final completedRate =
           planned <= 0 ? 0.0 : (completed / planned).clamp(0.0, 1.0);
 
-      const weeklyGoal = 2400; // 40h de foco; se puede hacer configurable
+      const weeklyGoal = 2400; // 40h de foco por 7 días; escalamos por rango
+      final scaledGoal =
+          (weeklyGoal * (range.days / 7.0)).round().clamp(1, 100000);
       final focus = w.focusMinutes;
 
       if (completedRate > 0.8 && focus >= weeklyGoal * 0.5) {
@@ -33,9 +43,9 @@ class NudgesSection extends StatelessWidget {
         );
       }
 
-      if (focus < weeklyGoal * 0.5) {
+      if (focus < scaledGoal * 0.5) {
         msgs.add(
-          'Tu foco semanal está por debajo de tu meta. Bloquea una o dos sesiones cortas extra.',
+          'Tu foco en este periodo está por debajo de tu meta. Bloquea una o dos sesiones cortas extra.',
         );
       }
 
@@ -47,7 +57,7 @@ class NudgesSection extends StatelessWidget {
 
       if (w.daysActive >= 3 && msgs.isEmpty) {
         msgs.add(
-          'Tu semana va bien encaminada. Revisa tu Q2 y protege esos bloques de foco.',
+          'Vas bien encaminado. Revisa tu Q2 y protege esos bloques de foco.',
         );
       }
     }
@@ -58,22 +68,23 @@ class NudgesSection extends StatelessWidget {
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: radius,
-      ),
-      padding: const EdgeInsets.all(16),
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final projectLabel = switch (project) {
+      ProjectCategory.all => isEs ? 'todos los proyectos' : 'all projects',
+      _ => project.displayName,
+    };
+
+    return EisenCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Nudges',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w600),
+          EisenSectionHeader(
+            title: isEs ? 'Insights' : 'Insights',
+            subtitle: isEs
+                ? 'Período: ${range.days} días · Proyecto: $projectLabel'
+                : 'Period: last ${range.days} days · Project: $projectLabel',
           ),
+          const SizedBox(height: 4),
           const SizedBox(height: 8),
           for (final m in msgs.take(3))
             Padding(
@@ -96,4 +107,3 @@ class NudgesSection extends StatelessWidget {
     );
   }
 }
-

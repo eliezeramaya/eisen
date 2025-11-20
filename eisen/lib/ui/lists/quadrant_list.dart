@@ -1,4 +1,6 @@
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/eisen_task_draggable.dart';
 import 'package:eisen/ui/task/task_row.dart';
 import 'package:flutter/material.dart';
 
@@ -45,12 +47,18 @@ class QuadrantList extends StatelessWidget {
           SliverPrototypeExtentList(
             prototypeItem: prototype,
             delegate: SliverChildBuilderDelegate(
-              (ctx, i) => TaskRow(
-                key: ValueKey(tasks[i].id),
-                task: tasks[i],
-                onToggle: onToggle == null ? null : () => onToggle!(tasks[i]),
-                onOpen: onOpen == null ? null : () => onOpen!(tasks[i]),
-              ),
+              (ctx, i) {
+                final task = tasks[i];
+                return EisenTaskDraggable(
+                  key: ValueKey(task.id),
+                  task: task,
+                  child: TaskRow(
+                    task: task,
+                    onToggle: onToggle == null ? null : () => onToggle!(task),
+                    onOpen: onOpen == null ? null : () => onOpen!(task),
+                  ),
+                );
+              },
               childCount: tasks.length,
             ),
           ),

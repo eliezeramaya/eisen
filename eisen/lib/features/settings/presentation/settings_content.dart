@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/features/settings/application/appearance_preview_controller.dart';
 import 'package:eisen/features/settings/presentation/widgets/appearance_preview_card.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'sections/general_panel.dart';
 
 class SettingsContent extends StatelessWidget {
@@ -524,12 +525,13 @@ class _GanttPanel extends StatelessWidget {
   }
 }
 
-class _AccessibilityPanel extends StatelessWidget {
+class _AccessibilityPanel extends ConsumerWidget {
   const _AccessibilityPanel();
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
+    final prefs = ref.watch(uiPrefsProvider);
     return ListView(
       padding: const EdgeInsets.all(8),
       children: [
@@ -543,8 +545,27 @@ class _AccessibilityPanel extends StatelessWidget {
         _bullet('Text scaling (100–150%)'),
         _bullet('Keyboard focus ring visible'),
         _bullet('Color-blind safe palette'),
+        const SizedBox(height: 16),
+        const Divider(),
+        const SizedBox(height: 8),
+        const Text(
+          'Text size',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 4),
+        const TextScaleCard(),
       ],
     );
+  }
+}
+
+/// Public wrapper used by mobile Settings to reuse the Accessibility content.
+class AccessibilityPanel extends StatelessWidget {
+  const AccessibilityPanel({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const _AccessibilityPanel();
   }
 }
 

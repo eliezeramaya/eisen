@@ -56,6 +56,8 @@ class MatrixState {
     this.layoutVersion = 0,
     this.viewMode = MatrixViewMode.top25,
     this.customTaskLimit = 25,
+    this.lastMovedTaskId,
+    this.isLoading = false,
   });
   final List<Task> tasks;
   final String? selectedId;
@@ -76,6 +78,8 @@ class MatrixState {
   final int layoutVersion;
   final MatrixViewMode viewMode;
   final int customTaskLimit;
+  final String? lastMovedTaskId;
+  final bool isLoading;
 
   MatrixState copyWith({
     List<Task>? tasks,
@@ -96,6 +100,8 @@ class MatrixState {
     int? layoutVersion,
     MatrixViewMode? viewMode,
     int? customTaskLimit,
+    String? lastMovedTaskId,
+    bool? isLoading,
   }) =>
       MatrixState(
         tasks: tasks ?? this.tasks,
@@ -116,6 +122,8 @@ class MatrixState {
         layoutVersion: layoutVersion ?? this.layoutVersion,
         viewMode: viewMode ?? this.viewMode,
         customTaskLimit: customTaskLimit ?? this.customTaskLimit,
+        lastMovedTaskId: lastMovedTaskId ?? this.lastMovedTaskId,
+        isLoading: isLoading ?? this.isLoading,
       );
 }
 
@@ -147,6 +155,7 @@ class MatrixController extends Notifier<MatrixState> {
   static const _customTaskLimitKey = 'customTaskLimit';
   static const _viewModeKey = 'matrixViewMode';
   Timer? _searchDebounce;
+  Timer? _lastMovedTimer;
 
   @override
   MatrixState build() {
@@ -185,6 +194,7 @@ class MatrixController extends Notifier<MatrixState> {
   }
 
   Future<void> load() async {
+    state = state.copyWith(isLoading: true);
     final loaded = await _repo.load();
     // Check if there are any active (non-completed) tasks
     final activeTasks = loaded.where((t) => t.completedAt == null).toList();
@@ -209,18 +219,41 @@ class MatrixController extends Notifier<MatrixState> {
     await _loadMatrixViewPrefs();
     // Force full layout recomputation on load
     invalidateLayout();
+    state = state.copyWith(isLoading: false);
   }
 
   /// Reset to demo tasks (useful for testing and demos)
   Future<void> resetToDemo() async {
+    state = state.copyWith(isLoading: true);
     final demo = _demoTasks();
     state = state.copyWith(tasks: demo, version: state.version + 1);
     await _repo.save(demo);
+    state = state.copyWith(isLoading: false);
   }
 
   Future<void> persist() => _repo.save(state.tasks);
 
   void select(String? id) => state = state.copyWith(selectedId: id);
+
+  /// Called when a drag operation starts for [task].
+  ///
+  /// Reserved for future global drag state (e.g. status bar hints).
+  void setDragging(Task task) {
+    // Premium drag state can be surfaced from here if needed.
+  }
+
+  /// Clears any dragging-related state.
+  void clearDragging() {
+    // Reserved hook for future global drag state.
+  }
+
+  void _markLastMoved(String id) {
+    _lastMovedTimer?.cancel();
+    state = state.copyWith(lastMovedTaskId: id);
+    _lastMovedTimer = Timer(const Duration(milliseconds: 200), () {
+      state = state.copyWith(lastMovedTaskId: null);
+    });
+  }
 
   void toggleTheme() {
     final next = switch (state.themeMode) {
@@ -501,6 +534,7 @@ class MatrixController extends Notifier<MatrixState> {
     final dirtyQuadrants = <Quadrant>{};
     if (prev.quadrant != next.quadrant) {
       dirtyQuadrants.addAll([prev.quadrant, next.quadrant]);
+      _markLastMoved(next.id);
     } else {
       dirtyQuadrants.add(next.quadrant);
     }

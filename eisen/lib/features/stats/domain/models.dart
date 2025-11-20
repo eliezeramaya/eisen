@@ -1,5 +1,30 @@
 import 'package:flutter/foundation.dart';
 
+/// Time window used by the Stats dashboard.
+///
+/// The values are intentionally coarse-grained to keep the UI simple
+/// on mobile. Each range maps to a fixed number of trailing days
+/// ending at “today”.
+enum StatsRange {
+  last7Days,
+  last14Days,
+  last30Days,
+}
+
+extension StatsRangeX on StatsRange {
+  /// Number of trailing days represented by this range.
+  int get days {
+    switch (this) {
+      case StatsRange.last7Days:
+        return 7;
+      case StatsRange.last14Days:
+        return 14;
+      case StatsRange.last30Days:
+        return 30;
+    }
+  }
+}
+
 class WeeklyStats {
   // median hours created->completed
   const WeeklyStats({

@@ -1,3 +1,4 @@
+import 'package:eisen/features/completed_tasks/domain/project_category.dart';
 import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,9 @@ class StatsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final width = MediaQuery.sizeOf(context).width;
     final isMobile = width < 600;
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final range = ref.watch(statsRangeProvider);
+    final project = ref.watch(statsProjectProvider);
     final weeklyAsync = ref.watch(weeklyStatsProvider);
     final balanceAsync = ref.watch(balanceProvider);
     final trendsAsync = ref.watch(trendsProvider);
@@ -26,9 +30,8 @@ class StatsPage extends ConsumerWidget {
     final balance =
         balanceAsync.when<BalanceBreakdown?>(
             data: (v) => v, loading: () => null, error: (_, __) => null);
-    final trends =
-        trendsAsync.when<List<TrendPoint>?>(
-            data: (v) => v, loading: () => null, error: (_, __) => null);
+    final trends = trendsAsync.when<List<TrendPoint>?>(
+        data: (v) => v, loading: () => null, error: (_, __) => null);
 
     return Scaffold(
       body: SafeArea(
@@ -51,13 +54,73 @@ class StatsPage extends ConsumerWidget {
                       ),
                 ),
                 const SizedBox(height: 12),
-                WeeklySummarySection(weekly: weekly),
+                Align(
+                  alignment:
+                      isMobile ? Alignment.center : Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: StatsRange.values.map((r) {
+                      final label = switch (r) {
+                        StatsRange.last7Days =>
+                          isEs ? '7 días' : '7 days',
+                        StatsRange.last14Days =>
+                          isEs ? '14 días' : '14 days',
+                        StatsRange.last30Days =>
+                          isEs ? '30 días' : '30 days',
+                      };
+                      return ChoiceChip(
+                        label: Text(label),
+                        selected: range == r,
+                        onSelected: (value) {
+                          if (!value) return;
+                          ref.read(statsRangeProvider.notifier).state = r;
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment:
+                      isMobile ? Alignment.center : Alignment.centerLeft,
+                  child: DropdownButton<ProjectCategory>(
+                    value: project,
+                    underline: const SizedBox.shrink(),
+                    items: ProjectCategory.values
+                        .map(
+                          (p) => DropdownMenuItem(
+                            value: p,
+                            child: Text(p.displayName),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      ref
+                          .read(statsProjectProvider.notifier)
+                          .set(value);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                WeeklySummarySection(
+                  weekly: weekly,
+                  range: range,
+                ),
                 const SizedBox(height: 16),
                 EisenhowerBalanceSection(balance: balance),
                 const SizedBox(height: 16),
-                WeeklyFocusTrendSection(trend: trends),
+                WeeklyFocusTrendSection(
+                  trend: trends,
+                  range: range,
+                ),
                 const SizedBox(height: 16),
-                NudgesSection(weekly: weekly),
+                NudgesSection(
+                  weekly: weekly,
+                  range: range,
+                  project: project,
+                ),
               ],
             ),
           ),

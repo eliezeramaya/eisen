@@ -89,6 +89,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
     final tasks = ref.watch(matrixTasksProvider);
     final selectedId =
         ref.watch(matrixControllerProvider.select((s) => s.selectedId));
+    final isLoading =
+        ref.watch(matrixControllerProvider.select((s) => s.isLoading));
 
     // Safe lookup for selected task (may be deleted externally)
     final selectedTask = selectedId == null
@@ -150,6 +152,9 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             ),
             onExitZoom: ctrl.resetHomeView,
             canExitZoom: zoom != null,
+            onOpenStats: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const StatsPage()),
+            ),
             // When workflow plan is enabled in Settings > General, show the
             // Gantt/Workflow action in the top toolbar.
             showWorkflowPlan: workflowPlanEnabled,
@@ -250,6 +255,18 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            AnimatedSwitcher(
+                              duration:
+                                  const Duration(milliseconds: 200),
+                              child: isLoading
+                                  ? const SizedBox(
+                                      height: 2,
+                                      child: LinearProgressIndicator(
+                                        minHeight: 2,
+                                      ),
+                                    )
+                                  : const SizedBox(height: 2),
+                            ),
                             if (legendsVisible)
                               // AppTextScale applied: isolated + scaled legends
                               RepaintBoundary(
@@ -341,20 +358,29 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                           '${zoom}_${dynamicLayout.length}_${suggested.length}'),
                                                       child: TreemapCanvas(
                                                         tasks: tasks,
-                                                        layout: dynamicLayout,
+                                                        layout:
+                                                            dynamicLayout,
                                                         compact: compact,
-                                                        suggestedIds: suggested,
+                                                        suggestedIds:
+                                                            suggested,
                                                         minimal: minimal,
-                                                        selectedId: selectedId,
+                                                        selectedId:
+                                                            selectedId,
                                                         zoom: zoom,
-                                                        presentQuadrant: zoom ??
-                                                            ref
-                                                                .read(
+                                                        presentQuadrant:
+                                                            zoom ??
+                                                                ref.read(
                                                                     matrixControllerProvider)
-                                                                .presentQuadrant,
+                                                                    .presentQuadrant,
                                                         textScale: tileTsf,
                                                         inlineEditId:
                                                             _inlineEditId,
+                                                        lastMovedTaskId: ref
+                                                            .read(
+                                                                matrixControllerProvider)
+                                                            .lastMovedTaskId,
+                                                        loading:
+                                                            isLoading,
                                                         onInlineSubmit:
                                                             (id, title) {
                                                           ctrl.updateTask(
@@ -762,17 +788,21 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _NavBarItem(
-                icon: Icons.bar_chart_rounded,
-                label: isEs ? 'Stats' : 'Stats',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const StatsPage()),
+              Expanded(
+                child: _NavBarItem(
+                  icon: Icons.bar_chart_rounded,
+                  label: isEs ? 'Stats' : 'Stats',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const StatsPage()),
+                  ),
                 ),
               ),
-              _NavBarItem(
-                icon: Icons.history,
-                label: isEs ? 'Completas' : 'Completed',
-                onTap: () => context.push('/completed-matrix'),
+              Expanded(
+                child: _NavBarItem(
+                  icon: Icons.history,
+                  label: isEs ? 'Completas' : 'Completed',
+                  onTap: () => context.push('/completed-matrix'),
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -783,76 +813,80 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                   child: const Icon(Icons.add, size: 28),
                 ),
               ),
-              _NavBarItem(
-                icon: Icons.view_timeline,
-                label: isEs ? 'Workflow' : 'Workflow',
-                onTap: () {
-                  if (!ref.read(uiPrefsProvider).workflowPlanEnabled) {
-                    final msg = isEs
-                        ? 'Activa "Workflow plan" en Ajustes'
-                        : 'Enable "Workflow plan" in Settings';
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(SnackBar(content: Text(msg)));
-                    return;
-                  }
-                  context.push('/list-mode');
-                },
+              Expanded(
+                child: _NavBarItem(
+                  icon: Icons.view_timeline,
+                  label: isEs ? 'Workflow' : 'Workflow',
+                  onTap: () {
+                    if (!ref.read(uiPrefsProvider).workflowPlanEnabled) {
+                      final msg = isEs
+                          ? 'Activa "Workflow plan" en Ajustes'
+                          : 'Enable "Workflow plan" in Settings';
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(SnackBar(content: Text(msg)));
+                      return;
+                    }
+                    context.push('/list-mode');
+                  },
+                ),
               ),
-              _NavBarItem(
-                icon: Icons.settings,
-                label: isEs ? 'Ajustes' : 'Settings',
-                onTap: () {
-                  final width = MediaQuery.sizeOf(context).width;
-                  final isMobile = width < 600;
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    useSafeArea: true,
-                    builder: (_) => isMobile
-                        ? SettingsSheetCompact(
-                            onToggleTheme: ctrl.toggleTheme,
-                            onToggleDensity: ctrl.toggleCompact,
-                            compact: compact,
-                            showAxisLegends: showAxisLegends,
-                            onToggleAxisLegends: ctrl.toggleAxisLegends,
-                            minimal: minimal,
-                            onToggleMinimal: ctrl.toggleMinimal,
-                            onResetToDemo: () async {
-                              await ctrl.resetToDemo();
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        '\u2728 Tareas demo restauradas (20 tareas)'),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                              }
-                            },
-                          )
-                        : SettingsSheet(
-                            onToggleTheme: ctrl.toggleTheme,
-                            onToggleDensity: ctrl.toggleCompact,
-                            compact: compact,
-                            showAxisLegends: showAxisLegends,
-                            onToggleAxisLegends: ctrl.toggleAxisLegends,
-                            minimal: minimal,
-                            onToggleMinimal: ctrl.toggleMinimal,
-                            onResetToDemo: () async {
-                              await ctrl.resetToDemo();
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        '\u2728 Tareas demo restauradas (20 tareas)'),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                  );
-                },
+              Expanded(
+                child: _NavBarItem(
+                  icon: Icons.settings,
+                  label: isEs ? 'Ajustes' : 'Settings',
+                  onTap: () {
+                    final width = MediaQuery.sizeOf(context).width;
+                    final isMobile = width < 600;
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      useSafeArea: true,
+                      builder: (_) => isMobile
+                          ? SettingsSheetCompact(
+                              onToggleTheme: ctrl.toggleTheme,
+                              onToggleDensity: ctrl.toggleCompact,
+                              compact: compact,
+                              showAxisLegends: showAxisLegends,
+                              onToggleAxisLegends: ctrl.toggleAxisLegends,
+                              minimal: minimal,
+                              onToggleMinimal: ctrl.toggleMinimal,
+                              onResetToDemo: () async {
+                                await ctrl.resetToDemo();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          '\u2728 Tareas demo restauradas (20 tareas)'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
+                            )
+                          : SettingsSheet(
+                              onToggleTheme: ctrl.toggleTheme,
+                              onToggleDensity: ctrl.toggleCompact,
+                              compact: compact,
+                              showAxisLegends: showAxisLegends,
+                              onToggleAxisLegends: ctrl.toggleAxisLegends,
+                              minimal: minimal,
+                              onToggleMinimal: ctrl.toggleMinimal,
+                              onResetToDemo: () async {
+                                await ctrl.resetToDemo();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          '\u2728 Tareas demo restauradas (20 tareas)'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -899,6 +933,9 @@ class _NavBarItem extends StatelessWidget {
                 color: colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
           ],
         ),

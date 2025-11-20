@@ -1,19 +1,46 @@
+import 'package:eisen/core/design_system/widgets/eisen_card.dart';
+import 'package:eisen/core/design_system/widgets/eisen_section_header.dart';
 import 'package:eisen/features/stats/domain/models.dart';
 import 'package:flutter/material.dart';
 
 class WeeklyFocusTrendSection extends StatelessWidget {
-  const WeeklyFocusTrendSection({super.key, this.trend});
+  const WeeklyFocusTrendSection({
+    super.key,
+    this.trend,
+    required this.range,
+  });
 
   final List<TrendPoint>? trend;
+  final StatsRange range;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final bg = cs.surfaceContainerLow;
-    final radius = BorderRadius.circular(12);
-    final points = (trend ?? const <TrendPoint>[]).take(7).toList();
+    final points = (trend ?? const <TrendPoint>[]).toList();
 
-    final labels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    String _dayLabel(DateTime d) {
+      switch (d.weekday) {
+        case DateTime.monday:
+          return isEs ? 'L' : 'M';
+        case DateTime.tuesday:
+          return isEs ? 'M' : 'T';
+        case DateTime.wednesday:
+          return isEs ? 'X' : 'W';
+        case DateTime.thursday:
+          return isEs ? 'J' : 'T';
+        case DateTime.friday:
+          return isEs ? 'V' : 'F';
+        case DateTime.saturday:
+          return isEs ? 'S' : 'S';
+        case DateTime.sunday:
+        default:
+          return isEs ? 'D' : 'S';
+      }
+    }
+
+    final labels =
+        points.map((p) => _dayLabel(p.day)).toList(growable: false);
     final focusPerDay =
         points.map((p) => p.focusMinutes).toList(growable: false);
     final maxV = focusPerDay.fold<int>(0, (a, b) => b > a ? b : a);
@@ -28,33 +55,36 @@ class WeeklyFocusTrendSection extends StatelessWidget {
       }
     }
 
+    final rangeLabel = switch (range) {
+      StatsRange.last7Days =>
+        isEs ? 'esta semana' : 'this week',
+      StatsRange.last14Days =>
+        isEs ? 'estos 14 días' : 'these 14 days',
+      StatsRange.last30Days =>
+        isEs ? 'estos 30 días' : 'these 30 days',
+    };
+
     final topText = topDays.isEmpty
         ? ''
-        : 'Tus días más fuertes esta semana: ${topDays.join(', ')}.';
+        : (isEs
+            ? 'Tus días más fuertes en $rangeLabel: ${topDays.join(', ')}.'
+            : 'Your strongest days in $rangeLabel: ${topDays.join(', ')}.');
 
-    return Container(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: radius,
-      ),
-      padding: const EdgeInsets.all(16),
+    return EisenCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Foco esta semana',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w600),
+          EisenSectionHeader(
+            title: isEs ? 'Foco por día' : 'Daily focus',
+            subtitle: rangeLabel,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           SizedBox(
             height: 80,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(7, (i) {
-                final v = i < focusPerDay.length ? focusPerDay[i] : 0;
+              children: List.generate(focusPerDay.length, (i) {
+                final v = focusPerDay[i];
                 final h = maxV == 0 ? 0.0 : (v / maxV).clamp(0.0, 1.0);
                 return Expanded(
                   child: Padding(
@@ -107,4 +137,3 @@ class WeeklyFocusTrendSection extends StatelessWidget {
     );
   }
 }
-

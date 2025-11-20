@@ -10,6 +10,7 @@ import 'package:eisen/core/ui/ui_typography.dart' as typography;
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_debug.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/_last_moved_highlight_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -34,6 +35,8 @@ class TreemapCanvas extends StatefulWidget {
     this.compact = false,
     this.selectedId,
     this.textScale = 1.0,
+    this.lastMovedTaskId,
+    this.loading = false,
   });
   final List<Task> tasks;
   final List<TreemapRect> layout;
@@ -53,6 +56,8 @@ class TreemapCanvas extends StatefulWidget {
   final String? selectedId;
   // User/app text scale multiplier applied to treemap labels
   final double textScale;
+  final String? lastMovedTaskId;
+  final bool loading;
 
   @override
   State<TreemapCanvas> createState() => _TreemapCanvasState();
@@ -343,8 +348,23 @@ class _TreemapCanvasState extends State<TreemapCanvas>
             }
           }
           // Quadrant dropzone keys for testing
+          // Quadrant dropzone keys for testing
+          final halfW = size.width / 2;
+          final halfH = size.height / 2;
+          Rect _quadRect(Quadrant q) {
+            switch (q) {
+              case Quadrant.q1:
+                return Rect.fromLTWH(0, 0, halfW, halfH);
+              case Quadrant.q2:
+                return Rect.fromLTWH(halfW, 0, halfW, halfH);
+              case Quadrant.q3:
+                return Rect.fromLTWH(0, halfH, halfW, halfH);
+              case Quadrant.q4:
+                return Rect.fromLTWH(halfW, halfH, halfW, halfH);
+            }
+          }
           for (final q in Quadrant.values) {
-            final qRect = _quadrantRect(q, size);
+            final qRect = _quadRect(q);
             overlay.add(
               Positioned(
                 key: ValueKey('quadrant_${q.name}_dropzone'),
@@ -476,48 +496,70 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                       _hoverQuadrant = _quadrantAt(_lastPos!, size);
                     });
                   },
-                  child: RepaintBoundary(
-                    child: CustomPaint(
-                      painter: _TreemapPainter(
-                        widget.layout,
-                        draggingId: _draggingId,
-                        pointer: _lastPos,
-                        hoverQuadrant:
-                            widget.zoom == null ? _hoverQuadrant : null,
-                        presentQuadrant: widget.presentQuadrant,
-                        zoom: widget.zoom,
-                        prevRects01: _prevRects01,
-                        nextRects01: _nextRects01,
-                        t: _t,
-                        tokens: glassTokens,
-                        minimal: widget.minimal,
-                        pulseQuadrant: _pulseQuadrant,
-                        pulseT: _pulseT,
-                        suggested: widget.suggestedIds,
-                        layoutVersion: _layoutVersion,
-                        selectedId: widget.selectedId,
-                        appearingIds: _appearingIds,
-                        outros: _pendingOutros,
-                        outrosVersion: _outrosVersion,
-                        outlineColor: Theme.of(
-                          context,
-                        ).colorScheme.outlineVariant.withValues(alpha: 0.28),
-                        tileBorderColor: UiTokens.stroke(
-                          Theme.of(context).colorScheme,
+                  child: Stack(
+                    children: [
+                      RepaintBoundary(
+                        child: CustomPaint(
+                          painter: _TreemapPainter(
+                            widget.layout,
+                            draggingId: _draggingId,
+                            pointer: _lastPos,
+                            hoverQuadrant:
+                                widget.zoom == null ? _hoverQuadrant : null,
+                            presentQuadrant: widget.presentQuadrant,
+                            zoom: widget.zoom,
+                            prevRects01: _prevRects01,
+                            nextRects01: _nextRects01,
+                            t: _t,
+                            tokens: glassTokens,
+                            minimal: widget.minimal,
+                            pulseQuadrant: _pulseQuadrant,
+                            pulseT: _pulseT,
+                            suggested: widget.suggestedIds,
+                            layoutVersion: _layoutVersion,
+                            selectedId: widget.selectedId,
+                            appearingIds: _appearingIds,
+                            outros: _pendingOutros,
+                            outrosVersion: _outrosVersion,
+                            outlineColor: Theme.of(
+                              context,
+                            ).colorScheme.outlineVariant.withValues(alpha: 0.28),
+                            tileBorderColor: UiTokens.stroke(
+                              Theme.of(context).colorScheme,
+                            ),
+                            onSurface: Theme.of(context).colorScheme.onSurface,
+                            onSurfaceVariant: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                            tileFillColor: UiTokens.fill(
+                              Theme.of(context).colorScheme,
+                            ),
+                            textScale: widget.textScale,
+                          ),
+                          isComplex: true,
+                          willChange: true,
+                          child: const SizedBox.expand(),
                         ),
-                        onSurface: Theme.of(context).colorScheme.onSurface,
-                        onSurfaceVariant: Theme.of(
-                          context,
-                        ).colorScheme.onSurfaceVariant,
-                        tileFillColor: UiTokens.fill(
-                          Theme.of(context).colorScheme,
-                        ),
-                        textScale: widget.textScale,
                       ),
-                      isComplex: true,
-                      willChange: true,
-                      child: const SizedBox.expand(),
-                    ),
+                      if (widget.lastMovedTaskId != null)
+                        LastMovedHighlightOverlay(
+                          id: widget.lastMovedTaskId!,
+                          layout: widget.layout,
+                          rectMap: _nextRects01,
+                          size: size,
+                        ),
+                      if (widget.loading)
+                        IgnorePointer(
+                          child: AnimatedOpacity(
+                            opacity: 0.06,
+                            duration:
+                                const Duration(milliseconds: 180),
+                            child: ColoredBox(
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -659,21 +701,6 @@ class _TreemapCanvasState extends State<TreemapCanvas>
     if (!left && top) return Quadrant.q2;
     if (left && !top) return Quadrant.q3;
     return Quadrant.q4;
-  }
-
-  Rect _quadrantRect(Quadrant q, Size size) {
-    final halfW = size.width / 2;
-    final halfH = size.height / 2;
-    switch (q) {
-      case Quadrant.q1:
-        return Rect.fromLTWH(0, 0, halfW, halfH);
-      case Quadrant.q2:
-        return Rect.fromLTWH(halfW, 0, halfW, halfH);
-      case Quadrant.q3:
-        return Rect.fromLTWH(0, halfH, halfW, halfH);
-      case Quadrant.q4:
-        return Rect.fromLTWH(halfW, halfH, halfW, halfH);
-    }
   }
 
   Rect _px(Rect r01, Size size) => Rect.fromLTWH(

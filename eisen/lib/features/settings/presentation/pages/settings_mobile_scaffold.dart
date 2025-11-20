@@ -1,5 +1,7 @@
 import 'package:eisen/features/settings/application/settings_controller.dart';
+import 'package:eisen/features/settings/presentation/sections/appearance_mobile_panel.dart';
 import 'package:eisen/features/settings/presentation/sections/general_panel.dart';
+import 'package:eisen/features/settings/presentation/settings_content.dart';
 import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -97,6 +99,18 @@ class SettingsCategoryPage extends ConsumerWidget {
       case 'general':
         body = const GeneralPanel();
         break;
+      case 'appearance':
+        body = const AppearanceMobilePanel();
+        break;
+      case 'notifications':
+        body = const NotificationsPanel();
+        break;
+      case 'language':
+        body = const LanguageRegionPanel();
+        break;
+      case 'accessibility':
+        body = const AccessibilityPanel();
+        break;
       // Future iterations: wire dedicated panels for each category.
       default:
         body = Center(
@@ -144,4 +158,3 @@ class SettingsCategoryPage extends ConsumerWidget {
     );
   }
 }
-

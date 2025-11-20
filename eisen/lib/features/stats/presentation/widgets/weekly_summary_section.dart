@@ -1,3 +1,6 @@
+import 'package:eisen/core/design_system/eisen_tokens.dart';
+import 'package:eisen/core/design_system/widgets/eisen_card.dart';
+import 'package:eisen/core/design_system/widgets/eisen_section_header.dart';
 import 'package:eisen/features/stats/domain/models.dart';
 import 'package:flutter/material.dart';
 
@@ -5,10 +8,12 @@ class WeeklySummarySection extends StatelessWidget {
   const WeeklySummarySection({
     super.key,
     required this.weekly,
+    required this.range,
     this.focusGoalMinutes = 2400,
   });
 
   final WeeklyStats? weekly;
+   final StatsRange range;
   final int focusGoalMinutes;
 
   @override
@@ -19,7 +24,11 @@ class WeeklySummarySection extends StatelessWidget {
     final radius = BorderRadius.circular(12);
 
     final focus = w?.focusMinutes ?? 0;
-    final goal = focusGoalMinutes.clamp(1, 100000);
+    // Base goal is defined for a 7-day window; scale with range.
+    final baseGoal = focusGoalMinutes.clamp(1, 100000);
+    final scaledGoal =
+        (baseGoal * (range.days / 7.0)).round().clamp(1, 100000);
+    final goal = scaledGoal;
     final pct = (focus / goal).clamp(0.0, 1.0);
 
     final completed = (w?.tasksDone ?? 0).toDouble();
@@ -31,25 +40,33 @@ class WeeklySummarySection extends StatelessWidget {
 
     final streak = w?.daysActive ?? 0;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: radius,
-      ),
-      padding: const EdgeInsets.all(16),
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final title = switch (range) {
+      StatsRange.last7Days =>
+        isEs ? 'Resumen semanal' : 'Weekly summary',
+      StatsRange.last14Days =>
+        isEs ? 'Resumen 14 días' : '14-day summary',
+      StatsRange.last30Days =>
+        isEs ? 'Resumen 30 días' : '30-day summary',
+    };
+    final focusLabel = switch (range) {
+      StatsRange.last7Days =>
+        isEs ? 'Foco semanal' : 'Weekly focus',
+      StatsRange.last14Days =>
+        isEs ? 'Foco (14 días)' : 'Focus (14 days)',
+      StatsRange.last30Days =>
+        isEs ? 'Foco (30 días)' : 'Focus (30 days)',
+    };
+
+    return EisenCard(
+      padding: const EdgeInsets.all(EisenSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          EisenSectionHeader(title: title, subtitle: focusLabel),
+          const SizedBox(height: 4),
           Text(
-            'Resumen semanal',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Foco semanal: $focus / $goal min',
+            '$focus / $goal min',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 8),
@@ -85,4 +102,3 @@ class WeeklySummarySection extends StatelessWidget {
     );
   }
 }
-

@@ -50,11 +50,12 @@ class AppearancePreviewState {
   }
 }
 
-class AppearancePreviewController extends StateNotifier<AppearancePreviewState> {
-  AppearancePreviewController(this.ref)
-      : super(AppearancePreviewState.fromPrefs(ref.read(uiPrefsProvider)));
-
-  final Ref ref;
+class AppearancePreviewController extends Notifier<AppearancePreviewState> {
+  @override
+  AppearancePreviewState build() {
+    final prefs = ref.read(uiPrefsProvider);
+    return AppearancePreviewState.fromPrefs(prefs);
+  }
 
   void setThemeMode(ThemeMode mode) {
     state = state.copyWith(themeMode: mode);
@@ -84,8 +85,6 @@ class AppearancePreviewController extends StateNotifier<AppearancePreviewState> 
   }
 }
 
-final appearancePreviewProvider = StateNotifierProvider<
-    AppearancePreviewController, AppearancePreviewState>((ref) {
-  return AppearancePreviewController(ref);
-});
-
+final appearancePreviewProvider =
+    NotifierProvider<AppearancePreviewController, AppearancePreviewState>(
+        AppearancePreviewController.new);
