@@ -20,8 +20,6 @@ class WeeklySummarySection extends StatelessWidget {
   Widget build(BuildContext context) {
     final w = weekly;
     final cs = Theme.of(context).colorScheme;
-    final bg = cs.surfaceContainerLow;
-    final radius = BorderRadius.circular(12);
 
     final focus = w?.focusMinutes ?? 0;
     // Base goal is defined for a 7-day window; scale with range.

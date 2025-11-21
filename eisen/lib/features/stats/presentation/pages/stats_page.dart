@@ -32,28 +32,49 @@ class StatsPage extends ConsumerWidget {
             data: (v) => v, loading: () => null, error: (_, __) => null);
     final trends = trendsAsync.when<List<TrendPoint>?>(
         data: (v) => v, loading: () => null, error: (_, __) => null);
+    final showBack = Navigator.of(context).canPop();
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Estadísticas'),
+        leading: showBack
+            ? BackButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : null,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: AppLogoHomeButton(),
+          ),
+        ],
+      ),
       body: SafeArea(
+        top: false,
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
+          duration: const Duration(milliseconds: 200),
+          transitionBuilder: (child, animation) {
+            final curved = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            );
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.02),
+                end: Offset.zero,
+              ).animate(curved),
+              child: FadeTransition(
+                opacity: curved,
+                child: child,
+              ),
+            );
+          },
           child: SingleChildScrollView(
+            key: ValueKey(range),
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 8),
-                const Center(child: AppLogoHomeButton()),
-                const SizedBox(height: 8),
-                Text(
-                  'Estadísticas',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 12),
                 Align(
                   alignment:
                       isMobile ? Alignment.center : Alignment.centerLeft,
@@ -74,7 +95,7 @@ class StatsPage extends ConsumerWidget {
                         selected: range == r,
                         onSelected: (value) {
                           if (!value) return;
-                          ref.read(statsRangeProvider.notifier).state = r;
+                          ref.read(statsRangeProvider.notifier).set(r);
                         },
                       );
                     }).toList(),
@@ -116,11 +137,7 @@ class StatsPage extends ConsumerWidget {
                   range: range,
                 ),
                 const SizedBox(height: 16),
-                NudgesSection(
-                  weekly: weekly,
-                  range: range,
-                  project: project,
-                ),
+                const NudgesSection(),
               ],
             ),
           ),

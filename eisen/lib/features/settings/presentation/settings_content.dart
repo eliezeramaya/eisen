@@ -1,4 +1,3 @@
-import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/features/settings/application/appearance_preview_controller.dart';
 import 'package:eisen/features/settings/presentation/widgets/appearance_preview_card.dart';
 import 'package:flutter/material.dart';
@@ -133,6 +132,10 @@ class SettingsContent extends StatelessWidget {
           preview: previewEnabled,
           onPreview: onPreviewChanged,
         );
+      case 'Notifications':
+        return const NotificationsPanel();
+      case 'Language':
+        return const LanguageRegionPanel();
       case 'Accessibility':
         return const _AccessibilityPanel();
       case 'Calendar/Gantt':
@@ -465,13 +468,6 @@ class _GanttPanel extends StatelessWidget {
   final ValueChanged<bool> onShowTodayLine;
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    String label(String k) => switch (k) {
-          'days' => 'Días',
-          'weeks' => 'Semanas',
-          'months' => 'Meses',
-          _ => 'Semanas'
-        };
     return ListView(
       children: [
         const ListTile(
@@ -531,7 +527,6 @@ class _AccessibilityPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
-    final prefs = ref.watch(uiPrefsProvider);
     return ListView(
       padding: const EdgeInsets.all(8),
       children: [

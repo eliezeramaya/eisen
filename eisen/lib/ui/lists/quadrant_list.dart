@@ -1,5 +1,4 @@
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
-import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/eisen_task_draggable.dart';
 import 'package:eisen/ui/task/task_row.dart';
 import 'package:flutter/material.dart';

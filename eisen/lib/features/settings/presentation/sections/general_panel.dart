@@ -1,4 +1,3 @@
-import 'package:eisen/core/design_system/eisen_tokens.dart';
 import 'package:eisen/core/design_system/widgets/eisen_card.dart';
 import 'package:eisen/core/design_system/widgets/eisen_section_header.dart';
 import 'package:eisen/core/notifications/notifications_service.dart';

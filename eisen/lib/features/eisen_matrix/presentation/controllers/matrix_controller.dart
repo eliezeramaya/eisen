@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:eisen/core/services/storage_prefs.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/core/sync/remote_tasks_service.dart';
+import 'package:eisen/core/sync/remote_tasks_service_noop.dart';
 import 'package:eisen/features/eisen_matrix/data/local_repo.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
@@ -139,6 +141,7 @@ class MatrixState {
 class MatrixController extends Notifier<MatrixState> {
   late final MatrixRepository _repo;
   late final UiPrefs _ui;
+  late final RemoteTasksService _remoteTasks;
 
   // Use cases
   late final CreateTaskUseCase _createTaskUseCase;
@@ -161,6 +164,7 @@ class MatrixController extends Notifier<MatrixState> {
   MatrixState build() {
     _repo = LocalPrefsMatrixRepository(StoragePrefs());
     _ui = UiPrefs();
+    _remoteTasks = ref.read(remoteTasksServiceProvider);
 
     // Initialize use cases
     _createTaskUseCase = CreateTaskUseCase();
@@ -203,7 +207,7 @@ class MatrixController extends Notifier<MatrixState> {
       // No active tasks - load demo data
       final demo = _demoTasks();
       state = state.copyWith(tasks: demo);
-      await _repo.save(demo);
+      await _saveAndSync(demo);
     } else {
       state = state.copyWith(tasks: loaded);
     }
@@ -227,11 +231,11 @@ class MatrixController extends Notifier<MatrixState> {
     state = state.copyWith(isLoading: true);
     final demo = _demoTasks();
     state = state.copyWith(tasks: demo, version: state.version + 1);
-    await _repo.save(demo);
+    await _saveAndSync(demo);
     state = state.copyWith(isLoading: false);
   }
 
-  Future<void> persist() => _repo.save(state.tasks);
+  Future<void> persist() => _saveAndSync(state.tasks);
 
   void select(String? id) => state = state.copyWith(selectedId: id);
 
@@ -357,7 +361,6 @@ class MatrixController extends Notifier<MatrixState> {
 
     const duration = Duration(milliseconds: 220);
     final begin = DateTime.now();
-    final end = begin.add(duration);
     while (true) {
       final now = DateTime.now();
       final tRaw =
@@ -487,6 +490,13 @@ class MatrixController extends Notifier<MatrixState> {
     }
     // Synchronize with layout prefs so treemap uses the effective topK
     ref.read(uiPrefsControllerProvider.notifier).setTopK(k);
+  }
+
+  Future<void> _saveAndSync(List<Task> tasks) async {
+    await _repo.save(tasks);
+    unawaited(
+      _remoteTasks.pushRemoteTasks(tasks).catchError((_) => null),
+    );
   }
 
   void _syncTopKWithZoom() {

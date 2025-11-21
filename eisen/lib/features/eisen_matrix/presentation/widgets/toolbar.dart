@@ -19,6 +19,7 @@ class AppToolbar extends StatefulWidget {
     this.onToggleMinimal,
     this.onOpenCompletedTasks,
     this.onOpenSpaces,
+    this.onOpenFocus,
     this.minimal = false,
     this.showWorkflowPlan = false,
   });
@@ -36,6 +37,7 @@ class AppToolbar extends StatefulWidget {
   final VoidCallback? onToggleMinimal;
   final VoidCallback? onOpenCompletedTasks;
   final VoidCallback? onOpenSpaces;
+  final VoidCallback? onOpenFocus;
   final bool minimal;
   final ThemeMode themeMode;
   final bool showWorkflowPlan;
@@ -101,6 +103,7 @@ class _AppToolbarState extends State<AppToolbar> {
     final searchLabel = isEs ? 'Buscar' : 'Search';
     final statsLabel = isEs ? 'Stats' : 'Stats';
     final workflowLabel = isEs ? 'Workflow' : 'Workflow';
+    final focusLabel = isEs ? 'Focus' : 'Focus';
     final settingsLabel = isEs ? 'Ajustes' : 'Settings';
     final profileLabel = isEs ? 'Perfil' : 'Profile';
     final completedLabel = isEs ? 'Completed' : 'Completed';
@@ -247,6 +250,12 @@ class _AppToolbarState extends State<AppToolbar> {
                             onPressed: widget.onOpenStats,
                             icon: Icons.bar_chart_rounded,
                             label: statsLabel,
+                          ),
+                        if (widget.onOpenFocus != null)
+                          actionButton(
+                            onPressed: widget.onOpenFocus,
+                            icon: Icons.bolt,
+                            label: focusLabel,
                           ),
                         if (widget.onOpenCompletedTasks != null)
                           actionButton(

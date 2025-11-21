@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 /// App logo that behaves as a Home button.
 ///
 /// When tapped, it resets the matrix view to the initial 4‑quadrant state
-/// and navigates to the root route ('/').
+/// and navigates to the matrix home route ('/matrix').
 class AppLogoHomeButton extends ConsumerWidget {
   const AppLogoHomeButton({super.key});
 
@@ -18,11 +18,8 @@ class AppLogoHomeButton extends ConsumerWidget {
       onTap: () {
         // Ensure matrix returns to the initial full‑matrix view.
         ref.read(matrixControllerProvider.notifier).resetHomeView();
-        // Navigate to the matrix home route. Using both go('/') and
-        // popUntil(first) ensures we exit any manually-pushed pages
-        // (like StatsPage) and land on the root matrix screen.
-        GoRouter.of(context).go('/');
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        // Navigate to the matrix home route.
+        GoRouter.of(context).go('/matrix');
       },
       child: Container(
         width: 28,

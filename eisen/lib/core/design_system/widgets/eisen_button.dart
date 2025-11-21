@@ -31,7 +31,7 @@ class EisenButton extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final enabled = onPressed != null && !loading;
 
-    Widget child = Row(
+    final Widget child = Row(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -79,4 +79,3 @@ class EisenButton extends StatelessWidget {
     }
   }
 }
-

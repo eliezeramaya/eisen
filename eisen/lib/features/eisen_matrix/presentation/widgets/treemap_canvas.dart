@@ -721,6 +721,7 @@ class _TreemapCanvasState extends State<TreemapCanvas>
     return m;
   }
 
+  // ignore: unused_element
   Offset _stackOverlayPosition(Quadrant q, Size size) {
     // Position near top-left of each quadrant, with margin to avoid banner
     final halfW = size.width / 2;
@@ -1624,6 +1625,7 @@ class _TreemapPainter extends CustomPainter {
   /// Cache key invalidation: When rect changes, hashCode changes, creating a
   /// new cache entry. Old entries are orphaned but remain until GC.
   /// Cache is bounded implicitly by task count (max ~500 tasks × 2 states).
+  // ignore: unused_element
   Path _getCachedPath(String taskId, Rect rect, double radius) {
     final key = '${taskId}_${rect.hashCode}_$radius#v$layoutVersion';
     return _pathCache.putIfAbsent(key, () {

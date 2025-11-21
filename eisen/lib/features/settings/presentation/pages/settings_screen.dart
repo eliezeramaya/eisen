@@ -11,14 +11,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// plug in a dedicated mobile flow with category list + breadcrumbs without
 /// changing routing or call sites.
 class SettingsScreen extends ConsumerWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.initialSection});
+
+  final String? initialSection;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final width = MediaQuery.sizeOf(context).width;
+    final section = initialSection?.isNotEmpty == true
+        ? initialSection!
+        : 'General';
     if (width < 720) {
-      return const SettingsMobileScaffold();
+      return SettingsMobileScaffold(initialSection: section);
     }
-    return const SettingsPageDesktop();
+    return SettingsPageDesktop(initialSection: section);
   }
 }

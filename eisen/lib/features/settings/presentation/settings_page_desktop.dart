@@ -5,20 +5,21 @@ import 'package:eisen/features/settings/application/settings_controller.dart';
 import 'package:eisen/features/settings/presentation/live_preview_pane.dart';
 import 'package:eisen/features/settings/presentation/section_bus.dart';
 import 'package:eisen/features/settings/presentation/settings_content.dart';
-import 'package:eisen/features/settings/presentation/settings_search.dart';
 import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SettingsPageDesktop extends ConsumerStatefulWidget {
-  const SettingsPageDesktop({super.key});
+  const SettingsPageDesktop({super.key, this.initialSection = 'General'});
+
+  final String initialSection;
   @override
   ConsumerState<SettingsPageDesktop> createState() =>
       _SettingsPageDesktopState();
 }
 
 class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
-  String _section = 'General';
+  late String _section;
   bool _dirty = false;
   bool _previewEnabled = false;
   // Staged values - initialized with defaults, will be updated from providers
@@ -52,6 +53,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
   @override
   void initState() {
     super.initState();
+    _section = _normalizeSection(widget.initialSection);
     // Initialize from providers after first frame to ensure context is ready
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadFromProviders());
   }
@@ -98,89 +100,80 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
     return SettingsSectionBus(
       jumpTo: (s) => setState(() => _section = s),
       child: Scaffold(
-        body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 8),
-              const Center(child: AppLogoHomeButton()),
-              const SizedBox(height: 8),
-              Text(
-                'Settings',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: isNarrow
-                    // Mobile/narrow: categorías arriba, contenido apilado debajo.
-                    ? Column(
-                        children: [
-                          SizedBox(
-                            height: 220,
-                            child: _SettingsSidebar(
-                              selected: _section,
-                              onSelect: (s) =>
-                                  setState(() => _section = s),
-                            ),
-                          ),
-                          Container(
-                            height: 1,
-                            color: cs.outlineVariant
-                                .withValues(alpha: 0.28),
-                          ),
-                          Expanded(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                              child: _buildSettingsContent(),
-                            ),
-                          ),
-                        ],
-                      )
-                    // Desktop/wide: sidebar + panel maestro-detalle.
-                    : Row(
-                        children: [
-                          Container(
-                            width: 240,
-                            color: cs.surfaceContainerHigh,
-                            child: _SettingsSidebar(
-                                selected: _section,
-                                onSelect: (s) =>
-                                    setState(() => _section = s)),
-                          ),
-                          Container(
-                              width: 1,
-                              color: cs.outlineVariant
-                                  .withValues(alpha: 0.28)),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                  24, 16, 24, 16),
-                              child: _buildSettingsContent(),
-                            ),
-                          ),
-                          if (isWide) ...[
-                            const VerticalDivider(width: 1),
-                            SizedBox(
-                              width: 320,
-                              child: LivePreviewPane(
-                                enabled: _previewEnabled,
-                                topK: _stagedTopK,
-                                gamma: _stagedGamma,
-                                minArea: _stagedMinArea,
-                                qPad: _stagedPadding,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-              ),
-            ],
+        appBar: AppBar(
+          leadingWidth: 72,
+          leading: const Padding(
+            padding: EdgeInsets.only(left: 12),
+            child: AppLogoHomeButton(),
           ),
+          title: Text('Settings · $_section'),
+          backgroundColor: cs.surface,
+          foregroundColor: cs.onSurface,
+          elevation: 0.5,
+        ),
+        body: SafeArea(
+          top: false,
+          child: isNarrow
+              // Mobile/narrow: categorías arriba, contenido apilado debajo.
+              ? Column(
+                  children: [
+                    SizedBox(
+                      height: 220,
+                      child: _SettingsSidebar(
+                        selected: _section,
+                        onSelect: (s) => setState(
+                            () => _section = _normalizeSection(s)),
+                      ),
+                    ),
+                    Container(
+                      height: 1,
+                      color: cs.outlineVariant.withValues(alpha: 0.28),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                            12, 12, 12, 12),
+                        child: _buildAnimatedContent(),
+                      ),
+                    ),
+                  ],
+                )
+              // Desktop/wide: sidebar + panel maestro-detalle.
+              : Row(
+                  children: [
+                    Container(
+                      width: 240,
+                      color: cs.surfaceContainerHigh,
+                      child: _SettingsSidebar(
+                          selected: _section,
+                          onSelect: (s) => setState(
+                              () => _section = _normalizeSection(s))),
+                    ),
+                    Container(
+                        width: 1,
+                        color: cs.outlineVariant.withValues(alpha: 0.28)),
+                    Expanded(
+                      child: Padding(
+                        padding:
+                            const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                        child: _buildAnimatedContent(),
+                      ),
+                    ),
+                    if (isWide) ...[
+                      const VerticalDivider(width: 1),
+                      SizedBox(
+                        width: 320,
+                        child: LivePreviewPane(
+                          enabled: _previewEnabled,
+                          topK: _stagedTopK,
+                          gamma: _stagedGamma,
+                          minArea: _stagedMinArea,
+                          qPad: _stagedPadding,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
         ),
         bottomNavigationBar: SafeArea(
           top: false,
@@ -224,6 +217,23 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
         ),
       ),
     );
+  }
+
+  String _normalizeSection(String value) {
+    const allowed = <String>{
+      'General',
+      'Appearance',
+      'Layout',
+      'Calendar/Gantt',
+      'Notifications',
+      'Language',
+      'Accessibility',
+      'Keyboard',
+      'Data & Privacy',
+      'About',
+    };
+    if (allowed.contains(value)) return value;
+    return 'General';
   }
 
   void _applyChanges() {
@@ -318,6 +328,32 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
     });
   }
 
+  Widget _buildAnimatedContent() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      transitionBuilder: (child, animation) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.02, 0),
+            end: Offset.zero,
+          ).animate(curved),
+          child: FadeTransition(
+            opacity: curved,
+            child: child,
+          ),
+        );
+      },
+      child: KeyedSubtree(
+        key: ValueKey<String>(_section),
+        child: _buildSettingsContent(),
+      ),
+    );
+  }
+
   SettingsContent _buildSettingsContent() {
     return SettingsContent(
       section: _section,
@@ -371,6 +407,8 @@ class _SettingsSidebar extends StatelessWidget {
     const items = <(String, IconData)>[
       ('General', Icons.tune),
       ('Appearance', Icons.palette_outlined),
+      ('Notifications', Icons.notifications_none),
+      ('Language', Icons.language),
       ('Layout', Icons.grid_view_rounded),
       ('Calendar/Gantt', Icons.view_timeline),
       ('Accessibility', Icons.accessibility_new),

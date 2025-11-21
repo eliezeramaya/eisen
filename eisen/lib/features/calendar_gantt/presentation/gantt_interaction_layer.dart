@@ -431,17 +431,6 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
     pc.setPxPerDay((current * factor).clamp(1.0, 1000.0));
   }
 
-  void _onScaleStart(ScaleStartDetails d) {
-    _pinchBasePx = ref.read(projectorProvider).pxPerDay;
-  }
-
-  void _onScaleUpdate(ScaleUpdateDetails d) {
-    final base = _pinchBasePx;
-    if (base == null) return;
-    final pc = ref.read(projectorProvider.notifier);
-    pc.setPxPerDay((base * d.scale).clamp(1.0, 1000.0));
-  }
-
   void _beginDrag(Offset local, CalendarSpan span, Rect rect) {
     _dragOrigSpan = span;
     _dragOrigRect = rect;

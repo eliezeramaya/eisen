@@ -1,13 +1,15 @@
 import 'dart:ui';
 
+import 'package:eisen/core/design_system/eisen_tokens.dart';
+import 'package:eisen/core/design_system/widgets/eisen_card.dart';
 import 'package:eisen/core/platform/platform_utils.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/theme/app_theme.dart';
+import 'package:eisen/core/theme/colors.dart';
 import 'package:eisen/core/ui/app_text_scale.dart';
 import 'package:eisen/core/ui/ui_breakpoints.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
-import 'package:eisen/features/eisen_matrix/presentation/pages/stats_page.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/inspector_drawer.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/minimap.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/profile_sheet.dart';
@@ -18,6 +20,8 @@ import 'package:eisen/features/eisen_matrix/presentation/widgets/toolbar.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_canvas.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/matrix_interactive_wrapper.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/zoom_indicator.dart';
+import 'package:eisen/features/insights/domain/nudge.dart';
+import 'package:eisen/features/insights/domain/nudge_controller.dart';
 import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/l10n/app_localizations_en.dart';
@@ -26,7 +30,6 @@ import 'package:eisen/ui/matrix/matrix_desktop.dart';
 import 'package:eisen/utils/breakpoints.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 // Removed FAB + coachmark imports; using single CTA in bottom bar
@@ -125,8 +128,14 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         ref.watch(matrixControllerProvider.select((s) => s.isSearchOpen));
     final searchQuery =
         ref.watch(matrixControllerProvider.select((s) => s.searchQuery));
-    // Show top-level navigation actions on all sizes; layout adapts inside AppToolbar.
-    final showTopSettings = true;
+    final showFocusFab = screenWidth < 600;
+    ref.read(nudgeControllerProvider.notifier).loadNudges();
+    final nudgesAsync = ref.watch(nudgeControllerProvider);
+    final Nudge? firstNudge =
+        nudgesAsync.value?.nudges.isNotEmpty == true
+            ? nudgesAsync.value!.nudges.first
+            : null;
+    final nudgeCtrl = ref.read(nudgeControllerProvider.notifier);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -152,78 +161,84 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             ),
             onExitZoom: ctrl.resetHomeView,
             canExitZoom: zoom != null,
-            onOpenStats: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const StatsPage()),
-            ),
+            onOpenStats: () => context.push('/stats'),
+            onOpenFocus: () => context.push('/focus'),
             // When workflow plan is enabled in Settings > General, show the
             // Gantt/Workflow action in the top toolbar.
             showWorkflowPlan: workflowPlanEnabled,
             onOpenWorkflow: workflowPlanEnabled
                 ? () => context.push('/workflow-plan')
                 : null,
-            onOpenSettings: showTopSettings
-                ? () {
-                    if (isDesktop) {
-                      context.push('/settings');
-                    } else {
-                      final width = MediaQuery.sizeOf(context).width;
-                      final isMobile = width < 600;
-                      showModalBottomSheet(
-                        context: context,
-                        showDragHandle: true,
-                        isScrollControlled: true,
-                        useSafeArea: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (_) => isMobile
-                            ? SettingsSheetCompact(
-                                onToggleTheme: ctrl.toggleTheme,
-                                onToggleDensity: ctrl.toggleCompact,
-                                compact: compact,
-                                showAxisLegends: showAxisLegends,
-                                onToggleAxisLegends: ctrl.toggleAxisLegends,
-                                minimal: minimal,
-                                onToggleMinimal: ctrl.toggleMinimal,
-                                onResetToDemo: () async {
-                                  await ctrl.resetToDemo();
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            '\u2728 Tareas demo restauradas (20 tareas)'),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
-                              )
-                            : SettingsSheet(
-                                onToggleTheme: ctrl.toggleTheme,
-                                onToggleDensity: ctrl.toggleCompact,
-                                compact: compact,
-                                showAxisLegends: showAxisLegends,
-                                onToggleAxisLegends: ctrl.toggleAxisLegends,
-                                minimal: minimal,
-                                onToggleMinimal: ctrl.toggleMinimal,
-                                onResetToDemo: () async {
-                                  await ctrl.resetToDemo();
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            '\u2728 Tareas demo restauradas (20 tareas)'),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
-                      );
-                    }
-                  }
-                : null,
+            onOpenSettings: () {
+              if (isDesktop) {
+                context.push('/settings');
+              } else {
+                final width = MediaQuery.sizeOf(context).width;
+                final isMobile = width < 600;
+                showModalBottomSheet(
+                  context: context,
+                  showDragHandle: true,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => isMobile
+                      ? SettingsSheetCompact(
+                          onToggleTheme: ctrl.toggleTheme,
+                          onToggleDensity: ctrl.toggleCompact,
+                          compact: compact,
+                          showAxisLegends: showAxisLegends,
+                          onToggleAxisLegends: ctrl.toggleAxisLegends,
+                          minimal: minimal,
+                          onToggleMinimal: ctrl.toggleMinimal,
+                          onResetToDemo: () async {
+                            await ctrl.resetToDemo();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      '\u2728 Tareas demo restauradas (20 tareas)'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                        )
+                      : SettingsSheet(
+                          onToggleTheme: ctrl.toggleTheme,
+                          onToggleDensity: ctrl.toggleCompact,
+                          compact: compact,
+                          showAxisLegends: showAxisLegends,
+                          onToggleAxisLegends: ctrl.toggleAxisLegends,
+                          minimal: minimal,
+                          onToggleMinimal: ctrl.toggleMinimal,
+                          onResetToDemo: () async {
+                            await ctrl.resetToDemo();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      '\u2728 Tareas demo restauradas (20 tareas)'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                );
+              }
+            },
           ),
         ),
       ),
+      floatingActionButton: showFocusFab
+          ? FloatingActionButton.extended(
+              heroTag: 'fab-focus',
+              icon: const Icon(Icons.bolt),
+              label: const Text('Focus'),
+              onPressed: () => context.push('/focus'),
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         child: MediaQuery(
           // AppTextScale applied: scale general UI using prefs
@@ -255,6 +270,58 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            AnimatedSwitcher(
+                              duration:
+                                  const Duration(milliseconds: 200),
+                              transitionBuilder: (child, animation) {
+                                final curved = CurvedAnimation(
+                                    parent: animation,
+                                    curve: Curves.easeOutCubic);
+                                return SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(0, -0.05),
+                                    end: Offset.zero,
+                                  ).animate(curved),
+                                  child: FadeTransition(
+                                    opacity: curved,
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: firstNudge != null
+                                  ? EisenCard(
+                                      key: ValueKey(firstNudge.id),
+                                      margin: const EdgeInsets.fromLTRB(
+                                        EisenSpacing.md,
+                                        EisenSpacing.md,
+                                        EisenSpacing.md,
+                                        EisenSpacing.sm,
+                                      ),
+                                      padding:
+                                          const EdgeInsets.all(EisenSpacing.sm),
+                                      interactive: true,
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.insights_outlined,
+                                            color: EisenColors.q2,
+                                            size: 20,
+                                          ),
+                                          const SizedBox(
+                                              width: EisenSpacing.sm),
+                                          Expanded(
+                                              child: Text(firstNudge.title)),
+                                          IconButton(
+                                            icon: const Icon(Icons.close,
+                                                size: 18),
+                                            onPressed: () => nudgeCtrl
+                                                .dismissNudge(firstNudge),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
                             AnimatedSwitcher(
                               duration:
                                   const Duration(milliseconds: 200),
@@ -789,14 +856,12 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               Expanded(
-                child: _NavBarItem(
-                  icon: Icons.bar_chart_rounded,
-                  label: isEs ? 'Stats' : 'Stats',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const StatsPage()),
-                  ),
-                ),
+              child: _NavBarItem(
+                icon: Icons.bar_chart_rounded,
+                label: isEs ? 'Stats' : 'Stats',
+                onTap: () => context.push('/stats'),
               ),
+            ),
               Expanded(
                 child: _NavBarItem(
                   icon: Icons.history,

@@ -189,7 +189,6 @@ class _NowChip extends StatelessWidget {
   const _NowChip();
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [

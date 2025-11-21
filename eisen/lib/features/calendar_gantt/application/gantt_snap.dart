@@ -8,9 +8,9 @@ TimeScale timeScaleFromPrefs(String value) {
     case 'months':
       return TimeScale.months;
     case 'days':
-    default:
       return TimeScale.days;
   }
+  return TimeScale.days;
 }
 
 /// Floors a DateTime to the beginning of the unit for the given scale.
@@ -24,7 +24,6 @@ DateTime snapFloor(DateTime t, TimeScale scale) {
     case TimeScale.months:
       return DateTime(t.year, t.month, 1);
     case TimeScale.days:
-    default:
       return DateTime(t.year, t.month, t.day);
   }
 }
@@ -38,7 +37,6 @@ int stepDaysForScale(TimeScale scale) {
       // Variable length in months; as a simplification return 30.
       return 30;
     case TimeScale.days:
-    default:
       return 1;
   }
 }

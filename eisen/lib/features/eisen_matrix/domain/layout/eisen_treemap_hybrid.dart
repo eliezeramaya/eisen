@@ -63,7 +63,6 @@ class EisenTreemapHybrid {
 
       // Prepare squarify weights (include cluster as sumRest if any)
       final topWeights = [for (final i in topIdx) weights[i]];
-      final sumTop = topWeights.fold<double>(0, (a, b) => a + b);
       final sumRest = restIdx.fold<double>(0, (a, i) => a + weights[i]);
       final sequence = [...topWeights];
       final hasCluster = sumRest > 0.0 && restIdx.isNotEmpty;

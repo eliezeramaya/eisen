@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/core/sync/remote_prefs_service.dart';
+import 'package:eisen/core/sync/remote_prefs_service_noop.dart';
 import 'package:eisen/features/settings/data/local/local_prefs_service.dart';
 import 'package:eisen/features/settings/domain/models/user_prefs.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,10 +15,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// single point of coordination.
 class SettingsController extends Notifier<UserPrefs> {
   late final LocalPrefsService _local;
+  late final RemotePrefsService _remote;
 
   @override
   UserPrefs build() {
     _local = LocalPrefsService(UiPrefs());
+    _remote = ref.read(remotePrefsServiceProvider);
     _init();
     return UserPrefsDefaults.value;
   }
@@ -38,6 +44,12 @@ class SettingsController extends Notifier<UserPrefs> {
     final next = UserPrefs(ui: ui, categoryUsage: state.categoryUsage);
     state = next;
     await _local.save(next);
+    // Fire-and-forget remote sync; errors are silenced.
+    unawaited(
+      _remote
+          .pushRemotePrefs(ui)
+          .catchError((_) => null),
+    );
   }
 
   /// Reloads preferences from local storage and updates the controller state.
@@ -83,4 +95,3 @@ class SettingsController extends Notifier<UserPrefs> {
 
 final settingsControllerProvider =
     NotifierProvider<SettingsController, UserPrefs>(SettingsController.new);
-
