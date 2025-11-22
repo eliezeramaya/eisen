@@ -31,27 +31,47 @@ void main() {
         surfaceSize: size,
         wrapper: (child) => MediaQuery(
           data: MediaQueryData(
-              size: size, textScaler: TextScaler.linear(textScale)),
-          child: DevicePreview(enabled: false, builder: (_) => child),
+            size: size,
+            textScaler: TextScaler.linear(textScale),
+          ),
+          child: child,
         ),
       );
-      await tester.pumpAndSettle(const Duration(milliseconds: 500));
+      // Avoid long settles that can hang; pump a handful of frames instead.
+      for (int i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 120));
+      }
     }
 
     for (final entry in scenarios.entries) {
       testGoldens('layout_${entry.key}_text1.0', (tester) async {
         await pumpApp(tester, entry.value, 1.0);
-        await screenMatchesGolden(tester, 'matrix_${entry.key}_ts1_0');
+        await screenMatchesGolden(
+          tester,
+          'matrix_${entry.key}_ts1_0',
+          customPump: (tester) async =>
+              tester.pump(const Duration(milliseconds: 200)),
+        );
       });
 
       testGoldens('layout_${entry.key}_text1.3', (tester) async {
         await pumpApp(tester, entry.value, 1.3);
-        await screenMatchesGolden(tester, 'matrix_${entry.key}_ts1_3');
+        await screenMatchesGolden(
+          tester,
+          'matrix_${entry.key}_ts1_3',
+          customPump: (tester) async =>
+              tester.pump(const Duration(milliseconds: 200)),
+        );
       });
 
       testGoldens('layout_${entry.key}_text1.6', (tester) async {
         await pumpApp(tester, entry.value, 1.6);
-        await screenMatchesGolden(tester, 'matrix_${entry.key}_ts1_6');
+        await screenMatchesGolden(
+          tester,
+          'matrix_${entry.key}_ts1_6',
+          customPump: (tester) async =>
+              tester.pump(const Duration(milliseconds: 200)),
+        );
       });
     }
   });

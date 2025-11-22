@@ -6,6 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+Future<void> pumpSettled(WidgetTester tester,
+    {int frames = 6, Duration step = const Duration(milliseconds: 120)}) async {
+  for (int i = 0; i < frames; i++) {
+    await tester.pump(step);
+  }
+}
+
 /// Integration tests for treemap interactions.
 ///
 /// Tests user interactions like:
@@ -25,8 +32,7 @@ void main() {
         ),
       );
 
-      // Wait for initial load
-      await tester.pumpAndSettle();
+      await pumpSettled(tester);
 
       // Verify app loads without errors
       expect(find.byType(MaterialApp), findsOneWidget,
@@ -44,7 +50,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await pumpSettled(tester);
 
       // Read state from controller
       final state = container.read(matrixControllerProvider);
@@ -65,7 +71,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await pumpSettled(tester);
 
       final controller = container.read(matrixControllerProvider.notifier);
       final initialState = container.read(matrixControllerProvider);
@@ -105,7 +111,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await pumpSettled(tester);
 
       final controller = container.read(matrixControllerProvider.notifier);
       final initialState = container.read(matrixControllerProvider);
@@ -133,7 +139,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await pumpSettled(tester);
 
       final controller = container.read(matrixControllerProvider.notifier);
       final initialState = container.read(matrixControllerProvider);
@@ -167,7 +173,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await pumpSettled(tester);
 
       final controller = container.read(matrixControllerProvider.notifier);
       final initialState = container.read(matrixControllerProvider);
@@ -200,7 +206,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await pumpSettled(tester);
 
       final controller = container.read(matrixControllerProvider.notifier);
       final initialState = container.read(matrixControllerProvider);
@@ -235,7 +241,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await pumpSettled(tester);
 
       final controller = container.read(matrixControllerProvider.notifier);
       final initialState = container.read(matrixControllerProvider);
@@ -261,7 +267,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await pumpSettled(tester);
 
       final controller = container.read(matrixControllerProvider.notifier);
       final initialState = container.read(matrixControllerProvider);
@@ -287,7 +293,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await pumpSettled(tester);
 
       final controller = container.read(matrixControllerProvider.notifier);
 
@@ -313,7 +319,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await pumpSettled(tester);
 
       final controller = container.read(matrixControllerProvider.notifier);
 
@@ -336,7 +342,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await pumpSettled(tester);
 
       final controller = container.read(matrixControllerProvider.notifier);
       final state = container.read(matrixControllerProvider);

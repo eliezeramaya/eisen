@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/stats_controller.dart';
+import '../../data/stats_exporter.dart';
+import '../../domain/report.dart';
 import '../../domain/models.dart';
 import '../widgets/eisenhower_balance_section.dart';
 import '../widgets/nudges_section.dart';
@@ -42,8 +44,13 @@ class StatsPage extends ConsumerWidget {
                 onPressed: () => Navigator.of(context).maybePop(),
               )
             : null,
-        actions: const [
-          Padding(
+        actions: [
+          IconButton(
+            tooltip: 'Exportar',
+            icon: const Icon(Icons.ios_share),
+            onPressed: () => _showExportSheet(context, ref),
+          ),
+          const Padding(
             padding: EdgeInsets.only(right: 12),
             child: AppLogoHomeButton(),
           ),
@@ -145,4 +152,81 @@ class StatsPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+Future<void> _showExportSheet(BuildContext context, WidgetRef ref) async {
+  final repo = ref.read(statsRepoProvider);
+  final range = ref.read(statsRangeProvider);
+  final project = ref.read(statsProjectProvider);
+  final bundle =
+      await repo.exportReport(range: range, project: project, now: DateTime.now());
+
+  if (!context.mounted) return;
+
+  Future<void> handleExport(StatsExportFormat format) async {
+    Navigator.of(context).pop();
+    final exporter = StatsExporter();
+    final result = await exporter.export(bundle, format);
+    if (!context.mounted) return;
+    if (result.filePath != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Exportado a ${result.filePath}'),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } else {
+      await showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Copia y comparte'),
+          content: SizedBox(
+            width: 480,
+            child: SelectableText(
+              result.content,
+              maxLines: 12,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  await showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (_) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.data_object),
+              title: const Text('Exportar JSON'),
+              subtitle: const Text('Datos estructurados del rango seleccionado'),
+              onTap: () => handleExport(StatsExportFormat.json),
+            ),
+            ListTile(
+              leading: const Icon(Icons.table_chart),
+              title: const Text('Exportar CSV'),
+              subtitle: const Text('Resumen y tendencia en formato hoja de cálculo'),
+              onTap: () => handleExport(StatsExportFormat.csv),
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf),
+              title: const Text('Exportar PDF (texto imprimible)'),
+              subtitle: const Text('Resumen listo para imprimir o compartir'),
+              onTap: () => handleExport(StatsExportFormat.pdfLike),
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }

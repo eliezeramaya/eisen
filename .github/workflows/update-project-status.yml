@@ -1,0 +1,73 @@
+name: Update Project Status Daily
+
+on:
+  schedule:
+    # Ejecutar diariamente a las 00:00 UTC (9:00 PM hora de El Salvador)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Permitir ejecución manual
+  push:
+    branches:
+      - main
+    paths:
+      - 'eisen/lib/**/*.dart'
+      - 'eisen/test/**/*.dart'
+      - 'eisen/pubspec.yaml'
+
+jobs:
+  update-status:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: 🔄 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for accurate git stats
+          
+      - name: 📊 Run update script
+        run: |
+          chmod +x scripts/update_project_status.sh
+          bash scripts/update_project_status.sh
+          
+      - name: 🔍 Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code docs/project_status.md || echo "changed=true" >> $GITHUB_OUTPUT
+          
+      - name: 📝 Commit changes
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/project_status.md
+          git commit -m "🤖 Auto-update project status [$(date +'%Y-%m-%d')]
+          
+          - Updated metrics and progress
+          - Automated daily update"
+          
+      - name: 🚀 Push changes
+        if: steps.git-check.outputs.changed == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          
+      - name: 💬 Create summary
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          echo "### 📊 Project Status Updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Successfully updated \`project_status.md\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Changes:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          git show --stat HEAD >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          
+      - name: ℹ️ No changes summary
+        if: steps.git-check.outputs.changed != 'true'
+        run: |
+          echo "### 📊 Project Status Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "ℹ️ No changes detected in project metrics" >> $GITHUB_STEP_SUMMARY

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:eisen/features/insights/domain/nudge.dart';
 import 'package:eisen/features/insights/domain/nudge_engine.dart';
+import 'package:eisen/features/settings/domain/notification_prefs_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -53,6 +54,14 @@ class NudgeController extends AsyncNotifier<NudgesState> {
   }
 
   Future<void> loadNudges({bool force = false}) async {
+    final notifPrefs = ref
+        .read(notificationPrefsControllerProvider)
+        .maybeWhen(data: (v) => v, orElse: () => null);
+    if (notifPrefs != null && notifPrefs.nudgesEnabled == false) {
+      state = const AsyncData(NudgesState(nudges: [], lastCalculatedAt: null));
+      return;
+    }
+
     final current = state.value ?? const NudgesState();
     final last = current.lastCalculatedAt;
     if (!force &&

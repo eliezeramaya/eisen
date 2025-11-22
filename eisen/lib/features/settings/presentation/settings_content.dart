@@ -1,4 +1,5 @@
 import 'package:eisen/features/settings/application/appearance_preview_controller.dart';
+import 'package:eisen/features/settings/domain/accessibility_controller.dart';
 import 'package:eisen/features/settings/presentation/widgets/appearance_preview_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -527,6 +528,9 @@ class _AccessibilityPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
+    final asyncA11y = ref.watch(accessibilityControllerProvider);
+    final a11y = asyncA11y.maybeWhen(data: (v) => v, orElse: () => null);
+    final ctrl = ref.read(accessibilityControllerProvider.notifier);
     return ListView(
       padding: const EdgeInsets.all(8),
       children: [
@@ -535,20 +539,47 @@ class _AccessibilityPanel extends ConsumerWidget {
         const SizedBox(height: 4),
         Text('Ajustes de legibilidad y navegación por teclado',
             style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
-        const SizedBox(height: 16),
-        _bullet('High contrast mode'),
-        _bullet('Text scaling (100–150%)'),
-        _bullet('Keyboard focus ring visible'),
-        _bullet('Color-blind safe palette'),
-        const SizedBox(height: 16),
-        const Divider(),
-        const SizedBox(height: 8),
-        const Text(
-          'Text size',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 4),
-        const TextScaleCard(),
+        const SizedBox(height: 12),
+        if (a11y == null)
+          const LinearProgressIndicator(minHeight: 2)
+        else ...[
+          SwitchListTile(
+            value: a11y.largeText,
+            onChanged: ctrl.toggleLargeText,
+            title: const Text('Texto más grande'),
+            subtitle: const Text('Aplica un aumento global de legibilidad'),
+            secondary: const Icon(Icons.text_increase),
+          ),
+          SwitchListTile(
+            value: a11y.highContrast,
+            onChanged: ctrl.toggleHighContrast,
+            title: const Text('Alto contraste'),
+            subtitle: const Text('Colores y superficies con mayor contraste'),
+            secondary: const Icon(Icons.contrast),
+          ),
+          SwitchListTile(
+            value: a11y.reduceAnimations,
+            onChanged: ctrl.toggleReduceAnimations,
+            title: const Text('Reducir animaciones'),
+            subtitle:
+                const Text('Transiciones simples y navegación sin motion'),
+            secondary: const Icon(Icons.motion_photos_off),
+          ),
+          SwitchListTile(
+            value: a11y.hapticsEnabled,
+            onChanged: ctrl.toggleHaptics,
+            title: const Text('Haptics'),
+            subtitle: const Text('Vibración ligera en interacciones clave'),
+            secondary: const Icon(Icons.vibration),
+          ),
+          const Divider(),
+          const Text(
+            'Escala de texto',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+          const TextScaleCard(),
+        ],
       ],
     );
   }
@@ -617,10 +648,11 @@ class _PrivacyPanel extends StatelessWidget {
         Text('Importación/exportación y telemetría',
             style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
         const SizedBox(height: 16),
-        _bullet('Export tasks (JSON/CSV)'),
-        _bullet('Import from file'),
-        _bullet('Telemetry consent (anonymous)'),
-        _bullet('Reset all data'),
+        _bullet('Exportar tareas en JSON/CSV para respaldo'),
+        _bullet('Importar desde archivo con validación básica'),
+        _bullet('Consentimiento de telemetría anónima (opt-in)'),
+        _bullet('Restablecer datos locales a estado inicial'),
+        _bullet('Editar preferencias de privacidad en cualquier momento'),
       ],
     );
   }
@@ -646,9 +678,28 @@ class _AboutPanel extends StatelessWidget {
         const Text('Version: 1.0.0'),
         const SizedBox(height: 8),
         const Text('Plan smart. Move fast.'),
+        const SizedBox(height: 12),
+        const Text('Creado con Flutter y Riverpod, con foco en UX accesible.'),
+        const SizedBox(height: 12),
+        const Text('Feedback y soporte: team@eisen.app'),
       ],
     );
   }
+}
+
+/// Public wrappers for mobile sections.
+class DataPrivacyPanel extends StatelessWidget {
+  const DataPrivacyPanel({super.key});
+
+  @override
+  Widget build(BuildContext context) => const _PrivacyPanel();
+}
+
+class AboutPanel extends StatelessWidget {
+  const AboutPanel({super.key});
+
+  @override
+  Widget build(BuildContext context) => const _AboutPanel();
 }
 
 Widget _bullet(String text) => Padding(

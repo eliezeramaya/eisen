@@ -7,7 +7,7 @@ void main() {
   testWidgets('Bottom bar Entry button opens AddTaskSheet', (tester) async {
     await tester.pumpWidget(
         const ProviderScope(child: MaterialApp(home: MatrixPage())));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     final entryEs = find.text('Entrada');
     final entryEn = find.text('Entry');
@@ -40,7 +40,7 @@ void main() {
       }
     }
     await tester.tap(target);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
 
     // AddTaskSheet shows Spanish labels by design ('Título' / 'Guardar')
     expect(find.text('Título'), findsOneWidget,

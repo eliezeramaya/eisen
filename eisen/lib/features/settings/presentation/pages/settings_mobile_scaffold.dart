@@ -212,6 +212,12 @@ class SettingsCategoryPage extends ConsumerWidget {
       case 'accessibility':
         body = const AccessibilityPanel();
         break;
+      case 'privacy':
+        body = const DataPrivacyPanel();
+        break;
+      case 'about':
+        body = const AboutPanel();
+        break;
       // Future iterations: wire dedicated panels for each category.
       default:
         body = Center(

@@ -155,5 +155,68 @@ void main() {
       // Bottom sheet should open with a list of tasks
       expect(find.byType(ListTile), findsWidgets);
     });
+
+    testWidgets('Dragging is disabled while inline edit is active',
+        (tester) async {
+      final tasks = [
+        Task(
+            id: 'edit_me',
+            title: 'Editable',
+            quadrant: Quadrant.q1,
+            priority: 8,
+            minutes: 120),
+        Task(
+            id: 'target',
+            title: 'Target',
+            quadrant: Quadrant.q2,
+            priority: 7,
+            minutes: 90),
+      ];
+
+      String? droppedId;
+      Quadrant? droppedTo;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: SizedBox(
+              width: 800,
+              height: 600,
+              child: TreemapCanvas(
+                tasks: tasks,
+                layout: computeStableLayout(tasks),
+                inlineEditId: 'edit_me', // disables drag gestures
+                onDropToQuadrant: (id, q) {
+                  droppedId = id;
+                  droppedTo = q;
+                },
+                minimal: true,
+                selectedId: null,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      final tile = find.byKey(const ValueKey('tile_edit_me'));
+      final dest = find.byKey(const ValueKey('quadrant_q2_dropzone'));
+      expect(tile, findsOneWidget);
+      expect(dest, findsOneWidget);
+
+      final start = tester.getCenter(tile);
+      final end = tester.getCenter(dest);
+
+      final gesture = await tester.startGesture(start);
+      await tester.pump();
+      await gesture.moveTo(end);
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(droppedId, isNull);
+      expect(droppedTo, isNull);
+    });
   });
 }

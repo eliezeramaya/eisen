@@ -4,6 +4,8 @@ import 'package:eisen/core/platform/platform_utils.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/ui/text_scaling.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/features/settings/domain/accessibility_controller.dart';
+import 'package:eisen/features/settings/domain/language_controller.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/theme/density.dart';
 import 'package:eisen/utils/breakpoints.dart';
@@ -53,17 +55,40 @@ class EisenApp extends ConsumerWidget {
       return DensityPreset.comfy;
     }();
 
-    final themed = applyDensity(theme, preset);
-    final darkThemed = applyDensity(darkTheme, preset);
+    final themedBase = applyDensity(theme, preset);
+    final darkThemedBase = applyDensity(darkTheme, preset);
+
+    final a11y = ref.watch(accessibilityControllerProvider).maybeWhen(
+          data: (v) => v,
+          orElse: () => null,
+        );
+    final themed = a11y?.highContrast == true
+        ? _withHighContrast(themedBase)
+        : themedBase;
+    final darkThemed = a11y?.highContrast == true
+        ? _withHighContrast(darkThemedBase)
+        : darkThemedBase;
+    final languageLocale = ref.watch(languageControllerProvider).maybeWhen(
+          data: (v) => v.locale,
+          orElse: () => null,
+        );
 
     return MaterialApp.router(
       builder: (ctx, child) {
         // Apply user text scaling on top of device scale with responsive clamps
         final prefs = ref.watch(uiPrefsProvider);
-        final tsf = effectiveTextScaleFactor(ctx, prefs);
+        final tsfBase = effectiveTextScaleFactor(ctx, prefs);
+        final tsf = a11y?.largeText == true ? tsfBase * 1.15 : tsfBase;
         final mq = MediaQuery.of(ctx);
         final scaledChild = MediaQuery(
-          data: mq.copyWith(textScaler: TextScaler.linear(tsf)),
+          data: mq.copyWith(
+            textScaler: TextScaler.linear(tsf),
+            accessibleNavigation: a11y?.reduceAnimations == true
+                ? true
+                : mq.accessibleNavigation,
+            highContrast:
+                a11y?.highContrast == true ? true : mq.highContrast,
+          ),
           child: child ?? const SizedBox.shrink(),
         );
 
@@ -93,13 +118,21 @@ class EisenApp extends ConsumerWidget {
       },
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
-      theme: themed,
-      darkTheme: darkThemed,
+      theme: a11y?.reduceAnimations == true
+          ? themed.copyWith(pageTransitionsTheme: _noTransitions)
+          : themed,
+      darkTheme: a11y?.reduceAnimations == true
+          ? darkThemed.copyWith(pageTransitionsTheme: _noTransitions)
+          : darkThemed,
       themeMode: themeMode,
       routerConfig: createRouter(),
-      locale: _resolveLocale(ref.watch(uiPrefsProvider)),
+      locale: languageLocale ?? _resolveLocale(ref.watch(uiPrefsProvider)),
       localeResolutionCallback: (device, supported) {
-        final forced = _resolveLocale(ref.read(uiPrefsProvider));
+        final forcedLocale = ref
+                .read(languageControllerProvider)
+                .maybeWhen(data: (v) => v.locale, orElse: () => null) ??
+            _resolveLocale(ref.read(uiPrefsProvider));
+        final forced = forcedLocale;
         return forced ?? device;
       },
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -113,4 +146,51 @@ Locale? _resolveLocale(UiPrefsData prefs) {
   final lang = prefs.languageCode;
   final region = prefs.regionCode == 'system' ? null : prefs.regionCode;
   return Locale.fromSubtags(languageCode: lang, countryCode: region);
+}
+
+ThemeData _withHighContrast(ThemeData base) {
+  final cs = base.colorScheme;
+  final onSurface =
+      cs.brightness == Brightness.dark ? Colors.white : Colors.black;
+  final onSurfaceVariant = cs.brightness == Brightness.dark
+      ? Colors.white70
+      : Colors.black87;
+  final surface =
+      cs.brightness == Brightness.dark ? Colors.black : Colors.white;
+  return base.copyWith(
+    colorScheme: cs.copyWith(
+      onSurface: onSurface,
+      onSurfaceVariant: onSurfaceVariant,
+      surface: surface,
+      surfaceTint: Colors.transparent,
+    ),
+    textTheme: base.textTheme.apply(
+      bodyColor: onSurface,
+      displayColor: onSurface,
+    ),
+  );
+}
+
+const _noTransitions = PageTransitionsTheme(
+  builders: {
+    TargetPlatform.android: _NoTransitionsBuilder(),
+    TargetPlatform.iOS: _NoTransitionsBuilder(),
+    TargetPlatform.macOS: _NoTransitionsBuilder(),
+    TargetPlatform.linux: _NoTransitionsBuilder(),
+    TargetPlatform.windows: _NoTransitionsBuilder(),
+  },
+);
+
+class _NoTransitionsBuilder extends PageTransitionsBuilder {
+  const _NoTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+      PageRoute<T> route,
+      BuildContext context,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child) {
+    return child;
+  }
 }

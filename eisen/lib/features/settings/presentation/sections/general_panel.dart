@@ -1,8 +1,9 @@
 import 'package:eisen/core/design_system/widgets/eisen_card.dart';
 import 'package:eisen/core/design_system/widgets/eisen_section_header.dart';
-import 'package:eisen/core/notifications/notifications_service.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/features/settings/application/appearance_preview_controller.dart';
+import 'package:eisen/features/settings/domain/language_controller.dart';
+import 'package:eisen/features/settings/domain/notification_prefs_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -29,7 +30,7 @@ class GeneralPanel extends ConsumerWidget {
           title: 'Notifications',
           subtitle: 'Recordatorios diarios y alertas',
         ),
-        _NotificationsCard(prefs: prefs),
+        const _NotificationsCard(),
         const SizedBox(height: 24),
         const EisenSectionHeader(
           title: 'Workflow',
@@ -66,14 +67,13 @@ class NotificationsPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final prefs = ref.watch(uiPrefsProvider);
     return ListView(
       children: [
         const _SectionHeader(
           title: 'Notifications',
           subtitle: 'Recordatorios diarios y alertas',
         ),
-        _NotificationsCard(prefs: prefs),
+        const _NotificationsCard(),
       ],
     );
   }
@@ -139,18 +139,31 @@ class _LanguageRegionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(uiPrefsControllerProvider.notifier);
+    final langAsync = ref.watch(languageControllerProvider);
+    final locale = langAsync.maybeWhen(
+      data: (v) => v.locale,
+      orElse: () => null,
+    );
+    final languageValue = locale?.languageCode ?? 'system';
     return EisenCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _DropdownRow(
             label: 'Idioma',
-            value: prefs.languageCode,
+            value: languageValue,
             items: const ['system', 'en', 'es'],
             itemLabel: (v) =>
                 {'system': 'Sistema', 'en': 'English', 'es': 'Español'}[v]!,
             onChanged: (v) {
-              if (v != null) ctrl.setLanguageCode(v);
+              if (v == null) return;
+              if (v == 'system') {
+                ref.read(languageControllerProvider.notifier).setLocale(null);
+              } else {
+                ref
+                    .read(languageControllerProvider.notifier)
+                    .setLocale(Locale(v));
+              }
             },
           ),
           _DropdownRow(
@@ -189,98 +202,126 @@ class _LanguageRegionCard extends ConsumerWidget {
 }
 
 class _NotificationsCard extends ConsumerWidget {
-  const _NotificationsCard({required this.prefs});
-  final UiPrefsData prefs;
+  const _NotificationsCard();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ctrl = ref.read(uiPrefsControllerProvider.notifier);
+    final asyncPrefs = ref.watch(notificationPrefsControllerProvider);
+    final ctrl = ref.read(notificationPrefsControllerProvider.notifier);
+    final prefs = asyncPrefs.maybeWhen(
+      data: (v) => v,
+      orElse: () => null,
+    );
+    final cs = Theme.of(context).colorScheme;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _TimePickerRow(
-            label: 'Daily focus reminder',
-            hhmm24: prefs.dailyReminderTime,
-            onPicked: (hhmm) async {
-              await ctrl.setDailyReminderTime(hhmm);
-              // Notifications not supported on web
-              // try {
-              //   await NotificationsService.scheduleDaily(
-              //     id: 1001,
-              //     time: hhmm,
-              //     title: 'Focus time',
-              //     body: 'Planifica tu día ahora',
-              //   );
-              // } catch (_) {}
-            },
-            onClear: () async {
-              await ctrl.setDailyReminderTime('');
-              // await NotificationsService.cancel(1001);
-            },
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Notificaciones',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+              Switch(
+                value: prefs?.notificationsEnabled ?? true,
+                onChanged: (v) => ctrl.toggleNotifications(v),
+              ),
+            ],
           ),
-          SwitchListTile(
-            title: const Text('End-of-day summary'),
-            subtitle: const Text(
-                'Recibe un resumen de pendientes al finalizar el día'),
-            value: prefs.endOfDaySummary,
-            onChanged: (v) async {
-              await ctrl.setEndOfDaySummary(v);
-              if (!v) await NotificationsService.cancel(1002);
-            },
+          const SizedBox(height: 8),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: asyncPrefs.isLoading
+                ? const LinearProgressIndicator(minHeight: 2)
+                : const SizedBox.shrink(),
           ),
-          if (prefs.endOfDaySummary)
-            _TimePickerRow(
-              label: 'Summary time',
-              hhmm24: prefs.endOfDayTime,
-              onPicked: (hhmm) async {
-                await ctrl.setEndOfDayTime(hhmm);
-                // Notifications not supported on web
-                // try {
-                //   await NotificationsService.scheduleDaily(
-                //     id: 1002,
-                //     time: _toTime(hhmm),
-                //     title: 'Resumen del día',
-                //     body: 'Revisa tus tareas',
-                //   );
-                // } catch (_) {}
-              },
-              onClear: () async {
-                await ctrl.setEndOfDayTime('');
-                // await NotificationsService.cancel(1002);
+          if (prefs != null) ...[
+            SwitchListTile(
+              title: const Text('Recordatorio diario'),
+              subtitle:
+                  const Text('Te recuerda bloquear tu foco en la mañana'),
+              value: prefs.dailyReminderEnabled,
+              onChanged: (v) => ctrl.toggleDailyReminder(v),
+            ),
+            if (prefs.dailyReminderEnabled)
+              _TimePickerRow(
+                label: 'Hora del recordatorio',
+                hhmm24: _fmtTime(prefs.dailyReminderTime),
+                onPicked: (t) => ctrl.setDailyReminderTime(t),
+                onClear: () => ctrl.setDailyReminderTime(null),
+              ),
+            SwitchListTile(
+              title: const Text('Resumen de fin de día'),
+              subtitle: const Text('Repasa pendientes y wins'),
+              value: prefs.endOfDaySummary,
+              onChanged: (v) => ctrl.toggleEndOfDaySummary(v),
+            ),
+            if (prefs.endOfDaySummary)
+              _TimePickerRow(
+                label: 'Hora del resumen',
+                hhmm24: _fmtTime(prefs.endOfDayTime),
+                onPicked: (t) => ctrl.setEndOfDayTime(t),
+                onClear: () => ctrl.setEndOfDayTime(null),
+              ),
+            const Divider(),
+            SwitchListTile(
+              title: const Text('Nudges inteligentes'),
+              subtitle: const Text('Recomendaciones contextualizadas'),
+              value: prefs.nudgesEnabled,
+              onChanged: (v) => ctrl.toggleNudges(v),
+            ),
+            SwitchListTile(
+              title: const Text('Horas silenciosas'),
+              subtitle: const Text('Evita alertas en la noche'),
+              value: prefs.quietHoursEnabled,
+              onChanged: (v) => ctrl.toggleQuietHours(v),
+            ),
+            if (prefs.quietHoursEnabled)
+              _QuietHoursRow(
+                start: prefs.quietStart,
+                end: prefs.quietEnd,
+                onChanged: (start, end) => ctrl.setQuietHours(start, end),
+              ),
+            const Divider(),
+            _DropdownRow(
+              label: 'Alerta Pomodoro',
+              value: prefs.pomodoroAlert,
+              items: const ['none', 'sound', 'visual'],
+              itemLabel: (v) =>
+                  {'none': 'Ninguna', 'sound': 'Sonido', 'visual': 'Visual'}[v]!,
+              onChanged: (v) {
+                if (v != null) ctrl.setPomodoroAlert(v);
               },
             ),
-          const SizedBox(height: 8),
-          _DropdownRow(
-            label: 'Alerta Pomodoro',
-            value: prefs.pomodoroAlert,
-            items: const ['none', 'sound', 'visual'],
-            itemLabel: (v) =>
-                {'none': 'Ninguna', 'sound': 'Sonido', 'visual': 'Visual'}[v]!,
-            onChanged: (v) {
-              if (v != null) ctrl.setPomodoroAlert(v);
-            },
-          ),
-          _DropdownRow(
-            label: 'Tono de Notificación',
-            value: prefs.notificationTone,
-            items: const ['default', 'chime', 'bell'],
-            itemLabel: (v) =>
-                {'default': 'Default', 'chime': 'Chime', 'bell': 'Bell'}[v]!,
-            onChanged: (v) {
-              if (v != null) ctrl.setNotificationTone(v);
-            },
-          ),
+            _DropdownRow(
+              label: 'Tono de Notificación',
+              value: prefs.notificationTone,
+              items: const ['default', 'chime', 'bell'],
+              itemLabel: (v) =>
+                  {'default': 'Default', 'chime': 'Chime', 'bell': 'Bell'}[v]!,
+              onChanged: (v) {
+                if (v != null) ctrl.setNotificationTone(v);
+              },
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Los horarios se respetan salvo que desactives las notificaciones.',
+              style: Theme.of(context)
+                  .textTheme
+                  .labelSmall
+                  ?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
         ]),
       ),
     );
   }
-
-  // Time parsing - not used on web
-  // Time _toTime(String hhmm) {
-  //   if (hhmm.isEmpty) return Time(9, 0);
-  //   final parts = hhmm.split(':');
-  //   return Time(int.parse(parts[0]), int.parse(parts[1]));
-  // }
 }
 
 class _WorkflowCard extends ConsumerWidget {
@@ -373,8 +414,9 @@ class _TimePickerRow extends StatelessWidget {
       required this.hhmm24,
       required this.onPicked,
       required this.onClear});
-  final String label, hhmm24;
-  final ValueChanged<String> onPicked;
+  final String label;
+  final String hhmm24;
+  final ValueChanged<TimeOfDay> onPicked;
   final VoidCallback onClear;
   @override
   Widget build(BuildContext context) {
@@ -390,13 +432,69 @@ class _TimePickerRow extends StatelessWidget {
             final picked =
                 await showTimePicker(context: context, initialTime: now);
             if (picked != null) {
-              final hh = picked.hour.toString().padLeft(2, '0');
-              final mm = picked.minute.toString().padLeft(2, '0');
-              onPicked('$hh:$mm');
+              onPicked(picked);
             }
           },
         ),
       ]),
     );
   }
+}
+
+class _QuietHoursRow extends StatelessWidget {
+  const _QuietHoursRow({
+    required this.start,
+    required this.end,
+    required this.onChanged,
+  });
+  final TimeOfDay? start;
+  final TimeOfDay? end;
+  final void Function(TimeOfDay start, TimeOfDay end) onChanged;
+
+  Future<TimeOfDay?> _pick(BuildContext context, TimeOfDay? initial) async {
+    final base = initial ?? TimeOfDay.now();
+    return showTimePicker(context: context, initialTime: base);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () async {
+                final picked = await _pick(context, start);
+                if (picked != null) {
+                  onChanged(picked, end ?? picked);
+                }
+              },
+              child: Text('Inicio: ${_fmtTime(start).isEmpty ? '--' : _fmtTime(start)}'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () async {
+                final picked = await _pick(context, end);
+                if (picked != null) {
+                  onChanged(start ?? picked, picked);
+                }
+              },
+              child:
+                  Text('Fin: ${_fmtTime(end).isEmpty ? '--' : _fmtTime(end)}'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _fmtTime(TimeOfDay? t) {
+  if (t == null) return '';
+  final hh = t.hour.toString().padLeft(2, '0');
+  final mm = t.minute.toString().padLeft(2, '0');
+  return '$hh:$mm';
 }

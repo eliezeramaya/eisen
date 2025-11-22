@@ -15,15 +15,18 @@ class CreateTaskUseCase {
     int priority = 5,
     int minutes = 30,
   }) {
+    final safeTitle = title.trim().isEmpty ? 'New Task' : title.trim();
+    final prio = priority.clamp(1, 10);
+    final mins = minutes.clamp(1, 24 * 60);
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final now = DateTime.now();
-    
+
     return Task(
       id: id,
-      title: title,
+      title: safeTitle,
       quadrant: quadrant,
-      priority: priority,
-      minutes: minutes,
+      priority: prio,
+      minutes: mins,
       createdAt: now,
     );
   }

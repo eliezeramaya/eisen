@@ -58,6 +58,7 @@ class _NudgeTile extends ConsumerWidget {
       NudgeSeverity.medium => cs.secondary,
       NudgeSeverity.low => cs.outlineVariant,
     };
+    final contextLine = _contextualLine(nudge);
 
     return EisenCard(
       padding: const EdgeInsets.all(EisenSpacing.md),
@@ -106,6 +107,16 @@ class _NudgeTile extends ConsumerWidget {
                   nudge.message,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
+                if (contextLine != null) ...[
+                  const SizedBox(height: EisenSpacing.xs),
+                  Text(
+                    contextLine,
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelMedium
+                        ?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
                 const SizedBox(height: EisenSpacing.sm),
                 Align(
                   alignment: Alignment.centerRight,
@@ -133,5 +144,26 @@ String _severityLabel(NudgeSeverity s) {
       return 'Media';
     case NudgeSeverity.low:
       return 'Baja';
+  }
+}
+
+String? _contextualLine(Nudge n) {
+  switch (n.type) {
+    case NudgeType.lowQ2:
+      final share = (n.metadata['q2Share'] as num?)?.toDouble();
+      final sample = n.metadata['sample'] as int?;
+      if (share == null || sample == null) return null;
+      return 'Solo ${(share * 100).toStringAsFixed(1)}% de $sample tareas recientes fueron Q2.';
+    case NudgeType.excessiveReschedules:
+      final res = n.metadata['rescheduled'] as int?;
+      final total = n.metadata['total'] as int?;
+      if (res == null || total == null || total == 0) return null;
+      final ratio = (res / total) * 100;
+      return 'Reprogramaste $res de $total tareas (${ratio.toStringAsFixed(1)}%).';
+    case NudgeType.overload:
+      final due = n.metadata['dueToday'] as int?;
+      final threshold = n.metadata['threshold'] as int?;
+      if (due == null || threshold == null) return null;
+      return 'Tienes $due tareas para hoy (umbral $threshold).';
   }
 }
