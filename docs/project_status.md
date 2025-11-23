@@ -1,9 +1,9 @@
 # 📘 EISEN – Guía Completa de Desarrollo y Roadmap
 
-**Estado del repositorio**: Commit `6973278` | Versión `1.1.0+2`  
+**Estado del repositorio**: Commit `4d21e44` | Versión `1.1.0+2`  
 **Documento técnico maestro** para desarrollo con VS Code + Copilot  
 **Autor**: ChatGPT – Ingeniería UX/UI & Flutter Clean Architecture  
-**Última actualización**: 22 de November 2025
+**Última actualización**: 23 de November 2025
 
 ---
 
@@ -838,7 +838,7 @@ Este documento representa el estado completo del proyecto **Eisen** al commit `d
 ---
 
 **Mantenido por**: ChatGPT + Equipo  
-**Última actualización**: 22 de November 2025
+**Última actualización**: 23 de November 2025
 **Próxima revisión**: Post-Sprint 1
 
 ---
