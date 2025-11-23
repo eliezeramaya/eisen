@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:eisen/core/notifications/notifications_service.dart';
 import 'package:eisen/features/settings/data/notification_prefs_repository.dart';
 import 'package:eisen/features/settings/domain/notification_prefs.dart';
+import 'package:eisen/features/settings/domain/notification_tone.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class NotificationPrefsController
-    extends AsyncNotifier<NotificationPrefs> {
+class NotificationPrefsController extends AsyncNotifier<NotificationPrefs> {
   late final NotificationPrefsRepository _repo;
 
   @override
@@ -71,7 +71,7 @@ class NotificationPrefsController
     await _save(current.copyWith(endOfDayTime: time));
   }
 
-  Future<void> setNotificationTone(String tone) async {
+  Future<void> setNotificationTone(NotificationTone tone) async {
     final current = state.asData?.value;
     if (current == null) return;
     await _save(current.copyWith(notificationTone: tone));
@@ -117,5 +117,6 @@ class NotificationPrefsController
   }
 }
 
-final notificationPrefsControllerProvider = AsyncNotifierProvider<
-    NotificationPrefsController, NotificationPrefs>(NotificationPrefsController.new);
+final notificationPrefsControllerProvider =
+    AsyncNotifierProvider<NotificationPrefsController, NotificationPrefs>(
+        NotificationPrefsController.new);

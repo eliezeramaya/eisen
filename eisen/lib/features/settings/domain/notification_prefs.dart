@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'notification_tone.dart';
+
 class NotificationPrefs {
   const NotificationPrefs({
     required this.notificationsEnabled,
@@ -11,7 +13,7 @@ class NotificationPrefs {
     required this.nudgesEnabled,
     required this.endOfDaySummary,
     this.endOfDayTime,
-    this.notificationTone = 'default',
+    this.notificationTone = NotificationTone.defaultTone,
     this.pomodoroAlert = 'sound',
   });
 
@@ -24,7 +26,7 @@ class NotificationPrefs {
   final bool nudgesEnabled;
   final bool endOfDaySummary;
   final TimeOfDay? endOfDayTime;
-  final String notificationTone;
+  final NotificationTone notificationTone;
   final String pomodoroAlert;
 
   NotificationPrefs copyWith({
@@ -37,7 +39,7 @@ class NotificationPrefs {
     bool? nudgesEnabled,
     bool? endOfDaySummary,
     TimeOfDay? endOfDayTime,
-    String? notificationTone,
+    NotificationTone? notificationTone,
     String? pomodoroAlert,
   }) {
     return NotificationPrefs(
@@ -65,7 +67,7 @@ class NotificationPrefs {
         'nudgesEnabled': nudgesEnabled,
         'endOfDaySummary': endOfDaySummary,
         'endOfDayTime': _encodeTime(endOfDayTime),
-        'notificationTone': notificationTone,
+        'notificationTone': notificationTone.id,
         'pomodoroAlert': pomodoroAlert,
       };
 
@@ -80,7 +82,8 @@ class NotificationPrefs {
       nudgesEnabled: (json['nudgesEnabled'] as bool?) ?? true,
       endOfDaySummary: (json['endOfDaySummary'] as bool?) ?? false,
       endOfDayTime: _decodeTime(json['endOfDayTime'] as String?),
-      notificationTone: (json['notificationTone'] as String?) ?? 'default',
+      notificationTone: NotificationToneX.fromId(
+          (json['notificationTone'] as String?) ?? 'default'),
       pomodoroAlert: (json['pomodoroAlert'] as String?) ?? 'sound',
     );
   }

@@ -9,7 +9,8 @@ class NotificationsService {
     if (_initialized) return;
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings();
-    await _plugin.initialize(const InitializationSettings(android: android, iOS: ios));
+    await _plugin
+        .initialize(const InitializationSettings(android: android, iOS: ios));
     _initialized = true;
   }
 
@@ -21,16 +22,19 @@ class NotificationsService {
   }) async {
     try {
       if (kDebugMode) {
-        debugPrint('[NotificationsService] scheduleDaily (debug only): id=$id time=$time title=$title');
+        debugPrint(
+            '[NotificationsService] scheduleDaily (debug only): id=$id time=$time title=$title');
         return;
       }
       await init();
       const details = NotificationDetails(
-        android: AndroidNotificationDetails('daily', 'Daily', importance: Importance.defaultImportance),
+        android: AndroidNotificationDetails('daily', 'Daily',
+            importance: Importance.defaultImportance),
         iOS: DarwinNotificationDetails(),
       );
       // Fallback in dev: show a one-off notification instead of exact daily schedule
-      await _plugin.periodicallyShow(id, title, body, RepeatInterval.daily, details,
+      await _plugin.periodicallyShow(
+          id, title, body, RepeatInterval.daily, details,
           androidAllowWhileIdle: true);
     } catch (e) {
       debugPrint('NotificationsService.scheduleDaily skipped: $e');
@@ -46,6 +50,34 @@ class NotificationsService {
       await _plugin.cancel(id);
     } catch (e) {
       debugPrint('NotificationsService.cancel skipped: $e');
+    }
+  }
+
+  /// Show an immediate notification
+  static Future<void> show({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    try {
+      if (kDebugMode) {
+        debugPrint(
+            '[NotificationsService] show (debug only): id=$id title=$title');
+        return;
+      }
+      await init();
+      const details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          'focus',
+          'Focus Sessions',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      );
+      await _plugin.show(id, title, body, details);
+    } catch (e) {
+      debugPrint('NotificationsService.show skipped: $e');
     }
   }
 }

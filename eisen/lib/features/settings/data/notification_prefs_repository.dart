@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:eisen/features/settings/domain/notification_prefs.dart';
-import 'package:flutter/material.dart';
+import 'package:eisen/features/settings/domain/notification_tone.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -29,7 +29,7 @@ class NotificationPrefsLocalRepository implements NotificationPrefsRepository {
         nudgesEnabled: true,
         endOfDaySummary: false,
         endOfDayTime: null,
-        notificationTone: 'default',
+        notificationTone: NotificationTone.defaultTone,
         pomodoroAlert: 'sound',
       );
     }
@@ -51,7 +51,7 @@ class NotificationPrefsLocalRepository implements NotificationPrefsRepository {
       nudgesEnabled: true,
       endOfDaySummary: false,
       endOfDayTime: null,
-      notificationTone: 'default',
+      notificationTone: NotificationTone.defaultTone,
       pomodoroAlert: 'sound',
     );
   }

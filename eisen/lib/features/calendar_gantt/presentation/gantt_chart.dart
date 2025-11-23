@@ -1,10 +1,13 @@
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/ui/ui_tokens.dart';
+import 'package:eisen/features/calendar_gantt/application/gantt_projection.dart';
 import 'package:eisen/features/calendar_gantt/application/gantt_providers.dart';
 import 'package:eisen/features/calendar_gantt/domain/calendar_span.dart';
+import 'package:eisen/features/calendar_gantt/domain/task_dependency.dart';
 import 'package:eisen/features/calendar_gantt/presentation/gantt_header.dart';
 import 'package:eisen/features/calendar_gantt/presentation/gantt_interaction_layer.dart';
 import 'package:eisen/features/calendar_gantt/presentation/gantt_painter.dart';
+import 'package:eisen/features/calendar_gantt/presentation/widgets/dependency_arrows.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,13 +20,17 @@ class GanttChart extends ConsumerStatefulWidget {
     required this.viewStart,
     this.milestones = const <(DateTime, String)>[],
     this.onSpanChanged,
+    this.onSpanTap,
+    this.dependencies = const <TaskDependency>[],
   });
   final List<CalendarSpan> spans;
+  final List<TaskDependency> dependencies;
   final TimeScale scale;
   final DateTime viewStart;
   final List<(DateTime, String)> milestones;
   final void Function(CalendarSpan oldSpan, CalendarSpan updated)?
       onSpanChanged;
+  final void Function(CalendarSpan span)? onSpanTap;
 
   @override
   ConsumerState<GanttChart> createState() => _GanttChartState();
@@ -89,6 +96,14 @@ class _GanttChartState extends ConsumerState<GanttChart> {
     final laneGap =
         ui.ganttCompactLanes ? UiTokens.laneGap * 0.8 : UiTokens.laneGap;
     final bodyHeight = (laneCount * laneHeight).toDouble();
+    final spanRects =
+        _computeRects(widget.spans, projector, laneHeight, laneGap);
+    final rectMap = {for (final entry in spanRects) entry.$1.id: entry.$2};
+    final arrows = computeDependencyArrows(
+      dependencies: widget.dependencies,
+      spanRects: rectMap,
+      color: UiTokens.now,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,23 +154,26 @@ class _GanttChartState extends ConsumerState<GanttChart> {
                       scrollDirection: Axis.horizontal,
                       child: Stack(
                         children: [
-                          RepaintBoundary(
-                            child: CustomPaint(
-                              size: Size(totalWidth, bodyHeight),
-                              painter: GanttPainter(
-                                projector: projector,
-                                now: DateTime.now(),
-                                spans: widget.spans,
-                                hScroll: _hBody,
-                                viewportWidth: viewportWidth,
-                                showBadges: ui.ganttShowBadges,
-                                showTodayLine: ui.ganttShowTodayLine,
-                                laneHeight: laneHeight,
-                                laneGap: laneGap,
-                                milestones: widget.milestones,
+                          DependencyArrowsLayer(
+                            arrows: arrows,
+                            child: RepaintBoundary(
+                              child: CustomPaint(
+                                size: Size(totalWidth, bodyHeight),
+                                painter: GanttPainter(
+                                  projector: projector,
+                                  now: DateTime.now(),
+                                  spans: widget.spans,
+                                  hScroll: _hBody,
+                                  viewportWidth: viewportWidth,
+                                  showBadges: ui.ganttShowBadges,
+                                  showTodayLine: ui.ganttShowTodayLine,
+                                  laneHeight: laneHeight,
+                                  laneGap: laneGap,
+                                  milestones: widget.milestones,
+                                ),
+                                isComplex: true,
+                                willChange: false,
                               ),
-                              isComplex: true,
-                              willChange: false,
                             ),
                           ),
                           // Interaction layer (hover tooltip, cursor, ctrl+wheel & pinch zoom)
@@ -169,6 +187,8 @@ class _GanttChartState extends ConsumerState<GanttChart> {
                               laneHeight: laneHeight,
                               laneGap: laneGap,
                               onSpanChanged: widget.onSpanChanged,
+                              onSpanTap: widget.onSpanTap,
+                              spanRects: spanRects,
                             ),
                           ),
                         ],
@@ -182,6 +202,28 @@ class _GanttChartState extends ConsumerState<GanttChart> {
         ),
       ],
     );
+  }
+
+  List<(CalendarSpan, Rect)> _computeRects(
+    List<CalendarSpan> spans,
+    TimelineProjector projector,
+    double laneHeight,
+    double laneGap,
+  ) {
+    final barHeight = laneHeight - laneGap;
+    final yPad = laneGap / 2;
+    final rects = <(CalendarSpan, Rect)>[];
+    for (final s in spans) {
+      if (s.lane < 0) continue;
+      final left = projector.dx(s.start);
+      final right = projector.dx(s.end);
+      final w = (right - left).toDouble();
+      if (w < 0.5) continue;
+      final y = s.lane * laneHeight + yPad;
+      final r = Rect.fromLTWH(left, y.toDouble(), w, barHeight);
+      rects.add((s, r));
+    }
+    return rects;
   }
 }
 

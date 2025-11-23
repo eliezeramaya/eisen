@@ -5,6 +5,7 @@ import 'package:eisen/features/insights/domain/nudge.dart';
 import 'package:eisen/features/insights/domain/nudge_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class NudgesSection extends ConsumerWidget {
   const NudgesSection({super.key});
@@ -89,8 +90,7 @@ class _NudgeTile extends ConsumerWidget {
                           vertical: EisenSpacing.xs),
                       decoration: BoxDecoration(
                         color: badgeColor.withValues(alpha: 0.1),
-                        borderRadius:
-                            BorderRadius.circular(EisenRadius.md),
+                        borderRadius: BorderRadius.circular(EisenRadius.md),
                       ),
                       child: Text(
                         _severityLabel(nudge.severity),
@@ -118,12 +118,35 @@ class _NudgeTile extends ConsumerWidget {
                   ),
                 ],
                 const SizedBox(height: EisenSpacing.sm),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => controller.dismissNudge(nudge),
-                    child: const Text('Descartar'),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // Botones de acción del nudge
+                    if (nudge.actions.isNotEmpty)
+                      ...nudge.actions.take(2).map((action) {
+                        return Padding(
+                          padding: const EdgeInsets.only(left: EisenSpacing.xs),
+                          child: FilledButton.tonal(
+                            onPressed: () {
+                              controller.executeAction(
+                                  action, nudge, GoRouter.of(context));
+                            },
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: EisenSpacing.md,
+                                vertical: EisenSpacing.xs,
+                              ),
+                            ),
+                            child: Text(action.label),
+                          ),
+                        );
+                      }),
+                    const SizedBox(width: EisenSpacing.sm),
+                    TextButton(
+                      onPressed: () => controller.dismissNudge(nudge),
+                      child: const Text('Descartar'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -161,9 +184,38 @@ String? _contextualLine(Nudge n) {
       final ratio = (res / total) * 100;
       return 'Reprogramaste $res de $total tareas (${ratio.toStringAsFixed(1)}%).';
     case NudgeType.overload:
-      final due = n.metadata['dueToday'] as int?;
+    case NudgeType.dailyOverload:
+      final due =
+          n.metadata['q1Today'] as int? ?? n.metadata['dueToday'] as int?;
       final threshold = n.metadata['threshold'] as int?;
-      if (due == null || threshold == null) return null;
-      return 'Tienes $due tareas para hoy (umbral $threshold).';
+      if (due == null) return null;
+      return threshold != null
+          ? 'Tienes $due tareas urgentes (umbral $threshold).'
+          : 'Tienes $due tareas urgentes.';
+    case NudgeType.procrastination:
+      final count = n.metadata['bigTasksCount'] as int?;
+      final days = n.metadata['oldestDays'] as int?;
+      if (count == null || days == null) return null;
+      return '$count tareas grandes llevan estancadas $days+ días.';
+    case NudgeType.quadrantImbalance:
+      final share = (n.metadata['share'] as num?)?.toDouble();
+      final total = n.metadata['total'] as int?;
+      if (share == null || total == null) return null;
+      return 'Desbalance: ${(share * 100).toStringAsFixed(0)}% en un solo cuadrante de $total tareas.';
+    case NudgeType.noProject:
+      final noProject = n.metadata['noProject'] as int?;
+      final total = n.metadata['total'] as int?;
+      if (noProject == null || total == null) return null;
+      final ratio = (noProject / total) * 100;
+      return '$noProject de $total tareas sin proyecto (${ratio.toStringAsFixed(0)}%).';
+    case NudgeType.noFocusSessions:
+      final days = n.metadata['daysSinceLastSession'] as int?;
+      if (days == null) return null;
+      return 'Hace $days días sin sesiones de foco registradas.';
+    case NudgeType.lateNightWork:
+      final tasks = n.metadata['lateNightTasks'] as int?;
+      final nights = n.metadata['distinctNights'] as int?;
+      if (tasks == null || nights == null) return null;
+      return '$tasks tareas completadas después de medianoche en $nights noches.';
   }
 }

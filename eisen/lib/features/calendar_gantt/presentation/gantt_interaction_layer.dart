@@ -26,6 +26,8 @@ class GanttInteractionLayer extends ConsumerStatefulWidget {
     required this.laneHeight,
     required this.laneGap,
     this.onSpanChanged,
+    this.onSpanTap,
+    this.spanRects,
   });
   final List<CalendarSpan> spans;
   final TimelineProjector projector;
@@ -36,6 +38,8 @@ class GanttInteractionLayer extends ConsumerStatefulWidget {
   final double laneGap;
   final void Function(CalendarSpan oldSpan, CalendarSpan updated)?
       onSpanChanged;
+  final void Function(CalendarSpan span)? onSpanTap;
+  final List<(CalendarSpan, Rect)>? spanRects;
 
   @override
   ConsumerState<GanttInteractionLayer> createState() =>
@@ -102,7 +106,7 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
   @override
   Widget build(BuildContext context) {
     // Compute rects once per build; cheap
-    final rects = _computeRects();
+    final rects = widget.spanRects ?? _computeRects();
     // Focus nodes lifecycle
     for (final entry in rects) {
       _focusNodes.putIfAbsent(
@@ -233,6 +237,19 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
               onScaleEnd: (_) {
                 if (_dragMode != _DragMode.none) {
                   _endDrag();
+                }
+              },
+              onTapUp: (details) {
+                if (widget.onSpanTap == null || _dragMode != _DragMode.none) {
+                  return;
+                }
+                final local = details.localPosition;
+                for (final entry in rects) {
+                  if (entry.$2.contains(local)) {
+                    widget.onSpanTap?.call(entry.$1);
+                    setState(() => _selectedId = entry.$1.id);
+                    break;
+                  }
                 }
               },
               child: MouseRegion(

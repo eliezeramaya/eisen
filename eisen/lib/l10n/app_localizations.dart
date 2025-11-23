@@ -259,6 +259,438 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Español'**
   String get languageSpanish;
+
+  /// No description provided for @focusModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus mode'**
+  String get focusModeTitle;
+
+  /// No description provided for @focusSessionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Session type'**
+  String get focusSessionType;
+
+  /// No description provided for @focusDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get focusDuration;
+
+  /// No description provided for @focusDurationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust the block length'**
+  String get focusDurationSubtitle;
+
+  /// No description provided for @focusPomodoro.
+  ///
+  /// In en, this message translates to:
+  /// **'Pomodoro'**
+  String get focusPomodoro;
+
+  /// No description provided for @focusDeepWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep Work'**
+  String get focusDeepWork;
+
+  /// No description provided for @focusSprint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sprint'**
+  String get focusSprint;
+
+  /// No description provided for @focusLinkedTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked task'**
+  String get focusLinkedTask;
+
+  /// No description provided for @focusLinkedTaskSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional: assign the session to a task'**
+  String get focusLinkedTaskSubtitle;
+
+  /// No description provided for @focusNoTaskLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'No task linked'**
+  String get focusNoTaskLinked;
+
+  /// No description provided for @focusSessionsCompletedToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sessions completed today'**
+  String get focusSessionsCompletedToday;
+
+  /// No description provided for @workflowPlanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Workflow plan'**
+  String get workflowPlanTitle;
+
+  /// No description provided for @workflowPlanSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeline of your tasks'**
+  String get workflowPlanSubtitle;
+
+  /// No description provided for @telemetryDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Help Improve Eisen'**
+  String get telemetryDialogTitle;
+
+  /// No description provided for @telemetryDialogWhatWeCollect.
+  ///
+  /// In en, this message translates to:
+  /// **'What we collect:'**
+  String get telemetryDialogWhatWeCollect;
+
+  /// No description provided for @telemetryDialogWhatWeDontCollect.
+  ///
+  /// In en, this message translates to:
+  /// **'What we DON\'T collect:'**
+  String get telemetryDialogWhatWeDontCollect;
+
+  /// No description provided for @telemetryDialogItemPerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance metrics'**
+  String get telemetryDialogItemPerformance;
+
+  /// No description provided for @telemetryDialogItemFeature.
+  ///
+  /// In en, this message translates to:
+  /// **'Feature usage (anonymized)'**
+  String get telemetryDialogItemFeature;
+
+  /// No description provided for @telemetryDialogItemCrash.
+  ///
+  /// In en, this message translates to:
+  /// **'Crash reports'**
+  String get telemetryDialogItemCrash;
+
+  /// No description provided for @telemetryDialogItemNoContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Task content or titles'**
+  String get telemetryDialogItemNoContent;
+
+  /// No description provided for @telemetryDialogItemNoPersonal.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal information'**
+  String get telemetryDialogItemNoPersonal;
+
+  /// No description provided for @telemetryDialogItemNoLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location data'**
+  String get telemetryDialogItemNoLocation;
+
+  /// No description provided for @telemetryDialogDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'No Thanks'**
+  String get telemetryDialogDecline;
+
+  /// No description provided for @telemetryDialogAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get telemetryDialogAccept;
+
+  /// No description provided for @notificationDailyReminderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus today'**
+  String get notificationDailyReminderTitle;
+
+  /// No description provided for @notificationDailyReminderBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember to plan your day'**
+  String get notificationDailyReminderBody;
+
+  /// No description provided for @notificationDailySummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Day summary'**
+  String get notificationDailySummaryTitle;
+
+  /// No description provided for @notificationDailySummaryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Review your progress'**
+  String get notificationDailySummaryBody;
+
+  /// No description provided for @addTaskQuadrant.
+  ///
+  /// In en, this message translates to:
+  /// **'Quadrant:'**
+  String get addTaskQuadrant;
+
+  /// No description provided for @addTaskSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get addTaskSave;
+
+  /// No description provided for @addTaskAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Task added'**
+  String get addTaskAdded;
+
+  /// No description provided for @settingsAppearanceThemeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get settingsAppearanceThemeTitle;
+
+  /// No description provided for @settingsAppearanceThemeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Light / Dark / System'**
+  String get settingsAppearanceThemeSubtitle;
+
+  /// No description provided for @settingsAppearanceLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get settingsAppearanceLight;
+
+  /// No description provided for @settingsAppearanceDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get settingsAppearanceDark;
+
+  /// No description provided for @settingsAppearanceSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get settingsAppearanceSystem;
+
+  /// No description provided for @settingsAppearanceDensityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Density'**
+  String get settingsAppearanceDensityTitle;
+
+  /// No description provided for @settingsAppearanceDensitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Comfy / Compact / Ultra / Auto'**
+  String get settingsAppearanceDensitySubtitle;
+
+  /// No description provided for @settingsAppearanceDensityComfy.
+  ///
+  /// In en, this message translates to:
+  /// **'Comfy'**
+  String get settingsAppearanceDensityComfy;
+
+  /// No description provided for @settingsAppearanceDensityCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact'**
+  String get settingsAppearanceDensityCompact;
+
+  /// No description provided for @settingsAppearanceDensityUltra.
+  ///
+  /// In en, this message translates to:
+  /// **'Ultra'**
+  String get settingsAppearanceDensityUltra;
+
+  /// No description provided for @settingsAppearanceDensityAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get settingsAppearanceDensityAuto;
+
+  /// No description provided for @settingsPreviewNotActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview not active'**
+  String get settingsPreviewNotActive;
+
+  /// No description provided for @settingsPreviewEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable \"Preview changes\" in Layout to see live effects.'**
+  String get settingsPreviewEnable;
+
+  /// No description provided for @settingsPreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get settingsPreviewTitle;
+
+  /// No description provided for @filtersAddEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Add/Edit filters'**
+  String get filtersAddEdit;
+
+  /// No description provided for @filtersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters (categories)'**
+  String get filtersTitle;
+
+  /// No description provided for @filtersClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get filtersClose;
+
+  /// No description provided for @settingsGeneralLanguageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Language & Region'**
+  String get settingsGeneralLanguageTitle;
+
+  /// No description provided for @settingsGeneralLanguageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Language, region and date/time formats'**
+  String get settingsGeneralLanguageSubtitle;
+
+  /// No description provided for @settingsGeneralTextTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Text & Readability'**
+  String get settingsGeneralTextTitle;
+
+  /// No description provided for @settingsGeneralTextSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Text scale and readability'**
+  String get settingsGeneralTextSubtitle;
+
+  /// No description provided for @settingsGeneralNotificationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get settingsGeneralNotificationsTitle;
+
+  /// No description provided for @settingsGeneralNotificationsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily reminders and alerts'**
+  String get settingsGeneralNotificationsSubtitle;
+
+  /// No description provided for @settingsGeneralWorkflowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Workflow'**
+  String get settingsGeneralWorkflowTitle;
+
+  /// No description provided for @settingsGeneralWorkflowSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable work plan mode'**
+  String get settingsGeneralWorkflowSubtitle;
+
+  /// No description provided for @settingsGeneral24HourTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'24-hour time'**
+  String get settingsGeneral24HourTitle;
+
+  /// No description provided for @settingsGeneral24HourSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use 24h format for time'**
+  String get settingsGeneral24HourSubtitle;
+
+  /// No description provided for @settingsGeneralTextScaleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Text size'**
+  String get settingsGeneralTextScaleTitle;
+
+  /// No description provided for @settingsGeneralTextScaleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust text scale throughout the app (1–5).'**
+  String get settingsGeneralTextScaleSubtitle;
+
+  /// No description provided for @settingsGeneralDailyReminderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily reminder'**
+  String get settingsGeneralDailyReminderTitle;
+
+  /// No description provided for @settingsGeneralDailyReminderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminds you to plan your focus in the morning'**
+  String get settingsGeneralDailyReminderSubtitle;
+
+  /// No description provided for @settingsGeneralEndOfDayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'End of day summary'**
+  String get settingsGeneralEndOfDayTitle;
+
+  /// No description provided for @settingsGeneralEndOfDaySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review your daily progress'**
+  String get settingsGeneralEndOfDaySubtitle;
+
+  /// No description provided for @importanceDeadlineSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Due soon'**
+  String get importanceDeadlineSoon;
+
+  /// No description provided for @importanceFocusTime.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve spent time on this'**
+  String get importanceFocusTime;
+
+  /// No description provided for @importanceTopThree.
+  ///
+  /// In en, this message translates to:
+  /// **'Chosen in your check-in'**
+  String get importanceTopThree;
+
+  /// No description provided for @importanceContextFit.
+  ///
+  /// In en, this message translates to:
+  /// **'Matches your focus schedule'**
+  String get importanceContextFit;
+
+  /// No description provided for @importanceWeeklyBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested for weekly balance'**
+  String get importanceWeeklyBalance;
+
+  /// No description provided for @pomodoroPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pomodoro'**
+  String get pomodoroPageTitle;
+
+  /// No description provided for @pomodoroPageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pomodoro timer (coming soon)'**
+  String get pomodoroPageSubtitle;
+
+  /// No description provided for @errorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {message}'**
+  String errorGeneric(String message);
 }
 
 class _AppLocalizationsDelegate

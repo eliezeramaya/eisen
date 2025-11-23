@@ -175,9 +175,9 @@ void main() {
         quadrant: Quadrant.q1,
         priority: 5,
         minutes: 30,
-        dueDate: pastDate,
+        due: pastDate,
       );
-      expect(task.dueDate, pastDate);
+      expect(task.due, pastDate);
     });
 
     test('due date in future should be allowed', () {
@@ -188,9 +188,9 @@ void main() {
         quadrant: Quadrant.q1,
         priority: 5,
         minutes: 30,
-        dueDate: futureDate,
+        due: futureDate,
       );
-      expect(task.dueDate, futureDate);
+      expect(task.due, futureDate);
     });
 
     test('completed date should be optional', () {
@@ -256,8 +256,8 @@ void main() {
     });
   });
 
-  group('Task Validation - Projects', () {
-    test('project should be optional', () {
+  group('Task Validation - Project/Category', () {
+    test('category should be optional', () {
       final task = Task(
         id: '1',
         title: 'Test',
@@ -265,122 +265,121 @@ void main() {
         priority: 5,
         minutes: 30,
       );
-      expect(task.project, isNull);
+      expect(task.category, isNull);
+      expect(task.projectId, isNull);
     });
 
-    test('all project categories should be valid', () {
-      for (final project in ProjectCategory.values) {
-        final task = Task(
-          id: '1',
-          title: 'Test',
-          quadrant: Quadrant.q1,
-          priority: 5,
-          minutes: 30,
-          project: project,
-        );
-        expect(task.project, project);
-      }
-    });
-
-    test('project should be preserved when set', () {
+    test('category string should be preserved when set', () {
       final task = Task(
         id: '1',
         title: 'Test',
         quadrant: Quadrant.q1,
         priority: 5,
         minutes: 30,
-        project: ProjectCategory.work,
+        category: 'work',
       );
-      expect(task.project, ProjectCategory.work);
+      expect(task.category, 'work');
     });
-  });
 
-  group('Task Validation - Reschedule Count', () {
-    test('reschedule count should default to 0', () {
+    test('projectId should be preserved when set', () {
       final task = Task(
         id: '1',
         title: 'Test',
         quadrant: Quadrant.q1,
         priority: 5,
         minutes: 30,
-        rescheduleCount: 0,
+        projectId: 'project-123',
       );
-      expect(task.rescheduleCount, 0);
-    });
-
-    test('reschedule count should be incrementable', () {
-      final task = Task(
-        id: '1',
-        title: 'Test',
-        quadrant: Quadrant.q1,
-        priority: 5,
-        minutes: 30,
-        rescheduleCount: 5,
-      );
-      expect(task.rescheduleCount, 5);
-    });
-
-    test('large reschedule count should be accepted', () {
-      final task = Task(
-        id: '1',
-        title: 'Test',
-        quadrant: Quadrant.q1,
-        priority: 5,
-        minutes: 30,
-        rescheduleCount: 100,
-      );
-      expect(task.rescheduleCount, 100);
+      expect(task.projectId, 'project-123');
     });
   });
 
-  group('Task Validation - Description', () {
-    test('description should be optional', () {
+  group('Task Validation - Replan Count', () {
+    test('replan count should default to 0', () {
       final task = Task(
         id: '1',
         title: 'Test',
         quadrant: Quadrant.q1,
         priority: 5,
         minutes: 30,
+        replanCount: 0,
       );
-      expect(task.description, isNull);
+      expect(task.replanCount, 0);
     });
 
-    test('empty description should be handled', () {
+    test('replan count should be incrementable', () {
       final task = Task(
         id: '1',
         title: 'Test',
         quadrant: Quadrant.q1,
         priority: 5,
         minutes: 30,
-        description: '',
+        replanCount: 5,
       );
-      expect(task.description, '');
+      expect(task.replanCount, 5);
     });
 
-    test('long description (1000 chars) should be accepted', () {
-      final longDesc = 'A' * 1000;
+    test('large replan count should be accepted', () {
       final task = Task(
         id: '1',
         title: 'Test',
         quadrant: Quadrant.q1,
         priority: 5,
         minutes: 30,
-        description: longDesc,
+        replanCount: 100,
       );
-      expect(task.description?.length, 1000);
+      expect(task.replanCount, 100);
+    });
+  });
+
+  group('Task Validation - Notes', () {
+    test('notes should be optional', () {
+      final task = Task(
+        id: '1',
+        title: 'Test',
+        quadrant: Quadrant.q1,
+        priority: 5,
+        minutes: 30,
+      );
+      expect(task.notes, isNull);
     });
 
-    test('description with special characters should be preserved', () {
-      const specialDesc = '**Bold** text with\nemoji 🎯 and symbols @#\$%';
+    test('empty notes should be handled', () {
       final task = Task(
         id: '1',
         title: 'Test',
         quadrant: Quadrant.q1,
         priority: 5,
         minutes: 30,
-        description: specialDesc,
+        notes: '',
       );
-      expect(task.description, specialDesc);
+      expect(task.notes, '');
+    });
+
+    test('long notes (1000 chars) should be accepted', () {
+      final longNotes = 'A' * 1000;
+      final task = Task(
+        id: '1',
+        title: 'Test',
+        quadrant: Quadrant.q1,
+        priority: 5,
+        minutes: 30,
+        notes: longNotes,
+      );
+      expect(task.notes?.length, 1000);
+    });
+
+    test('notes with special characters should be preserved', () {
+      const specialNotes = '**Bold** text with\nemoji 🎯 and symbols @#\$%';
+      final task = Task(
+        id: '1',
+        title: 'Test',
+        quadrant: Quadrant.q1,
+        priority: 5,
+        minutes: 30,
+        notes: specialNotes,
+      );
+      expect(task.notes, specialNotes);
     });
   });
 

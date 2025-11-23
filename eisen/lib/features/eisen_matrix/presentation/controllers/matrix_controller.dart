@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:eisen/core/haptics/haptics_service.dart';
 import 'package:eisen/core/services/storage_prefs.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/sync/remote_tasks_service.dart';
@@ -10,8 +11,8 @@ import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/layout_config.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/layout_config_provider.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/layout_providers.dart';
-import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/features/eisen_matrix/domain/matrix_view_mode.dart';
+import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/compute_layout_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/compute_reorder_delta_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/create_task_usecase.dart';
@@ -446,8 +447,9 @@ class MatrixController extends Notifier<MatrixState> {
     final hasLimit = prefs.containsKey(_customTaskLimitKey);
     final hasMode = prefs.containsKey(_viewModeKey);
 
-    final savedLimit =
-        hasLimit ? (prefs.getInt(_customTaskLimitKey) ?? 25) : state.customTaskLimit;
+    final savedLimit = hasLimit
+        ? (prefs.getInt(_customTaskLimitKey) ?? 25)
+        : state.customTaskLimit;
     final modeIndex = hasMode ? prefs.getInt(_viewModeKey) : null;
     MatrixViewMode mode = state.viewMode;
     if (modeIndex != null &&
@@ -580,6 +582,10 @@ class MatrixController extends Notifier<MatrixState> {
 
   void markTaskDone(String id) {
     updateTask(id, (t) => t.copyWith(completedAt: DateTime.now()));
+
+    // Haptic feedback on task completion
+    final haptics = ref.read(hapticsServiceProvider);
+    haptics.light();
   }
 
   /// Resets the matrix view to the initial "home" state.

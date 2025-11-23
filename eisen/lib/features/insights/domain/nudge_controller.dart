@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'package:eisen/features/insights/data/nudge_tracking_repository.dart';
 import 'package:eisen/features/insights/domain/nudge.dart';
 import 'package:eisen/features/insights/domain/nudge_engine.dart';
+import 'package:eisen/features/insights/domain/nudge_tracking.dart';
 import 'package:eisen/features/settings/domain/notification_prefs_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _dismissedKey = 'nudges_dismissed_ids';
@@ -74,10 +77,13 @@ class NudgeController extends AsyncNotifier<NudgesState> {
     final engine = ref.read(nudgeEngineProvider);
     final now = DateTime.now();
     final nudges = await engine.calculateNudges(now);
-    final filtered = nudges
-        .where((n) => !dismissed.contains(n.id))
-        .toList(growable: false);
+    final filtered =
+        nudges.where((n) => !dismissed.contains(n.id)).toList(growable: false);
     filtered.sort(_severityCompare);
+
+    // Marcar nudges como vistos (tracking)
+    await _trackNudgesAsSeen(filtered);
+
     state = AsyncData(
       NudgesState(
         nudges: filtered,
@@ -86,18 +92,63 @@ class NudgeController extends AsyncNotifier<NudgesState> {
     );
   }
 
+  Future<void> _trackNudgesAsSeen(List<Nudge> nudges) async {
+    if (nudges.isEmpty) return;
+
+    final trackingRepo = ref.read(nudgeTrackingRepositoryProvider);
+    final trackings = <NudgeTrackingData>[];
+
+    for (final nudge in nudges) {
+      final existing = await trackingRepo.getTracking(nudge.id);
+      final updated = existing?.markAsSeen() ??
+          NudgeTrackingData(nudgeId: nudge.id).markAsSeen();
+      trackings.add(updated);
+    }
+
+    await trackingRepo.saveMultiple(trackings);
+  }
+
   Future<void> refresh() => loadNudges(force: true);
 
   Future<void> dismissNudge(Nudge nudge) async {
     final current = state.value ?? const NudgesState();
-    final nextList =
-        current.nudges.where((it) => it.id != nudge.id).toList();
+    final nextList = current.nudges.where((it) => it.id != nudge.id).toList();
     state = AsyncData(
       current.copyWith(nudges: nextList, lastCalculatedAt: DateTime.now()),
     );
     final dismissed = await _loadDismissedIds();
     dismissed.add(nudge.id);
     await _persistDismissed(dismissed);
+
+    // Registrar dismissal en tracking
+    await _trackDismissal(nudge.id);
+  }
+
+  Future<void> _trackDismissal(String nudgeId) async {
+    final trackingRepo = ref.read(nudgeTrackingRepositoryProvider);
+    final existing = await trackingRepo.getTracking(nudgeId);
+    final updated = existing?.markAsDismissed() ??
+        NudgeTrackingData(nudgeId: nudgeId).markAsDismissed();
+    await trackingRepo.saveTracking(updated);
+  }
+
+  /// Ejecuta la acción asociada a un nudge y navega a la ruta correspondiente.
+  Future<void> executeAction(
+      NudgeAction action, Nudge nudge, GoRouter router) async {
+    if (action.route != null) {
+      router.go(action.route!);
+    }
+
+    // Registrar acción en tracking
+    await _trackAction(nudge.id);
+  }
+
+  Future<void> _trackAction(String nudgeId) async {
+    final trackingRepo = ref.read(nudgeTrackingRepositoryProvider);
+    final existing = await trackingRepo.getTracking(nudgeId);
+    final updated = existing?.markAsActed() ??
+        NudgeTrackingData(nudgeId: nudgeId).markAsActed();
+    await trackingRepo.saveTracking(updated);
   }
 
   int _severityCompare(Nudge a, Nudge b) =>

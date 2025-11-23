@@ -45,6 +45,9 @@ dependencies:
   equatable: ^2.0.7
   flutter_local_notifications: ^17.0.0
   path_provider: ^2.1.3
+  fl_chart: ^0.69.0
+  audioplayers: ^6.0.0
+  vibration: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +77,11 @@ flutter:
 
   generate: true
 
+  # Assets
+  assets:
+    - assets/sounds/chime_soft.mp3
+    - assets/sounds/bell_short.mp3
+    - assets/sounds/wood_tick.mp3
 
   # Localization (gen-l10n)
   # Configure ARB directory and output classes

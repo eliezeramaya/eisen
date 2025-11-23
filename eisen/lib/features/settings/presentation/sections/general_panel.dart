@@ -4,6 +4,8 @@ import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/features/settings/application/appearance_preview_controller.dart';
 import 'package:eisen/features/settings/domain/language_controller.dart';
 import 'package:eisen/features/settings/domain/notification_prefs_controller.dart';
+import 'package:eisen/features/settings/domain/notification_tone.dart';
+import 'package:eisen/features/settings/presentation/widgets/tone_selector_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -105,8 +107,7 @@ class _TextScaleCard extends ConsumerWidget {
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.text_fields),
             title: Text('Tamaño de texto'),
-            subtitle:
-                Text('Ajusta la escala del texto en toda la app (1–5).'),
+            subtitle: Text('Ajusta la escala del texto en toda la app (1–5).'),
           ),
           Slider(
             value: prefs.textScaleLevel.toDouble(),
@@ -244,8 +245,7 @@ class _NotificationsCard extends ConsumerWidget {
           if (prefs != null) ...[
             SwitchListTile(
               title: const Text('Recordatorio diario'),
-              subtitle:
-                  const Text('Te recuerda bloquear tu foco en la mañana'),
+              subtitle: const Text('Te recuerda bloquear tu foco en la mañana'),
               value: prefs.dailyReminderEnabled,
               onChanged: (v) => ctrl.toggleDailyReminder(v),
             ),
@@ -293,21 +293,21 @@ class _NotificationsCard extends ConsumerWidget {
               label: 'Alerta Pomodoro',
               value: prefs.pomodoroAlert,
               items: const ['none', 'sound', 'visual'],
-              itemLabel: (v) =>
-                  {'none': 'Ninguna', 'sound': 'Sonido', 'visual': 'Visual'}[v]!,
+              itemLabel: (v) => {
+                'none': 'Ninguna',
+                'sound': 'Sonido',
+                'visual': 'Visual'
+              }[v]!,
               onChanged: (v) {
                 if (v != null) ctrl.setPomodoroAlert(v);
               },
             ),
-            _DropdownRow(
-              label: 'Tono de Notificación',
-              value: prefs.notificationTone,
-              items: const ['default', 'chime', 'bell'],
-              itemLabel: (v) =>
-                  {'default': 'Default', 'chime': 'Chime', 'bell': 'Bell'}[v]!,
-              onChanged: (v) {
-                if (v != null) ctrl.setNotificationTone(v);
-              },
+            ListTile(
+              leading: const Icon(Icons.music_note),
+              title: const Text('Tono de notificación'),
+              subtitle: Text(prefs.notificationTone.labelEs),
+              trailing: const Icon(Icons.chevron_right, size: 18),
+              onTap: () => showToneSelectorSheet(context),
             ),
             const SizedBox(height: 6),
             Text(
@@ -335,20 +335,20 @@ class _WorkflowCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            SwitchListTile(
-              title: const Text('Workflow plan'),
-              subtitle: const Text(
-                  'Muestra un botón con vista tipo Gantt en la barra superior'),
-              value: prefs.workflowPlanEnabled,
-              onChanged: ctrl.setWorkflowPlanEnabled,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Cuando está activo, verás un icono de líneas temporales en el menú superior.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
+          SwitchListTile(
+            title: const Text('Workflow plan'),
+            subtitle: const Text(
+                'Muestra un botón con vista tipo Gantt en la barra superior'),
+            value: prefs.workflowPlanEnabled,
+            onChanged: ctrl.setWorkflowPlanEnabled,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Cuando está activo, verás un icono de líneas temporales en el menú superior.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
         ],
       ),
     );
@@ -470,7 +470,8 @@ class _QuietHoursRow extends StatelessWidget {
                   onChanged(picked, end ?? picked);
                 }
               },
-              child: Text('Inicio: ${_fmtTime(start).isEmpty ? '--' : _fmtTime(start)}'),
+              child: Text(
+                  'Inicio: ${_fmtTime(start).isEmpty ? '--' : _fmtTime(start)}'),
             ),
           ),
           const SizedBox(width: 8),
