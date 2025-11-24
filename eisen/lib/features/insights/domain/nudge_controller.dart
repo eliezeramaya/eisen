@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:eisen/features/insights/data/nudge_tracking_repository.dart';
 import 'package:eisen/features/insights/domain/nudge.dart';
 import 'package:eisen/features/insights/domain/nudge_engine.dart';
+import 'package:eisen/features/insights/domain/nudge_notification_service.dart';
 import 'package:eisen/features/insights/domain/nudge_tracking.dart';
 import 'package:eisen/features/settings/domain/notification_prefs_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,6 +85,11 @@ class NudgeController extends AsyncNotifier<NudgesState> {
     // Marcar nudges como vistos (tracking)
     await _trackNudgesAsSeen(filtered);
 
+    // Enviar notificaciones si hay nudges nuevos de alta prioridad
+    if (notifPrefs != null) {
+      await _sendNotificationsIfNeeded(filtered, notifPrefs);
+    }
+
     state = AsyncData(
       NudgesState(
         nudges: filtered,
@@ -149,6 +155,39 @@ class NudgeController extends AsyncNotifier<NudgesState> {
     final updated = existing?.markAsActed() ??
         NudgeTrackingData(nudgeId: nudgeId).markAsActed();
     await trackingRepo.saveTracking(updated);
+  }
+
+  /// Envía notificaciones para nudges de alta prioridad que son nuevos
+  Future<void> _sendNotificationsIfNeeded(
+      List<Nudge> nudges, notificationPrefs) async {
+    // Solo enviar notificaciones para nudges de severidad alta o mediumHigh
+    final highPriorityNudges = nudges
+        .where((n) =>
+            n.severity == NudgeSeverity.high ||
+            n.severity == NudgeSeverity.mediumHigh)
+        .toList();
+
+    if (highPriorityNudges.isEmpty) return;
+
+    // Verificar cuáles son nuevos (no han sido notificados antes)
+    final trackingRepo = ref.read(nudgeTrackingRepositoryProvider);
+    final newNudges = <Nudge>[];
+
+    for (final nudge in highPriorityNudges) {
+      final tracking = await trackingRepo.getTracking(nudge.id);
+      // Es nuevo si no tiene tracking o tiene menos de 2 vistas
+      if (tracking == null || tracking.viewCount < 2) {
+        newNudges.add(nudge);
+      }
+    }
+
+    if (newNudges.isNotEmpty) {
+      // Enviar notificaciones en batch (máximo 3)
+      await NudgeNotificationService.sendBatchNudges(
+        nudges: newNudges,
+        prefs: notificationPrefs,
+      );
+    }
   }
 
   int _severityCompare(Nudge a, Nudge b) =>
