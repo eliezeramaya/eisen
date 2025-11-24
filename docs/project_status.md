@@ -1078,11 +1078,7 @@ Este documento representa el estado completo del proyecto **Eisen** con las últ
 ---
 
 **Mantenido por**: ChatGPT + Equipo  
-<<<<<<< HEAD
-**Última actualización**: 23 de November 2025 - 17:30 hrs
-=======
 **Última actualización**: 23 de November 2025
->>>>>>> 6b7b1a59af720f55c69112774a8d5097e9262b06
 **Próxima revisión**: Post-Sprint 1
 
 ---
