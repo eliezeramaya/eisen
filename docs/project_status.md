@@ -41,13 +41,23 @@
 - 🚧 **En progreso**: Actualmente en desarrollo
 - ❌ **Pendiente**: No iniciado
 - 🔴 **Bloqueado**: Dependencias sin resolver
-
 ### 1.3 Resumen rápido (23 Nov PM)
 
-- ✅ UX de notificaciones de nudges pulida: toggle dedicado en Settings, preview visual y payload estable con deep link (GoRouter) vía NotificationsService.
-- ✅ Insights avanzados visibles/ocultos según `advancedInsightsEnabled`; nuevo panel “IA y personalización” en Settings con texto de privacidad y reset de aprendizaje.
-- ✅ Sección de Nudges con “¿Por qué veo esto?”, feedback Útil/No relevante y copy de recomendaciones inteligentes; StatsTrendsSection con subtítulo aclaratorio.
-- ✅ ManageDependenciesSheet ahora usa `DraggableScrollableSheet` + scroll para evitar overflow; tests y goldens regenerados.
+**✅ P2 Nudges 100% Completo:**
+- ✅ Sistema completo de 9 reglas con categorías semánticas (balance, focus, health, organization, productivity)
+- ✅ Sistema de acciones (14 acciones) + navegación GoRouter + tracking completo (visto/descartado/actuado)
+- ✅ Notificaciones push inteligentes (quiet hours, priorización, batch max 3) + 10 unit tests pasando
+- ✅ UX pulida: toggle Settings, deep link, feedback "Útil/No relevante", diálogo "¿Por qué veo esto?"
+
+**🤖 Estrategia de IA/ML Completa Integrada (~1,400 líneas):**
+- ✅ **Capa 0**: Instrumentación (UserEvent, AnalyticsService, privacy-first)
+- ✅ **Capa 1**: IA Clásica (XGBoost: completion probability, overload risk, focus windows, procrastination)
+- ✅ **Capa 2**: IA Adaptativa (Multi-armed bandits, Thompson Sampling, arquetipos, personalización contextual)
+- ✅ **Capa 3**: IA Generativa (Daily planner AI, task breakdown assistant, LLM integration, explicaciones NL)
+- ✅ **Roadmap 12 semanas** (80-110h) + diferenciadores disruptivos + 15+ código Dart/Python + 8+ UI mockups
+- ✅ **Tabla comparativa** vs Todoist/Notion/TickTick
+
+**🎯 Progreso Global: 92% | P0: 85% | P1: 73% | P2: 70% | P3: 100%**
 
 **Niveles de Prioridad:**
 - **P0**: Crítico - Bloqueante para release
