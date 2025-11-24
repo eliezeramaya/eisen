@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'stats_trends_service.dart';
 import 'trend_points.dart';
+import 'package:eisen/features/insights_ml/domain/productivity_scoring_service.dart';
+import 'package:eisen/features/insights_ml/domain/productivity_scores.dart';
 
 /// Rango de tiempo para visualización de tendencias.
 enum TrendsTimeRange {
@@ -54,6 +56,9 @@ class TrendsData {
     this.trendAnalysis,
     this.mostActiveQuadrant,
     this.averageDailyCompletions,
+    this.dailyScores = const [],
+    this.focusWindows = const [],
+    this.overloadRisk,
   });
 
   final List<DailyProductivityPoint> productivityPoints;
@@ -62,6 +67,9 @@ class TrendsData {
   final TrendAnalysis? trendAnalysis;
   final Quadrant? mostActiveQuadrant;
   final double? averageDailyCompletions;
+  final List<DailyProductivityScore> dailyScores;
+  final List<FocusWindowSuggestion> focusWindows;
+  final OverloadRisk? overloadRisk;
 }
 
 /// Controller para el rango de tiempo seleccionado.
@@ -80,12 +88,28 @@ final trendsTimeRangeProvider =
   TrendsTimeRangeController.new,
 );
 
+class _TrendsCacheEntry {
+  const _TrendsCacheEntry(this.data, this.timestamp);
+  final TrendsData data;
+  final DateTime timestamp;
+}
+
+const _cacheTtl = Duration(seconds: 5);
+final Map<String, _TrendsCacheEntry> _trendsCache = {};
+
 /// Provider para calcular los datos de tendencias.
 final statsTrendsControllerProvider = FutureProvider<TrendsData>((ref) async {
   final service = ref.read(statsTrendsServiceProvider);
+  final scoring = ref.read(productivityScoringServiceProvider);
   final range = ref.watch(trendsTimeRangeProvider);
 
+  final cacheKey = range.name;
+  final cached = _trendsCache[cacheKey];
   final now = DateTime.now();
+  if (cached != null && now.difference(cached.timestamp) < _cacheTtl) {
+    return cached.data;
+  }
+
   final to = DateTime(now.year, now.month, now.day);
   final from = to.subtract(Duration(days: range.days));
 
@@ -97,6 +121,14 @@ final statsTrendsControllerProvider = FutureProvider<TrendsData>((ref) async {
 
   final productivityPoints = results[0] as List<DailyProductivityPoint>;
   final focusPoints = results[1] as List<DailyFocusPoint>;
+
+  // Scores heurísticos para la ventana.
+  final scores = await scoring.computeDailyScores(from: from, to: to);
+  final focusWindows = await scoring.computeFocusWindows(
+    from: from,
+    to: to,
+  );
+  final overload = await scoring.computeDailyOverloadRisk(DateTime.now());
 
   // Calcular análisis de tendencia comparando con período anterior
   TrendAnalysis? analysis;
@@ -124,12 +156,18 @@ final statsTrendsControllerProvider = FutureProvider<TrendsData>((ref) async {
       ? service.getAverageDailyCompletions(productivityPoints)
       : null;
 
-  return TrendsData(
+  final data = TrendsData(
     productivityPoints: productivityPoints,
     focusPoints: focusPoints,
     range: range,
     trendAnalysis: analysis,
     mostActiveQuadrant: mostActive,
     averageDailyCompletions: avgDaily,
+    dailyScores: scores,
+    focusWindows: focusWindows,
+    overloadRisk: overload,
   );
+
+  _trendsCache[cacheKey] = _TrendsCacheEntry(data, now);
+  return data;
 });

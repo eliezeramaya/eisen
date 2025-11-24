@@ -115,78 +115,95 @@ class _WorkflowPlanPageState extends ConsumerState<WorkflowPlanPage> {
                 // Internal header: title + summary + optional demo toggle
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Workflow plan',
-                        style:
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            'Workflow plan',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
                                   fontWeight: FontWeight.w700,
                                   color: Colors.white,
                                 ),
+                          ),
+                          // Badge showing data source
+                          if (!_useDemo && !hasNoRealTasks)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                    color: Colors.green.withOpacity(0.5)),
+                              ),
+                              child: Text(
+                                (Localizations.localeOf(context)
+                                            .languageCode ==
+                                        'es')
+                                    ? '${spans.length} tareas reales'
+                                    : '${spans.length} real tasks',
+                                style: const TextStyle(
+                                  color: Colors.greenAccent,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            )
+                          else if (_useDemo)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                    color: Colors.orange.withOpacity(0.5)),
+                              ),
+                              child: Text(
+                                (Localizations.localeOf(context)
+                                            .languageCode ==
+                                        'es')
+                                    ? 'Datos de ejemplo'
+                                    : 'Demo data',
+                                style: const TextStyle(
+                                  color: Colors.orangeAccent,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          if (showDemoToggle)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  (Localizations.localeOf(context)
+                                              .languageCode ==
+                                          'es')
+                                      ? 'Ver demo'
+                                      : 'Show demo',
+                                  style: const TextStyle(
+                                      color: Colors.white70, fontSize: 13),
+                                ),
+                                const SizedBox(width: 8),
+                                Switch.adaptive(
+                                  value: _useDemo,
+                                  onChanged: (v) =>
+                                      setState(() => _useDemo = v),
+                                ),
+                              ],
+                            ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      // Badge showing data source
-                      if (!_useDemo && !hasNoRealTasks)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                                color: Colors.green.withOpacity(0.5)),
-                          ),
-                          child: Text(
-                            (Localizations.localeOf(context).languageCode ==
-                                    'es')
-                                ? '${spans.length} tareas reales'
-                                : '${spans.length} real tasks',
-                            style: const TextStyle(
-                              color: Colors.greenAccent,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        )
-                      else if (_useDemo)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                                color: Colors.orange.withOpacity(0.5)),
-                          ),
-                          child: Text(
-                            (Localizations.localeOf(context).languageCode ==
-                                    'es')
-                                ? 'Datos de ejemplo'
-                                : 'Demo data',
-                            style: const TextStyle(
-                              color: Colors.orangeAccent,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      const Spacer(),
-                      if (showDemoToggle) ...[
-                        Text(
-                          (Localizations.localeOf(context).languageCode == 'es')
-                              ? 'Ver demo'
-                              : 'Show demo',
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 13),
-                        ),
-                        const SizedBox(width: 8),
-                        Switch.adaptive(
-                          value: _useDemo,
-                          onChanged: (v) => setState(() => _useDemo = v),
-                        ),
-                        const SizedBox(width: 16),
-                      ],
+                      const SizedBox(height: 8),
                       Text(
                         _summaryFor(spans, context),
                         style: Theme.of(context)

@@ -22,6 +22,8 @@ import 'package:eisen/features/eisen_matrix/presentation/widgets/matrix_interact
 import 'package:eisen/features/eisen_matrix/presentation/widgets/zoom_indicator.dart';
 import 'package:eisen/features/insights/domain/nudge.dart';
 import 'package:eisen/features/insights/domain/nudge_controller.dart';
+import 'package:eisen/features/insights_ml/domain/productivity_scoring_service.dart';
+import 'package:eisen/features/insights_ml/domain/productivity_scores.dart';
 import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/l10n/app_localizations_en.dart';
@@ -33,6 +35,22 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 // Removed FAB + coachmark imports; using single CTA in bottom bar
+
+/// Score heurístico más reciente (ventana de 7 días).
+final todayProductivityScoreProvider =
+    FutureProvider<DailyProductivityScore?>((ref) async {
+  final scoring = ref.read(productivityScoringServiceProvider);
+  final now = DateTime.now();
+  final to = DateTime(now.year, now.month, now.day);
+  final from = to.subtract(const Duration(days: 6));
+  final scores = await scoring.computeDailyScores(from: from, to: to);
+  return scores.isNotEmpty ? scores.last : null;
+});
+
+final overloadRiskTodayProvider = FutureProvider<OverloadRisk>((ref) async {
+  final scoring = ref.read(productivityScoringServiceProvider);
+  return scoring.computeDailyOverloadRisk(DateTime.now());
+});
 
 class MatrixPage extends ConsumerStatefulWidget {
   const MatrixPage({super.key});
@@ -94,6 +112,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         ref.watch(matrixControllerProvider.select((s) => s.selectedId));
     final isLoading =
         ref.watch(matrixControllerProvider.select((s) => s.isLoading));
+    final advancedInsights =
+        ref.watch(uiPrefsProvider.select((p) => p.advancedInsightsEnabled));
 
     // Safe lookup for selected task (may be deleted externally)
     final selectedTask = selectedId == null
@@ -136,6 +156,16 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             ? nudgesAsync.value!.nudges.first
             : null;
     final nudgeCtrl = ref.read(nudgeControllerProvider.notifier);
+    final scoreAsync = advancedInsights
+        ? ref.watch(todayProductivityScoreProvider)
+        : const AsyncData<DailyProductivityScore?>(null);
+    final overloadRiskAsync = ref.watch(overloadRiskTodayProvider);
+    final overloadRisk = overloadRiskAsync.valueOrNull;
+    final warningTasks = tasks
+        .where((t) =>
+            t.completedAt == null && _procrastinationScore(t) >= 0.75)
+        .map((t) => t.id)
+        .toSet();
 
     return Scaffold(
       key: _scaffoldKey,
@@ -288,39 +318,21 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                   ),
                                 );
                               },
-                              child: firstNudge != null
-                                  ? EisenCard(
-                                      key: ValueKey(firstNudge.id),
-                                      margin: const EdgeInsets.fromLTRB(
-                                        EisenSpacing.md,
-                                        EisenSpacing.md,
-                                        EisenSpacing.md,
-                                        EisenSpacing.sm,
-                                      ),
-                                      padding:
-                                          const EdgeInsets.all(EisenSpacing.sm),
-                                      interactive: true,
-                                      child: Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.insights_outlined,
-                                            color: EisenColors.q2,
-                                            size: 20,
-                                          ),
-                                          const SizedBox(
-                                              width: EisenSpacing.sm),
-                                          Expanded(
-                                              child: Text(firstNudge.title)),
-                                          IconButton(
-                                            icon: const Icon(Icons.close,
-                                                size: 18),
-                                            onPressed: () => nudgeCtrl
-                                                .dismissNudge(firstNudge),
-                                          ),
-                                        ],
-                                      ),
-                                    )
-                                  : const SizedBox.shrink(),
+                              child: _buildBanner(
+                                context: context,
+                                scoreAsync: scoreAsync,
+                                tasks: tasks,
+                                nudge: firstNudge,
+                                overloadRisk: overloadRisk,
+                                onDismissNudge: () {
+                                  if (firstNudge != null) {
+                                    nudgeCtrl.dismissNudge(firstNudge);
+                                  }
+                                },
+                                onOpenStats: () => context.push('/stats'),
+                                onOpenQ2Picker: () =>
+                                    _openQ2Picker(context, tasks),
+                              ),
                             ),
                             AnimatedSwitcher(
                               duration:
@@ -448,6 +460,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                             .lastMovedTaskId,
                                                         loading:
                                                             isLoading,
+                                                        warningTaskIds:
+                                                            warningTasks,
                                                         onInlineSubmit:
                                                             (id, title) {
                                                           ctrl.updateTask(
@@ -852,34 +866,31 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
       child: SafeArea(
         child: SizedBox(
           height: 56,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Expanded(
-              child: _NavBarItem(
-                icon: Icons.bar_chart_rounded,
-                label: isEs ? 'Stats' : 'Stats',
-                onTap: () => context.push('/stats'),
-              ),
-            ),
-              Expanded(
-                child: _NavBarItem(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isTight = constraints.maxWidth < 380;
+              final items = <Widget>[
+                _NavBarItem(
+                  icon: Icons.bar_chart_rounded,
+                  label: isEs ? 'Stats' : 'Stats',
+                  onTap: () => context.push('/stats'),
+                ),
+                _NavBarItem(
                   icon: Icons.history,
                   label: isEs ? 'Completas' : 'Completed',
                   onTap: () => context.push('/completed-matrix'),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: FloatingActionButton(
-                  heroTag: 'fab-entry-nav',
-                  onPressed: () => _openAddTaskSheet(context),
-                  elevation: 2,
-                  child: const Icon(Icons.add, size: 28),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: FloatingActionButton(
+                    heroTag: 'fab-entry-nav',
+                    mini: isTight,
+                    onPressed: () => _openAddTaskSheet(context),
+                    elevation: 2,
+                    child: Icon(Icons.add, size: isTight ? 22 : 28),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _NavBarItem(
+                _NavBarItem(
                   icon: Icons.view_timeline,
                   label: isEs ? 'Workflow' : 'Workflow',
                   onTap: () {
@@ -894,9 +905,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                     context.push('/list-mode');
                   },
                 ),
-              ),
-              Expanded(
-                child: _NavBarItem(
+                _NavBarItem(
                   icon: Icons.settings,
                   label: isEs ? 'Ajustes' : 'Settings',
                   onTap: () {
@@ -952,13 +961,228 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                     );
                   },
                 ),
-              ),
-            ],
+              ];
+
+              if (isTight) {
+                return Center(
+                  child: Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.center,
+                    children: items,
+                  ),
+                );
+              }
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: items
+                    .map((w) => Expanded(child: Center(child: w)))
+                    .toList(growable: false),
+              );
+            },
           ),
         ),
       ),
     );
   }
+}
+
+Widget _buildBanner({
+  required BuildContext context,
+  required AsyncValue<DailyProductivityScore?> scoreAsync,
+  required List<Task> tasks,
+  required Nudge? nudge,
+  OverloadRisk? overloadRisk,
+  required VoidCallback onDismissNudge,
+  required VoidCallback onOpenStats,
+  required VoidCallback onOpenQ2Picker,
+}) {
+  final cs = Theme.of(context).colorScheme;
+
+  DailyProductivityScore? score;
+  scoreAsync.whenData((s) => score = s);
+
+  Widget? banner;
+  if (overloadRisk != null && overloadRisk.score >= 0.8) {
+    banner = EisenCard(
+      margin: const EdgeInsets.fromLTRB(
+        EisenSpacing.md,
+        EisenSpacing.md,
+        EisenSpacing.md,
+        EisenSpacing.sm,
+      ),
+      padding: const EdgeInsets.all(EisenSpacing.sm),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: cs.error),
+          const SizedBox(width: EisenSpacing.sm),
+          Expanded(
+            child: Text(
+              'Parece que tu día está sobrecargado. Reorganiza 1–2 tareas.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+          TextButton(
+            onPressed: onOpenStats,
+            child: const Text('Reorganizar'),
+          ),
+        ],
+      ),
+    );
+  } else if (score != null) {
+    if (score!.overloadScore >= 0.66) {
+      banner = EisenCard(
+        margin: const EdgeInsets.fromLTRB(
+          EisenSpacing.md,
+          EisenSpacing.md,
+          EisenSpacing.md,
+          EisenSpacing.sm,
+        ),
+        padding: const EdgeInsets.all(EisenSpacing.sm),
+        child: Row(
+          children: [
+            Icon(Icons.priority_high, color: cs.error),
+            const SizedBox(width: EisenSpacing.sm),
+            Expanded(
+              child: Text(
+                'Tu día de hoy parece muy cargado. Considera mover 1–2 tareas a mañana.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: cs.onSurface),
+              ),
+            ),
+            const SizedBox(width: EisenSpacing.sm),
+            TextButton(
+              onPressed: onOpenStats,
+              child: const Text('Reorganizar hoy'),
+            ),
+          ],
+        ),
+      );
+    } else if (score!.q2Ratio < 0.20) {
+      banner = EisenCard(
+        margin: const EdgeInsets.fromLTRB(
+          EisenSpacing.md,
+          EisenSpacing.md,
+          EisenSpacing.md,
+          EisenSpacing.sm,
+        ),
+        padding: const EdgeInsets.all(EisenSpacing.sm),
+        child: Row(
+          children: [
+            Icon(Icons.auto_awesome, color: cs.primary),
+            const SizedBox(width: EisenSpacing.sm),
+            Expanded(
+              child: Text(
+                'Muy poco tiempo en Q2 (importante no urgente). Elige 1 tarea Q2 para hoy.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            const SizedBox(width: EisenSpacing.sm),
+            TextButton(
+              onPressed: onOpenQ2Picker,
+              child: const Text('Elegir tarea Q2'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  // Si no hay banner de score, usar nudge existente.
+  if (banner == null && nudge != null) {
+    banner = EisenCard(
+      key: ValueKey(nudge.id),
+      margin: const EdgeInsets.fromLTRB(
+        EisenSpacing.md,
+        EisenSpacing.md,
+        EisenSpacing.md,
+        EisenSpacing.sm,
+      ),
+      padding: const EdgeInsets.all(EisenSpacing.sm),
+      interactive: true,
+      child: Row(
+        children: [
+          const Icon(
+            Icons.insights_outlined,
+            color: EisenColors.q2,
+            size: 20,
+          ),
+          const SizedBox(width: EisenSpacing.sm),
+          Expanded(child: Text(nudge.title)),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: onDismissNudge,
+          ),
+        ],
+      ),
+    );
+  }
+
+  return banner ?? const SizedBox.shrink();
+}
+
+void _openQ2Picker(BuildContext context, List<Task> tasks) {
+  final q2 = tasks
+      .where((t) => t.completedAt == null && t.quadrant == Quadrant.q2)
+      .toList();
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    useSafeArea: true,
+    builder: (_) {
+      if (q2.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.all(EisenSpacing.lg),
+          child: Text('No hay tareas Q2 pendientes.'),
+        );
+      }
+      return ListView.separated(
+        padding: const EdgeInsets.all(EisenSpacing.md),
+        itemBuilder: (ctx, idx) {
+          final t = q2[idx];
+          return ListTile(
+            leading: const Icon(Icons.star_outline),
+            title: Text(t.title),
+            subtitle: t.due != null
+                ? Text(
+                    'Vence: ${t.due}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  )
+                : null,
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Tarea seleccionada: ${t.title}'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          );
+        },
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemCount: q2.length,
+      );
+    },
+  );
+}
+
+double _procrastinationScore(Task task) {
+  double score = 0.2;
+  score += task.replanCount * 0.15;
+  if (task.minutes > 180) score += 0.15;
+  if (task.quadrant == Quadrant.q4) score += 0.2;
+  final title = task.title.toLowerCase();
+  const vague = ['revisar', 'ver', 'checar', 'check', 'look', 'review'];
+  if (vague.any((v) => title.contains(v))) {
+    score += 0.1;
+  }
+  return score.clamp(0.0, 1.0);
 }
 
 class _NavBarItem extends StatelessWidget {

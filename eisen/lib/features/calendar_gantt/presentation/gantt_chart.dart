@@ -141,6 +141,7 @@ class _GanttChartState extends ConsumerState<GanttChart> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final viewportWidth = constraints.maxWidth;
+              final showArrows = viewportWidth >= 450;
               return Container(
                 color: UiTokens.bgDark,
                 child: Scrollbar(
@@ -155,7 +156,7 @@ class _GanttChartState extends ConsumerState<GanttChart> {
                       child: Stack(
                         children: [
                           DependencyArrowsLayer(
-                            arrows: arrows,
+                            arrows: showArrows ? arrows : const [],
                             child: RepaintBoundary(
                               child: CustomPaint(
                                 size: Size(totalWidth, bodyHeight),

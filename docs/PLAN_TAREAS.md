@@ -1,7 +1,9 @@
 # 📋 Plan de Tareas Pendientes - Eisen
 
-**Fecha de creación**: 23 de Noviembre 2025  
-**Estado global**: 92% completo
+**Fecha de actualización**: 23 de Noviembre 2025 (PM)  
+**Estado global**: 92% completo  
+**Versión**: 1.1.0+2  
+**Commit**: latest
 
 ---
 
@@ -395,11 +397,61 @@
 
 ---
 
-## 📝 Notas
+## 📝 Notas Importantes
 
-- **Tests P0**: Críticos para prevenir regresiones antes de release
-- **Performance**: Importante pero no bloqueante si la app funciona
-- **ML Strategy**: Completamente documentada, lista para implementación progresiva
-- **P3 Features**: Ya completadas en su mayoría (Focus, Stats avanzados, Nudges completo)
+### Estado Actual del Proyecto
 
-**Última actualización**: 23 de Noviembre 2025
+**✅ Completado al 100%:**
+- Matriz Eisenhower con treemap interactivo
+- CRUD completo de tareas
+- Settings Desktop y Mobile (con toda la lógica)
+- Stats con filtros funcionales
+- Focus/Pomodoro completo con notificaciones
+- Gantt con dependencias y edición inline
+- Sistema completo de Nudges (9 reglas, tracking, notificaciones)
+- Haptic feedback mobile
+- Advanced Stats con tendencias
+- Notification tones personalizables
+- i18n EN/ES completo
+
+**⚠️ En Progreso:**
+- Testing (~25% cobertura)
+- Responsive mobile (mayoría funciona, algunos ajustes)
+- Design System (tokens definidos, falta unificación)
+
+**❌ Pendiente Crítico:**
+- Tests unitarios P0 (CRUD, Settings, Stats)
+- Performance audit
+- Responsive final polish
+
+### Contexto Técnico
+
+- **LOC**: ~31,500+
+- **Archivos**: 223+
+- **Features core**: 17/17 implementados
+- **Tests pasando**: ~150+ (suite completa)
+- **Estrategia ML**: 1,400+ líneas documentadas (4 capas completas)
+
+### Prioridades Sugeridas
+
+1. **Semana 1**: Tests P0 (CRUD + Settings + Stats) - Prevenir regresiones
+2. **Semana 2**: Responsive fixes + Performance audit - Polish final
+3. **Semana 3**: Release 1.0 preparation - Beta testing
+4. **Post-Release**: P1/P2 features incrementales
+
+### Decisiones Pendientes
+
+- [ ] **Backend choice**: Firebase vs Supabase vs Custom (para P2 Sync)
+- [ ] **Testing framework adicional**: ¿Patrol para integration tests?
+- [ ] **ML implementation start**: ¿Empezar Capa 0 post-release o esperar?
+- [ ] **Store strategy**: ¿iOS + Android simultáneo o secuencial?
+
+### Referencias
+
+- **Documentación completa**: `docs/project_status.md` (2,637 líneas)
+- **Estrategia ML**: `docs/project_status.md` sección 3.3.1 (líneas 517-1725)
+- **Arquitectura**: `docs/ARCHITECTURE.md`
+- **Privacy**: `docs/PRIVACY_IMPLEMENTATION.md`
+- **Gantt**: `docs/GANTT_INTEGRATION_SUMMARY.md`, `docs/GANTT_DEPENDENCIES_SUMMARY.md`
+
+**Última actualización**: 23 de Noviembre 2025 (PM)

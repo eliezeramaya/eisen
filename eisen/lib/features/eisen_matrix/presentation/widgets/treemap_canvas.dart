@@ -37,6 +37,7 @@ class TreemapCanvas extends StatefulWidget {
     this.textScale = 1.0,
     this.lastMovedTaskId,
     this.loading = false,
+    this.warningTaskIds = const <String>{},
   });
   final List<Task> tasks;
   final List<TreemapRect> layout;
@@ -58,6 +59,7 @@ class TreemapCanvas extends StatefulWidget {
   final double textScale;
   final String? lastMovedTaskId;
   final bool loading;
+  final Set<String> warningTaskIds;
 
   @override
   State<TreemapCanvas> createState() => _TreemapCanvasState();
@@ -535,6 +537,7 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                               Theme.of(context).colorScheme,
                             ),
                             textScale: widget.textScale,
+                            warningTaskIds: widget.warningTaskIds,
                           ),
                           isComplex: true,
                           willChange: true,
@@ -980,6 +983,7 @@ class _TreemapPainter extends CustomPainter {
     required this.onSurfaceVariant,
     required this.tileFillColor,
     this.textScale = 1.0,
+    this.warningTaskIds = const <String>{},
   });
   final List<TreemapRect> layout;
   final String? draggingId;
@@ -1006,6 +1010,7 @@ class _TreemapPainter extends CustomPainter {
   final Color onSurface;
   final Color onSurfaceVariant;
   final double textScale;
+  final Set<String> warningTaskIds;
 
   /// Tile path cache for performance optimization.
   ///
@@ -1250,6 +1255,22 @@ class _TreemapPainter extends CustomPainter {
         ..strokeWidth = UiTokens.tileStroke;
       canvas.drawRRect(rr, paint);
 
+      final bool warn = warningTaskIds.contains(tr.task.id);
+      if (warn) {
+        final tp = _textPainter(
+          '⚠',
+          drawRect,
+          14 * textScale,
+          FontWeight.w700,
+          textColor: Colors.orangeAccent,
+          maxLines: 1,
+        );
+        tp.paint(
+          canvas,
+          Offset(drawRect.right - tp.width - 4, drawRect.top + 2),
+        );
+      }
+
       // If this is a stack tile, render a centered +N label and skip details
       if (tr.stackChildren.isNotEmpty) {
         final label = '+${tr.stackChildren.length}';
@@ -1472,7 +1493,8 @@ class _TreemapPainter extends CustomPainter {
         oldDelegate.appearingIds.length != appearingIds.length ||
         oldDelegate.outlineColor != outlineColor ||
         oldDelegate.tileBorderColor != tileBorderColor ||
-        oldDelegate.tileFillColor != tileFillColor;
+        oldDelegate.tileFillColor != tileFillColor ||
+        oldDelegate.warningTaskIds.length != warningTaskIds.length;
 
     // Invalidate path cache on layout version or key visual changes.
     if (oldDelegate.layoutVersion != layoutVersion ||

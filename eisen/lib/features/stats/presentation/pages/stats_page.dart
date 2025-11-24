@@ -1,5 +1,7 @@
 import 'package:eisen/features/completed_tasks/domain/project_category.dart';
 import 'package:eisen/ui/widgets/app_logo_home_button.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/core/utils/debounce.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,15 +11,30 @@ import '../../domain/models.dart';
 import '../widgets/eisenhower_balance_section.dart';
 import '../widgets/nudges_section.dart';
 import '../widgets/stats_trends_section.dart';
+import '../widgets/stats_productivity_scores_section.dart';
 import '../widgets/weekly_focus_trend_section.dart';
 import '../widgets/weekly_summary_section.dart';
+import 'package:eisen/features/insights_ml/presentation/widgets/stats_ml_section.dart';
 
 /// StatsPage — UX/UI dashboard for motivation with calm visuals.
-class StatsPage extends ConsumerWidget {
+class StatsPage extends ConsumerStatefulWidget {
   const StatsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StatsPage> createState() => _StatsPageState();
+}
+
+class _StatsPageState extends ConsumerState<StatsPage> {
+  final Debouncer _debounce = Debouncer(delay: const Duration(milliseconds: 200));
+
+  @override
+  void dispose() {
+    _debounce.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final isMobile = width < 600;
     final isEs = Localizations.localeOf(context).languageCode == 'es';
@@ -26,6 +43,8 @@ class StatsPage extends ConsumerWidget {
     final weeklyAsync = ref.watch(weeklyStatsProvider);
     final balanceAsync = ref.watch(balanceProvider);
     final trendsAsync = ref.watch(trendsProvider);
+    final uiPrefs = ref.watch(uiPrefsProvider);
+    final advanced = uiPrefs.advancedInsightsEnabled;
 
     final weekly = weeklyAsync.when<WeeklyStats?>(
         data: (v) => v, loading: () => null, error: (_, __) => null);
@@ -97,7 +116,8 @@ class StatsPage extends ConsumerWidget {
                         selected: range == r,
                         onSelected: (value) {
                           if (!value) return;
-                          ref.read(statsRangeProvider.notifier).set(r);
+                          _debounce.run(
+                              () => ref.read(statsRangeProvider.notifier).set(r));
                         },
                       );
                     }).toList(),
@@ -119,13 +139,18 @@ class StatsPage extends ConsumerWidget {
                         .toList(),
                     onChanged: (value) {
                       if (value == null) return;
-                      ref.read(statsProjectProvider.notifier).set(value);
+                      _debounce.run(
+                          () => ref.read(statsProjectProvider.notifier).set(value));
                     },
                   ),
                 ),
                 const SizedBox(height: 12),
                 // Nueva sección de tendencias avanzadas
-                const StatsTrendsSection(),
+                if (advanced) const StatsTrendsSection(),
+                if (advanced) const SizedBox(height: 16),
+                if (advanced) const StatsProductivityScoresSection(),
+                if (advanced) const SizedBox(height: 16),
+                if (advanced) const StatsMlSection(),
                 const SizedBox(height: 16),
                 WeeklySummarySection(
                   weekly: weekly,
