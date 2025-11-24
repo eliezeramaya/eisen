@@ -229,56 +229,86 @@
 
 ## 🤖 Estrategia de IA/ML (P3 Futuro)
 
-**Estado**: ✅ **100% DOCUMENTADO** (~1,400 líneas)
+**Estado**: ⚠️ **CAPA 0-1 EN PROGRESO** (~1,400 líneas documentadas + ~600 LOC implementadas)
 
 ### Capa 0: Instrumentación y Datos
 
-- [ ] **UserEvent system**
-  - [ ] Definir esquema de eventos
-  - [ ] Implementar AnalyticsService
-  - [ ] Logging automático en eventos clave
-  - [ ] UserBehaviorSnapshot aggregations
-  - **Estado**: ❌ No iniciado
+- [x] **UserEvent system** ✅ IMPLEMENTADO
+  - [x] Definir esquema de eventos
+  - [x] Implementar AnalyticsService
+  - [x] Logging automático en eventos clave
+  - [x] UserBehaviorSnapshot aggregations
+  - **Estado**: ✅ Completo
+  - **Archivos**: 
+    - `core/analytics/user_event.dart`
+    - `core/analytics/analytics_service.dart`
+    - `core/analytics/user_behavior_service.dart`
+    - `core/analytics/user_behavior_snapshot.dart`
   - **Documentación**: ✅ Completa
 
-- [ ] **Privacy controls**
-  - [ ] UI en Settings
+- [ ] **Privacy controls** ⚠️ EN PROGRESO
+  - [x] UI en Settings ✅
   - [ ] "Borrar historial"
   - [ ] "Restablecer ID anónimo"
   - [ ] Export datos ML
-  - **Estado**: ⚠️ UI básica existe
+  - **Estado**: ⚠️ UI parcial implementada
   - **Documentación**: ✅ Completa
 
 ### Capa 1: IA Clásica (Modelos Predictivos)
 
-- [ ] **TaskCompletionModel**
+- [x] **HeuristicProductivityScoringService** ✅ IMPLEMENTADO
+  - [x] Interface ProductivityScoringService
+  - [x] Implementación heurística inicial (243 líneas)
+  - [x] DailyProductivityScore computation
+  - [x] Integración con UserBehaviorService
+  - **Estado**: ✅ MVP funcional (heurístico)
+  - **Archivos**:
+    - `features/insights_ml/domain/productivity_scoring_service.dart` (243 LOC)
+    - `features/insights_ml/domain/productivity_scores.dart` (54 LOC)
+  - **Documentación**: ✅ Completa con código
+
+- [ ] **TaskCompletionModel** ⚠️ EN PROGRESO
+  - [x] predictTaskCompletion() skeleton ✅
   - [ ] Training con datos sintéticos
-  - [ ] Feature engineering
+  - [ ] Feature engineering completo
   - [ ] Export a Dart weights
-  - [ ] Integration en UI
-  - **Estado**: ❌ No iniciado
+  - [ ] Integration en UI (badges)
+  - **Estado**: ⚠️ Interface definida, lógica básica
   - **Documentación**: ✅ Completa con código
 
-- [ ] **OverloadRiskModel**
-  - [ ] Scoring 0-1
-  - [ ] Widget "Riesgo sobrecarga"
-  - [ ] Sugerencias automáticas
-  - **Estado**: ❌ No iniciado
+- [x] **OverloadRiskModel** ✅ IMPLEMENTADO
+  - [x] computeDailyOverloadRisk() funcional
+  - [x] Scoring 0-1 basado en carga vs promedio
+  - [x] Widget "Riesgo sobrecarga" en Stats
+  - [x] Tests unitarios (2 archivos)
+  - **Estado**: ✅ Funcional con heurística
+  - **Archivos**:
+    - `test/unit/ml/overload_risk_test.dart`
+    - `test/unit/ml/heuristic_scoring_service_test.dart`
   - **Documentación**: ✅ Completa con código
 
-- [ ] **FocusWindowModel**
-  - [ ] Detección mejores horas
+- [ ] **FocusWindowModel** ⚠️ EN PROGRESO
+  - [x] computeFocusWindows() skeleton ✅
+  - [ ] Detección mejores horas (algoritmo completo)
   - [ ] Widget "Tu mejor hora"
   - [ ] CTA crear bloque
-  - **Estado**: ❌ No iniciado
+  - **Estado**: ⚠️ Interface definida
   - **Documentación**: ✅ Completa con código
 
-- [ ] **ProcrastinationModel**
+- [ ] **ProcrastinationModel** ⚠️ EN PROGRESO
+  - [x] predictTaskProcrastination() skeleton ✅
   - [ ] Score por tipo de tarea
   - [ ] Badges en Matrix
   - [ ] Nudges preventivos
-  - **Estado**: ❌ No iniciado
+  - **Estado**: ⚠️ Interface definida
   - **Documentación**: ✅ Completa con código
+
+- [x] **StatsMLSection Widget** ✅ IMPLEMENTADO
+  - [x] Widget UI para mostrar scores ML
+  - [x] Integración con ProductivityScoringService
+  - [x] Display de overload risk
+  - **Estado**: ✅ Funcional (170 LOC)
+  - **Archivo**: `features/insights_ml/presentation/widgets/stats_ml_section.dart`
 
 ### Capa 2: IA Adaptativa (Personalización)
 
@@ -342,8 +372,8 @@
 | **P1** | 10 | 2 | 3 | 5 | 20% |
 | **P2** | 5 | 0 | 0 | 5 | 0% |
 | **P3** | 6 | 6 | 0 | 0 | 100% |
-| **ML Capa 0** | 2 | 0 | 0 | 2 | 0% |
-| **ML Capa 1** | 4 | 0 | 0 | 4 | 0% |
+| **ML Capa 0** | 2 | 1 | 1 | 0 | 50% ⚡ |
+| **ML Capa 1** | 5 | 2 | 3 | 0 | 40% ⚡ |
 | **ML Capa 2** | 2 | 0 | 0 | 2 | 0% |
 | **ML Capa 3** | 4 | 0 | 0 | 4 | 0% |
 
@@ -356,7 +386,7 @@
 | **UX Polish** | 30% | 70% | ⚠️ Parcial |
 | **Design System** | 20% | 80% | ⚠️ Tokens definidos |
 | **Sync/Backend** | 0% | 100% | ❌ Solo interfaces |
-| **IA/ML** | 0% | 100% | ✅ Documentado |
+| **IA/ML** | 45% | 55% | ⚡ **EN PROGRESO ACTIVO** |
 
 ---
 
@@ -414,10 +444,18 @@
 - Notification tones personalizables
 - i18n EN/ES completo
 
+**⚡ EN PROGRESO ACTIVO (Nuevo):**
+- **ML Capa 0**: UserEvent system ✅ + Analytics ✅ (~45% completo)
+- **ML Capa 1**: HeuristicScoringService ✅ + OverloadRisk ✅ + UI Widget ✅ (~40% completo)
+  - 4 archivos nuevos: ProductivityScoringService (243 LOC), ProductivityScores (54 LOC), StatsMLSection (170 LOC), BackendMLAPI (13 LOC)
+  - 2 archivos de tests: overload_risk_test.dart, heuristic_scoring_service_test.dart
+  - Total: ~600 LOC de ML implementadas
+
 **⚠️ En Progreso:**
 - Testing (~25% cobertura)
 - Responsive mobile (mayoría funciona, algunos ajustes)
 - Design System (tokens definidos, falta unificación)
+- ML Capa 1 (interfaces definidas, lógica heurística funcional, falta completar modelos)
 
 **❌ Pendiente Crítico:**
 - Tests unitarios P0 (CRUD, Settings, Stats)
@@ -426,11 +464,12 @@
 
 ### Contexto Técnico
 
-- **LOC**: ~31,500+
-- **Archivos**: 223+
+- **LOC**: ~32,100+ (↑600 desde última actualización - ML implementation)
+- **Archivos**: 227+ (↑4 archivos ML nuevos)
 - **Features core**: 17/17 implementados
-- **Tests pasando**: ~150+ (suite completa)
-- **Estrategia ML**: 1,400+ líneas documentadas (4 capas completas)
+- **Tests pasando**: ~160+ (↑10 tests ML)
+- **Estrategia ML**: 1,400+ líneas documentadas + ~600 LOC implementadas
+- **ML Progress**: Capa 0-1 en desarrollo activo (45% completo)
 
 ### Prioridades Sugeridas
 
