@@ -3,7 +3,7 @@
 **Estado del repositorio**: Commit `latest` | Versión `1.1.0+2`  
 **Documento técnico maestro** para desarrollo con VS Code + Copilot  
 **Autor**: ChatGPT – Ingeniería UX/UI & Flutter Clean Architecture  
-**Última actualización**: 23 de November 2025
+**Última actualización**: 23 de November 2025 (refresco UX nudges push + insights IA + fixes Gantt)
 
 ---
 
@@ -41,6 +41,13 @@
 - 🚧 **En progreso**: Actualmente en desarrollo
 - ❌ **Pendiente**: No iniciado
 - 🔴 **Bloqueado**: Dependencias sin resolver
+
+### 1.3 Resumen rápido (23 Nov PM)
+
+- ✅ UX de notificaciones de nudges pulida: toggle dedicado en Settings, preview visual y payload estable con deep link (GoRouter) vía NotificationsService.
+- ✅ Insights avanzados visibles/ocultos según `advancedInsightsEnabled`; nuevo panel “IA y personalización” en Settings con texto de privacidad y reset de aprendizaje.
+- ✅ Sección de Nudges con “¿Por qué veo esto?”, feedback Útil/No relevante y copy de recomendaciones inteligentes; StatsTrendsSection con subtítulo aclaratorio.
+- ✅ ManageDependenciesSheet ahora usa `DraggableScrollableSheet` + scroll para evitar overflow; tests y goldens regenerados.
 
 **Niveles de Prioridad:**
 - **P0**: Crítico - Bloqueante para release
@@ -307,6 +314,7 @@ feature_name/
     - 4 unit tests DependencyArrows
     - 2 widget tests WorkflowPlanPage
     - 5 widget tests ManageDependenciesSheet básicos (13 adicionales con issues menores)
+- ✅ **Sheet sin overflow** - ManageDependenciesSheet migrado a `DraggableScrollableSheet` + scroll; goldens responsive regenerados tras el ajuste visual.
 
 **Pendientes (P3):**
 - ✅ **Más tests dependencias** - Cobertura completada
@@ -446,6 +454,10 @@ feature_name/
   - NudgeAction model con type, label, route, params
   - executeAction() en controller con navegación GoRouter
   - Botones de acción en UI (máximo 2 por nudge)
+- ✅ **UX de notificaciones**:
+  - Sección “Nudges inteligentes” en Settings → General con toggle y preview visual (no dispara notificaciones reales).
+  - Respeto explícito a `notificationsEnabled`, `nudgesEnabled` y quiet hours en NudgeNotificationService; payload estable `nudge.type.name`.
+  - Deep link desde notificación hacia rutas clave (`/focus`, `/matrix`, `/stats`) vía callback expuesto en NotificationsService y registrado en `app.dart`.
 - ✅ **Sistema de tracking completo** (Nov 23):
   - NudgeTrackingData con firstSeenAt, lastSeenAt, dismissedAt, actedAt, viewCount
   - NudgeTrackingRepository con persistencia en SharedPreferences
@@ -459,7 +471,12 @@ feature_name/
   - Priorización por severidad y metadata
   - Canal dedicado "Nudges Inteligentes" en Android
   - IDs de notificación en rango 2000-2099
-- ✅ Widget de visualización en Stats page con acciones
+- ✅ Widget de visualización en Stats page con acciones y copy renovado “Recomendaciones inteligentes”
+- ✅ **Insights avanzados (ML-ready) en UI**:
+  - Toggle global `advancedInsightsEnabled` (UiPrefs) en Settings → “IA y personalización”; texto de privacidad + botón “Restablecer aprendizaje”.
+  - StatsTrendsSection con subtítulo “Insights avanzados sobre tu ritmo”.
+  - NudgesSection con “¿Por qué veo esto?” (dialog contextual) y feedback “Útil” / “No relevante” que marca tracking/dismiss y muestra SnackBar.
+  - Secciones de insights/nudges se ocultan si `advancedInsightsEnabled` es false (gating).
 - ✅ Priorización por severidad (Low/Medium/MediumHigh/High)
 - ✅ Metadata enriquecida por nudge
 - ✅ Dismiss persistente con SharedPreferences
@@ -469,6 +486,7 @@ feature_name/
 - ✅ **Accionabilidad** - Botones + navegación + 14 acciones configuradas (4-5h)
 - ✅ **Dismissal/tracking** - Sistema completo de tracking (3-4h)
 - ✅ **Notificaciones push** - Sistema inteligente de notificaciones (4h)
+- ✅ **UI/UX insights avanzados + Settings IA** - Toggle global, preview, deep link, feedback y “por qué veo esto”.
 
 **Pendientes (P3):**
 - ❌ **Machine learning patterns** - P3 - 20-30h
@@ -480,13 +498,1477 @@ feature_name/
 - `domain/nudge_notification_service.dart` (230 líneas) - Servicio de notificaciones
 - `domain/nudge_tracking.dart` (130 líneas) - Modelo de tracking
 - `data/nudge_tracking_repository.dart` (98 líneas) - Repositorio tracking
-- `stats/presentation/widgets/nudges_section.dart` (222 líneas) - Widget UI con botones
-- `core/notifications/notifications_service.dart` (200 líneas) - Servicio base extendido
+- `stats/presentation/widgets/nudges_section.dart` (222 líneas) - Widget UI con acciones, feedback y “¿Por qué veo esto?”
+- `stats/presentation/widgets/stats_trends_section.dart` - Sección insights con subtítulo aclaratorio
+- `core/services/ui_prefs.dart` + Settings “IA y personalización” - toggle advancedInsightsEnabled
+- `core/notifications/notifications_service.dart` (200 líneas) - Servicio base extendido con callback de deep link
 - `test/unit/insights/nudge_notifications_test.dart` (250 líneas) - 10 tests pasando
-- `domain/nudge_controller.dart` (177 líneas) - Controller con tracking
-- `domain/nudge_tracking.dart` (130 líneas) - Modelo de tracking
-- `data/nudge_tracking_repository.dart` (98 líneas) - Repositorio tracking
-- `stats/presentation/widgets/nudges_section.dart` (222 líneas) - Widget UI con botones
+- `test/unit/insights/nudge_narratives_test.dart` - Cobertura de metadata para nuevas reglas
+
+---
+
+#### 🤖 Estrategia de IA y Machine Learning
+
+**Estado**: 📋 Diseño completo, implementación futura (P3)  
+**Objetivo**: Sistema progresivo de 4 capas para personalización inteligente
+
+Esta estrategia define una arquitectura escalable de IA/ML que evoluciona desde instrumentación básica hasta capacidades generativas, manteniendo privacidad y control del usuario.
+
+##### **Capa 0: Instrumentación y Datos (Fundación)**
+
+**Estado**: ⚠️ Parcialmente implementado  
+**Prioridad**: P2 (8-12h)  
+**Objetivo**: Captura estructurada de eventos para todo el análisis posterior
+
+**Datos clave a capturar:**
+
+1. **Eventos de Tareas:**
+   - `created_at`, `completed_at`, `due_date`, `quadrant`, `project`, `tags`
+   - Número de reprogramaciones (`rescheduleCount`)
+   - Completada en sesión de foco (boolean)
+   - Contexto de creación (hora del día, día semana)
+
+2. **Eventos de Sesiones de Foco:**
+   - Tipo (Pomodoro/Deep Work/Sprint)
+   - Duración planificada vs real
+   - Hora del día, día de la semana
+   - Éxito (¿completó tarea vinculada?)
+   - Interrupciones o abandono
+
+3. **Eventos de Uso de App:**
+   - Horas pico de uso
+   - Días activos vs inactivos
+   - Features más utilizados
+   - Tiempo en cada vista
+
+4. **Eventos de Respuesta a Nudges:**
+   - Visto / ignorado
+   - Click en acción
+   - Dismiss
+   - Tiempo hasta acción
+
+**Implementación propuesta:**
+
+```dart
+// lib/core/analytics/user_event.dart
+enum EventType {
+  taskCreated, taskCompleted, taskRescheduled, taskDeleted,
+  focusSessionStarted, focusSessionCompleted, focusSessionAbandoned,
+  nudgeSeen, nudgeActed, nudgeDismissed,
+  appOpened, appClosed, featureUsed
+}
+
+class UserEvent {
+  final String id;
+  final EventType type;
+  final DateTime timestamp;
+  final String context; // 'matrix', 'focus', 'stats', etc.
+  final Map<String, dynamic> metadata;
+  
+  // Privacy: anonymous userId, can be reset
+  final String anonymousUserId;
+}
+
+// lib/core/analytics/analytics_service.dart
+class AnalyticsService {
+  // Solo registra eventos localmente
+  Future<void> logEvent(UserEvent event);
+  
+  // Agregaciones para ML
+  Future<UserBehaviorSnapshot> getDailySnapshot(DateTime date);
+  Future<UserBehaviorSnapshot> getWeeklySnapshot(DateTime weekStart);
+  
+  // Privacy controls
+  Future<void> clearAllHistory();
+  Future<void> resetAnonymousId();
+}
+
+// lib/core/analytics/user_behavior_snapshot.dart
+class UserBehaviorSnapshot {
+  final DateTime periodStart;
+  final DateTime periodEnd;
+  
+  // Task metrics
+  final int tasksCreated;
+  final int tasksCompleted;
+  final int tasksRescheduled;
+  final Map<Quadrant, int> tasksByQuadrant;
+  
+  // Focus metrics
+  final int focusSessionsTotal;
+  final int focusSessionsCompleted;
+  final Duration totalFocusTime;
+  
+  // Engagement metrics
+  final int activeMinutes;
+  final List<int> peakHours; // Hours of day
+  
+  // Nudge response
+  final int nudgesSeen;
+  final int nudgesActed;
+  final int nudgesDismissed;
+}
+```
+
+**Garantías de privacidad:**
+- IDs anónimos regenerables
+- Datos solo on-device (no envío a servidor)
+- Opción "Borrar todo mi historial" en Settings → Data & Privacy
+- Toggle `advancedInsightsEnabled` para opt-out completo
+
+**Integración UI:**
+- Settings → "IA y personalización" → "Restablecer aprendizaje" (ya existe)
+- Stats → Mostrar métricas de comportamiento agregadas
+
+---
+
+##### **Capa 1: IA Clásica (Predicciones Útiles)**
+
+**Estado**: ❌ No implementado  
+**Prioridad**: P3 (15-20h)  
+**Objetivo**: Inferencias sistemáticas basadas en patrones históricos del usuario
+
+**Modelos clave:**
+
+1. **Probabilidad de Completar Tarea en Fecha**
+   - **Input**: cuadrante, duración estimada, nº reprogramaciones, día semana, hora creación, proyecto, histórico usuario
+   - **Output**: `P(complete_on_time)`, `P(reprogram)`
+   - **Uso**: Badge ⚠️ en tareas de alto riesgo en matriz
+
+2. **Riesgo de Sobrecarga Diaria**
+   - **Input**: nº tareas planificadas hoy, suma duraciones, histórico días similares, promedio completadas/día
+   - **Output**: Score 0-1 (Bajo/Medio/Alto)
+   - **Uso**: Widget en Stats "Riesgo de sobrecarga hoy"
+
+3. **Mejor Franja del Día para Foco**
+   - **Input**: historial sesiones foco (hora, duración, éxito)
+   - **Output**: Ventanas horarias rankeadas (ej. 9-11am: 0.85, 16-18: 0.72)
+   - **Uso**: Chip en Stats "Tu mejor hora: 9-11 am" + CTA "Crear bloque fijo"
+
+4. **Tendencia de Procrastinación por Tipo**
+   - **Input**: tipo tarea (texto, cuadrante, proyecto) + patrón reprogramaciones
+   - **Output**: Score "procrastinable" por tarea
+   - **Uso**: Sugerir dividir tareas grandes, recordatorios proactivos
+
+**Arquitectura técnica:**
+
+```dart
+// lib/features/ml/domain/task_completion_model.dart
+class TaskCompletionModel {
+  // Modelo entrenado offline (XGBoost → pesos)
+  final Map<String, double> weights;
+  
+  double predictCompletionProbability(Task task, UserBehaviorSnapshot history) {
+    // Features engineering
+    final features = _extractFeatures(task, history);
+    // Simple weighted sum o lookup table
+    return _computeScore(features, weights);
+  }
+  
+  Map<String, double> _extractFeatures(Task task, UserBehaviorSnapshot history) {
+    return {
+      'quadrant_q1': task.quadrant == Quadrant.q1 ? 1.0 : 0.0,
+      'quadrant_q2': task.quadrant == Quadrant.q2 ? 1.0 : 0.0,
+      'duration_hours': task.durationMinutes / 60.0,
+      'reschedule_count': task.rescheduleCount.toDouble(),
+      'day_of_week': DateTime.now().weekday.toDouble(),
+      'user_avg_completion_rate': history.tasksCompleted / history.tasksCreated,
+      // ... más features
+    };
+  }
+}
+```
+
+**Backend (opcional, para entrenamiento):**
+
+```python
+# scripts/ml/train_completion_model.py
+import pandas as pd
+from xgboost import XGBClassifier
+
+def train_completion_model(user_data_csv):
+    df = pd.read_csv(user_data_csv)
+    
+    features = ['quadrant', 'duration_min', 'reschedule_count', 
+                'day_of_week', 'hour_created', 'project_id',
+                'user_avg_completion_rate', 'user_overload_score']
+    
+    X = df[features]
+    y = df['completed_on_time']
+    
+    model = XGBClassifier(max_depth=4, n_estimators=50)
+    model.fit(X, y)
+    
+    # Export to JSON weights for Dart
+    weights = export_weights_to_json(model)
+    return weights
+```
+
+**UI Integration:**
+
+```dart
+// Stats Page
+Widget _buildOverloadRiskSection() {
+  final risk = ref.watch(overloadRiskProvider); // 0-1
+  return EisenCard(
+    child: Column(
+      children: [
+        EisenSectionHeader(title: 'Riesgo de sobrecarga hoy'),
+        LinearProgressIndicator(
+          value: risk,
+          color: risk > 0.7 ? Colors.red : risk > 0.4 ? Colors.orange : Colors.green,
+        ),
+        Text(risk > 0.7 ? 'Alto' : risk > 0.4 ? 'Medio' : 'Bajo'),
+        if (risk > 0.7) 
+          EisenButton(
+            label: 'Reprogramar tareas',
+            onPressed: () => context.go('/matrix'),
+          ),
+      ],
+    ),
+  );
+}
+
+// Matrix Page - Task Badge
+Widget _buildTaskCard(Task task) {
+  final completionProb = ref.watch(taskCompletionProbProvider(task.id));
+  return Stack(
+    children: [
+      // ... task content
+      if (completionProb < 0.4)
+        Positioned(
+          top: 4, right: 4,
+          child: Tooltip(
+            message: 'Esta tarea suele reprogramarse',
+            child: Icon(Icons.warning_amber, size: 16, color: Colors.orange),
+          ),
+        ),
+    ],
+  );
+}
+```
+
+---
+
+##### **Capa 2: IA Adaptativa (Aprendizaje Continuo)**
+
+**Estado**: ❌ No implementado  
+**Prioridad**: P3 (20-25h)  
+**Objetivo**: Sistema que se adapta dinámicamente al comportamiento del usuario
+
+**Conceptos clave:**
+
+1. **Multi-Armed Bandits para Selección de Nudges**
+   - Problema: ¿Qué nudge mostrar cuando hay múltiples candidatos?
+   - Solución: Thompson Sampling para balancear exploración/explotación
+   - Métricas: CTR (click-through rate), conversion rate por tipo de nudge
+
+2. **Clustering de Arquetipos de Productividad**
+   - Detectar si el usuario es:
+     - "Morning person" vs "Night owl"
+     - "Sprint worker" vs "Deep work marathoner"
+     - "Planner" vs "Reactive"
+   - Ajustar sugerencias según arquetipo
+
+3. **Reinforcement Learning Ligero**
+   - Aprender timing óptimo de nudges
+   - Ajustar umbrales de alertas según respuesta
+
+**Implementación propuesta:**
+
+```dart
+// lib/features/ml/domain/nudge_selector.dart
+class AdaptiveNudgeSelector {
+  final Map<NudgeType, BanditArm> arms;
+  
+  // Thompson Sampling
+  NudgeType selectBestNudge(List<NudgeType> candidates) {
+    final scores = candidates.map((type) {
+      final arm = arms[type]!;
+      // Sample from Beta distribution
+      return _sampleBeta(arm.successes + 1, arm.failures + 1);
+    }).toList();
+    
+    return candidates[scores.indexOf(scores.reduce(max))];
+  }
+  
+  void recordOutcome(NudgeType type, bool success) {
+    if (success) {
+      arms[type]!.successes++;
+    } else {
+      arms[type]!.failures++;
+    }
+    _persist();
+  }
+}
+
+class BanditArm {
+  int successes;
+  int failures;
+  double get ctr => successes / (successes + failures);
+}
+```
+
+**Clustering de arquetipos:**
+
+```dart
+// lib/features/ml/domain/productivity_archetype.dart
+enum ProductivityArchetype {
+  morningPerson, nightOwl,
+  sprinter, marathoner,
+  planner, reactive,
+  monofocused, multitasker
+}
+
+class ArchetypeDetector {
+  ProductivityArchetype detectArchetype(UserBehaviorSnapshot history) {
+    // K-means simple on user features
+    final features = _extractArchetypeFeatures(history);
+    return _assignCluster(features);
+  }
+  
+  Map<String, double> _extractArchetypeFeatures(UserBehaviorSnapshot history) {
+    // Peak hour distribution
+    final morningScore = history.peakHours.where((h) => h < 12).length / 4.0;
+    final nightScore = history.peakHours.where((h) => h > 20).length / 4.0;
+    
+    // Session patterns
+    final avgSessionDuration = history.totalFocusTime.inMinutes / history.focusSessionsTotal;
+    final sprintScore = avgSessionDuration < 30 ? 1.0 : 0.0;
+    
+    return {
+      'morning_score': morningScore,
+      'night_score': nightScore,
+      'sprint_score': sprintScore,
+      // ...
+    };
+  }
+}
+```
+
+**UI Personalizada por Arquetipo:**
+
+```dart
+// Stats insights adaptados
+Widget _buildPersonalizedInsights() {
+  final archetype = ref.watch(archetypeProvider);
+  
+  switch (archetype) {
+    case ProductivityArchetype.morningPerson:
+      return _buildInsight(
+        'Eres más productivo por la mañana',
+        'Intenta agendar tareas Q1 antes de las 12:00',
+        icon: Icons.wb_sunny,
+      );
+    case ProductivityArchetype.sprinter:
+      return _buildInsight(
+        'Prefieres sesiones cortas intensas',
+        'Usa Pomodoro (25min) en lugar de Deep Work',
+        icon: Icons.bolt,
+      );
+    // ...
+  }
+}
+```
+
+**¿Por qué Multi-Armed Bandits?**
+
+El problema tradicional de nudges es que mostramos el mismo tipo de sugerencia a todos los usuarios, pero:
+- Usuario A responde bien a "bloques de foco", ignora "reduce carga"
+- Usuario B responde bien a "divide tarea grande", ignora "bloques de foco"
+
+Con bandits, cada tipo de nudge es un "brazo" con recompensas:
+- **Nudge A**: Bloques de foco → CTR 15%, conversión 8%
+- **Nudge B**: Reduce carga hoy → CTR 22%, conversión 12%
+- **Nudge C**: Divide tarea grande → CTR 10%, conversión 18%
+- **Nudge D**: Ritual de cierre → CTR 25%, conversión 5%
+
+**Métricas de recompensa:**
+1. **Inmediata**: ¿Usuario hizo click? ¿Ejecutó acción?
+2. **Diferida**: En próximos 3 días, ¿mejoraron sus métricas?
+   - Menos reprogramaciones
+   - Más tareas Q2 completadas
+   - Más sesiones de foco
+
+**Algoritmo Thompson Sampling:**
+- Cada brazo tiene distribución Beta(α, β)
+- α = successes + 1, β = failures + 1
+- En cada decisión, sampleamos de cada Beta y elegimos el máximo
+- Balancea automáticamente exploración (probar nudges poco vistos) vs explotación (mostrar los que funcionan)
+
+**Variante contextual:**
+- Contexto: hora del día, día de la semana, overload score, días sin foco
+- Diferentes bandits para diferentes contextos
+- Ejemplo: Usuario responde mejor a "bloques de foco" los lunes, "reduce carga" los viernes
+
+**Implementación avanzada:**
+
+```dart
+// lib/features/ml/domain/contextual_bandit.dart
+class ContextualBandit {
+  // Un bandit por contexto
+  final Map<String, AdaptiveNudgeSelector> contextBandits;
+  
+  NudgeType selectForContext(List<NudgeType> candidates, NudgeContext context) {
+    final contextKey = _contextToKey(context);
+    final bandit = contextBandits.putIfAbsent(
+      contextKey, 
+      () => AdaptiveNudgeSelector(),
+    );
+    return bandit.selectBestNudge(candidates);
+  }
+  
+  String _contextToKey(NudgeContext context) {
+    // Discretizar contexto continuo
+    final overloadBucket = context.overloadScore > 0.7 ? 'high' : 
+                          context.overloadScore > 0.4 ? 'med' : 'low';
+    final timeBucket = context.hourOfDay < 12 ? 'morning' : 
+                       context.hourOfDay < 18 ? 'afternoon' : 'evening';
+    return '${context.dayOfWeek}_${timeBucket}_${overloadBucket}';
+  }
+  
+  void recordOutcome(NudgeType type, NudgeContext context, bool success, 
+                     {Map<String, double>? delayedMetrics}) {
+    final contextKey = _contextToKey(context);
+    
+    // Recompensa inmediata
+    contextBandits[contextKey]?.recordOutcome(type, success);
+    
+    // Recompensa diferida (si mejoraron métricas)
+    if (delayedMetrics != null) {
+      final metricsImproved = _evaluateMetricsImprovement(delayedMetrics);
+      if (metricsImproved) {
+        // Bonus adicional para el último nudge actuado
+        contextBandits[contextKey]?.recordOutcome(type, true);
+      }
+    }
+  }
+}
+
+class NudgeContext {
+  final int dayOfWeek; // 1-7
+  final int hourOfDay; // 0-23
+  final double overloadScore; // 0-1
+  final int daysSinceLastFocus;
+  final Quadrant dominantQuadrant;
+}
+```
+
+**Arquetipos de productividad - Clusters dinámicos:**
+
+En lugar de etiquetar permanentemente a usuarios, detectamos **sesiones** con patrones:
+
+**Cluster 1: "Sprints nocturnos"**
+- Peak hours: 20:00-01:00
+- Sesiones cortas (<30min)
+- Alta tasa de completado en Q1
+- Bajo Q2
+
+**Cluster 2: "Mañanas sólidas, tardes flojas"**
+- Peak hours: 08:00-12:00
+- Sesiones largas matutinas
+- Tardes con mucho reschedule
+- Balance Q1/Q2 aceptable
+
+**Cluster 3: "Mucho inicio, poca finalización"**
+- Alta tasa de creación de tareas
+- Baja tasa de completado
+- Muchas reprogramaciones
+- Pocas sesiones de foco
+
+**Usos en UI:**
+
+```dart
+// Stats Page - Tarjeta de arquetipo
+Widget _buildArchetypeCard() {
+  final archetype = ref.watch(weeklyArchetypeProvider);
+  
+  return EisenCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        EisenSectionHeader(
+          title: 'Tu patrón esta semana',
+          subtitle: archetype.name,
+        ),
+        Text(archetype.description), // "Mañanas fuertes, tardes dispersas"
+        SizedBox(height: 12),
+        Text('💡 Recomendación:', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(archetype.recommendation),
+        // Ej: "Agenda todas tus tareas Q1 e importantes antes de las 14:00"
+        SizedBox(height: 8),
+        EisenButton(
+          label: 'Aplicar estrategia',
+          onPressed: () => _applyArchetypeStrategy(archetype),
+        ),
+      ],
+    ),
+  );
+}
+```
+
+**Nudge Engine adaptado por arquetipo:**
+
+```dart
+// lib/features/insights/domain/nudge_engine.dart (extended)
+List<Nudge> generateNudges({
+  required List<Task> tasks,
+  required UserBehaviorSnapshot history,
+  required ProductivityArchetype archetype,
+}) {
+  final nudges = <Nudge>[];
+  
+  // Reglas base (existentes)
+  nudges.addAll(_baseRules(tasks, history));
+  
+  // Reglas adaptadas por arquetipo
+  switch (archetype) {
+    case ProductivityArchetype.nightOwl:
+      // Priorizar nudges sobre descanso/cierre
+      if (_detectLateNightWork(history)) {
+        nudges.add(Nudge(
+          type: NudgeType.healthRitual,
+          title: 'Establece un ritual de cierre',
+          description: 'Trabajas mejor de noche, pero necesitas descanso. '
+                      'Define una hora límite y úsala consistentemente.',
+          actions: [
+            NudgeAction(type: NudgeActionType.openSettings, label: 'Configurar'),
+          ],
+        ));
+      }
+      break;
+      
+    case ProductivityArchetype.morningPerson:
+      // Sugerir poner tareas importantes solo en mañanas
+      final afternoonQ1 = tasks.where((t) => 
+        t.quadrant == Quadrant.q1 && 
+        t.dueDate?.hour != null && 
+        t.dueDate!.hour > 14
+      ).length;
+      
+      if (afternoonQ1 > 2) {
+        nudges.add(Nudge(
+          type: NudgeType.rescheduleOptimal,
+          title: 'Mueve urgencias a la mañana',
+          description: 'Eres más productivo antes del mediodía. '
+                      'Tienes $afternoonQ1 tareas urgentes agendadas para la tarde.',
+          actions: [
+            NudgeAction(type: NudgeActionType.openGantt, label: 'Reorganizar'),
+          ],
+        ));
+      }
+      break;
+      
+    case ProductivityArchetype.sprinter:
+      // Recomendar dividir tareas grandes
+      final largeTasks = tasks.where((t) => t.durationMinutes > 90).toList();
+      if (largeTasks.isNotEmpty) {
+        nudges.add(Nudge(
+          type: NudgeType.breakdownTask,
+          title: 'Divide tareas largas',
+          description: 'Trabajas mejor en sprints cortos (<30min). '
+                      'Tienes ${largeTasks.length} tareas de >90min.',
+          actions: [
+            NudgeAction(type: NudgeActionType.openMatrix, label: 'Ver tareas'),
+          ],
+        ));
+      }
+      break;
+  }
+  
+  return nudges;
+}
+```
+
+---
+
+##### **Capa 3: IA Generativa (Asistencia Avanzada)**
+
+**Estado**: ❌ No implementado  
+**Prioridad**: P3 (30-40h)  
+**Objetivo**: Integración de LLM para planificación y coaching
+
+Aquí combinamos los datos estructurados + modelos ML con un LLM para crear una experiencia de "coach personal" que entiende contexto y habla en lenguaje natural.
+
+**Capacidades clave:**
+
+1. **Daily Planner AI**
+   - Input: Lista de tareas, calendario, histórico, contexto personal
+   - Output: Plan del día optimizado con bloques de tiempo
+   - Ejemplo: "Buenos días. Hoy tienes 8 tareas. Te sugiero: 9-11am Deep Work en Q1, 11-12 Q3 rápidos, tarde para Q2..."
+
+2. **Task Breakdown Assistant**
+   - Input: Tarea grande (>2h)
+   - Output: Subtareas accionables con estimaciones
+   - Ejemplo: "Preparar presentación" → ["Outline estructura (30min)", "Buscar datos (45min)", "Diseñar slides (90min)"]
+
+3. **Natural Language Task Creation**
+   - Input: "Mañana a las 10 tengo que llamar a Juan sobre el proyecto X"
+   - Output: Task creada con due_date, project, cuadrante sugerido
+
+4. **Productivity Coach**
+   - Análisis semanal narrativo
+   - Identificación de patrones negativos
+   - Sugerencias de hábitos
+
+**Arquitectura técnica:**
+
+```dart
+// lib/features/ai/domain/llm_service.dart
+abstract class LLMService {
+  Future<DailyPlan> generateDailyPlan({
+    required List<Task> tasks,
+    required List<FocusSession> recentSessions,
+    required UserBehaviorSnapshot history,
+  });
+  
+  Future<List<Task>> breakdownTask(Task largeTask);
+  
+  Future<Task> parseNaturalLanguage(String input);
+  
+  Future<WeeklyCoachingReport> generateWeeklyReport({
+    required WeeklyStats stats,
+    required List<Nudge> triggeredNudges,
+  });
+}
+
+// lib/features/ai/data/llm_service_openai.dart (example)
+class OpenAILLMService implements LLMService {
+  final String apiKey;
+  
+  @override
+  Future<DailyPlan> generateDailyPlan(...) async {
+    final prompt = _buildDailyPlanPrompt(tasks, sessions, history);
+    final response = await _callOpenAI(prompt, model: 'gpt-4o-mini');
+    return _parseDailyPlan(response);
+  }
+  
+  String _buildDailyPlanPrompt(List<Task> tasks, ...) {
+    return '''
+You are a productivity coach for a user of Eisenhower Matrix app.
+
+User context:
+- Archetype: ${history.archetype}
+- Peak hours: ${history.peakHours}
+- Average focus session: ${history.avgFocusSession}
+
+Today's tasks:
+${tasks.map((t) => '- ${t.title} (${t.quadrant}, ${t.durationMinutes}min)').join('\n')}
+
+Create an optimized daily plan with time blocks, considering the user's patterns.
+Format: JSON { blocks: [{start, end, tasks, type}] }
+''';
+  }
+}
+```
+
+**3.1. Copiloto de Planificación Diaria - Flujo Completo**
+
+**Momento de activación**: Usuario abre Eisen por la mañana (8-10am)
+
+**Análisis automático**:
+1. **Inventario del día**:
+   - Tareas para hoy (due date = today)
+   - Tareas pendientes de ayer
+   - Tareas sin fecha pero importantes (Q1, Q2)
+   
+2. **Evaluación de riesgo**:
+   - Overload score (basado en suma de duraciones vs histórico)
+   - Balance Q1/Q2/Q3/Q4
+   - Tiempo disponible vs tiempo necesario
+
+3. **Contexto del usuario**:
+   - Arquetipo (morning person, sprinter, etc.)
+   - Picos de foco históricos
+   - Sesiones de foco recientes (burn-out check)
+
+**Output del LLM - "Plan del día sugerido"**:
+
+```
+Hola! 🌅 
+
+Hoy tienes 8 tareas (total ~4.5h estimadas).
+
+⚠️ Detecto sobrecarga: 6 son Q1 (urgentes) y solo 1 Q2.
+
+Te propongo este plan:
+
+📍 09:00–09:45 | Foco profundo
+   → "Revisar propuesta cliente X" (Q2, 45min)
+   Razón: Tu mejor momento es mañana, aprovecha para Q2
+
+☕ 09:45–10:00 | Break
+
+📍 10:00–10:50 | Sprint de urgencias
+   → "Enviar reporte semanal" (Q1, 20min)
+   → "Responder correos críticos" (Q1, 30min)
+
+📍 11:00–11:25 | Tareas rápidas Q3
+   → "Actualizar Trello" (Q3, 10min)
+   → "Revisar calendario semana" (Q3, 15min)
+
+🍽️ 12:00–13:30 | Almuerzo
+
+📍 16:30–17:30 | Cierre del día
+   → "Preparar presentación viernes" (Q2, 60min)
+   Razón: Tarea grande, mejor en tarde con menos interrupciones
+
+✅ 3 tareas quedan para mañana (menos carga, más balance)
+
+¿Aceptas este plan?
+[Aceptar todo] [Ajustar] [Rehacer]
+```
+
+**UI - Modal Interactivo**:
+
+```dart
+// lib/features/ai/presentation/daily_plan_dialog.dart
+class DailyPlanDialog extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final plan = ref.watch(dailyPlanProvider);
+    
+    return Dialog(
+      child: Container(
+        width: 600,
+        padding: EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('🤖 Plan del día sugerido', style: Theme.of(context).textTheme.headlineSmall),
+            SizedBox(height: 16),
+            
+            // Greeting y análisis
+            Text(plan.greeting, style: TextStyle(fontSize: 16)),
+            if (plan.warnings.isNotEmpty) ...[
+              SizedBox(height: 12),
+              ...plan.warnings.map((w) => _WarningChip(w)),
+            ],
+            
+            SizedBox(height: 24),
+            
+            // Bloques de tiempo arrastrables
+            Expanded(
+              child: ReorderableListView(
+                onReorder: (oldIndex, newIndex) {
+                  ref.read(dailyPlanProvider.notifier).reorderBlocks(oldIndex, newIndex);
+                },
+                children: plan.blocks.map((block) => 
+                  _TimeBlockCard(
+                    key: ValueKey(block.id),
+                    block: block,
+                    onRemove: () => ref.read(dailyPlanProvider.notifier).removeBlock(block.id),
+                    onEdit: () => _showEditBlockDialog(context, block),
+                  )
+                ).toList(),
+              ),
+            ),
+            
+            SizedBox(height: 24),
+            
+            // Acciones
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancelar'),
+                ),
+                Row(
+                  children: [
+                    OutlinedButton(
+                      onPressed: () async {
+                        // Regenerar plan con diferentes parámetros
+                        await ref.read(dailyPlanProvider.notifier).regenerate();
+                      },
+                      child: Text('Rehacer'),
+                    ),
+                    SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Aplicar plan: crear eventos en Gantt, actualizar due dates
+                        ref.read(dailyPlanProvider.notifier).applyPlan();
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('✅ Plan aplicado al calendario')),
+                        );
+                      },
+                      child: Text('Aplicar plan'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TimeBlockCard extends StatelessWidget {
+  final TimeBlock block;
+  final VoidCallback onRemove;
+  final VoidCallback onEdit;
+  
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(_iconForBlockType(block.type)),
+        title: Text('${block.startTime} - ${block.endTime}'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(block.title, style: TextStyle(fontWeight: FontWeight.bold)),
+            ...block.tasks.map((t) => Text('  → ${t.title}')),
+            if (block.reason != null) 
+              Text('💡 ${block.reason}', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(icon: Icon(Icons.edit), onPressed: onEdit),
+            IconButton(icon: Icon(Icons.close), onPressed: onRemove),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+**3.2. Reescritura Inteligente de Tareas - Task Breakdown**
+
+**Problema**: Usuarios crean tareas vagas como "Hacer proyecto X" (>2h), difíciles de iniciar
+
+**Solución**: LLM divide en subtareas accionables
+
+**Flujo UI**:
+
+1. Usuario edita tarea con duración >90min
+2. Aparece botón "✨ Hacerla accionable con IA"
+3. Bottom sheet muestra propuesta de subtareas
+4. Usuario acepta parcial o totalmente
+
+**Ejemplo de conversión**:
+
+```
+Tarea original:
+"Preparar presentación trimestral" (Q1, 180min)
+
+LLM output:
+Subtareas sugeridas:
+✓ Definir estructura y mensajes clave (30min, Q2)
+✓ Recopilar datos y métricas del trimestre (45min, Q1)
+✓ Crear borrador de slides (60min, Q1)
+✓ Diseñar visualizaciones (45min, Q3)
+✓ Practicar presentación (30min, Q2)
+
+Total: 210min (ajustado por overhead)
+```
+
+**Implementación**:
+
+```dart
+// lib/features/ai/domain/task_breakdown_service.dart
+class TaskBreakdownService {
+  final LLMService llm;
+  
+  Future<TaskBreakdownResult> breakdownTask(Task task) async {
+    final prompt = '''
+Task: "${task.title}"
+Description: ${task.description ?? 'N/A'}
+Estimated duration: ${task.durationMinutes}min
+Quadrant: ${task.quadrant}
+
+Break this down into 3-5 actionable subtasks that:
+1. Are specific and have clear completion criteria
+2. Take 20-60min each
+3. Can be done independently (mostly)
+4. Sum to approximately the original duration
+
+For each subtask, suggest:
+- Title (action verb + object)
+- Estimated minutes
+- Suggested quadrant (Q1/Q2/Q3/Q4)
+- Dependencies (optional)
+
+Format: JSON array of {title, minutes, quadrant, dependencies}
+''';
+
+    final response = await llm.complete(prompt);
+    final subtasks = _parseSubtasks(response);
+    
+    return TaskBreakdownResult(
+      originalTask: task,
+      subtasks: subtasks,
+      totalMinutes: subtasks.fold(0, (sum, t) => sum + t.durationMinutes),
+    );
+  }
+}
+
+// lib/features/ai/presentation/task_breakdown_sheet.dart
+void showTaskBreakdownSheet(BuildContext context, Task task) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      builder: (context, scrollController) {
+        return TaskBreakdownSheet(task: task, scrollController: scrollController);
+      },
+    ),
+  );
+}
+
+class TaskBreakdownSheet extends ConsumerStatefulWidget {
+  final Task task;
+  final ScrollController scrollController;
+  
+  @override
+  _TaskBreakdownSheetState createState() => _TaskBreakdownSheetState();
+}
+
+class _TaskBreakdownSheetState extends ConsumerState<TaskBreakdownSheet> {
+  late Future<TaskBreakdownResult> _breakdownFuture;
+  final Set<int> _selectedIndices = {};
+  
+  @override
+  void initState() {
+    super.initState();
+    _breakdownFuture = ref.read(taskBreakdownServiceProvider).breakdownTask(widget.task);
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('✨ Dividir tarea con IA', style: Theme.of(context).textTheme.headlineSmall),
+          SizedBox(height: 8),
+          Text('Tarea original: "${widget.task.title}"', style: TextStyle(fontStyle: FontStyle.italic)),
+          SizedBox(height: 16),
+          
+          FutureBuilder<TaskBreakdownResult>(
+            future: _breakdownFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+              
+              if (snapshot.hasError) {
+                return Text('Error: ${snapshot.error}');
+              }
+              
+              final result = snapshot.data!;
+              
+              return Expanded(
+                child: ListView(
+                  controller: widget.scrollController,
+                  children: [
+                    Text('Subtareas sugeridas:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
+                    
+                    ...List.generate(result.subtasks.length, (index) {
+                      final subtask = result.subtasks[index];
+                      final isSelected = _selectedIndices.contains(index);
+                      
+                      return CheckboxListTile(
+                        value: isSelected,
+                        onChanged: (value) {
+                          setState(() {
+                            if (value!) {
+                              _selectedIndices.add(index);
+                            } else {
+                              _selectedIndices.remove(index);
+                            }
+                          });
+                        },
+                        title: Text(subtask.title),
+                        subtitle: Text(
+                          '${subtask.durationMinutes}min • ${subtask.quadrant.name.toUpperCase()}'
+                        ),
+                        secondary: _QuadrantBadge(subtask.quadrant),
+                      );
+                    }),
+                    
+                    SizedBox(height: 16),
+                    Text('Total: ${result.totalMinutes}min', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+              );
+            },
+          ),
+          
+          SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancelar'),
+              ),
+              Row(
+                children: [
+                  OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedIndices.clear();
+                        _selectedIndices.addAll(List.generate(result.subtasks.length, (i) => i));
+                      });
+                    },
+                    child: Text('Seleccionar todo'),
+                  ),
+                  SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _selectedIndices.isEmpty ? null : () {
+                      _createSubtasks(result.subtasks, _selectedIndices.toList());
+                      Navigator.pop(context);
+                    },
+                    child: Text('Crear ${_selectedIndices.length} subtareas'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _createSubtasks(List<Task> subtasks, List<int> indices) {
+    final selected = indices.map((i) => subtasks[i]).toList();
+    ref.read(matrixControllerProvider.notifier).createSubtasks(
+      parentTask: widget.task,
+      subtasks: selected,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('✅ ${selected.length} subtareas creadas')),
+    );
+  }
+}
+```
+
+**3.3. Explicaciones en Lenguaje Natural**
+
+Cada insight/score ML tiene explicación clara:
+
+**Ejemplo en Stats - Overload Warning**:
+
+```dart
+Widget _buildOverloadExplanation() {
+  return EisenCard(
+    color: Colors.orange.shade50,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.warning_amber, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Riesgo alto de sobrecarga', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        SizedBox(height: 12),
+        Text('Te sugerimos mover 2 tareas de hoy porque:'),
+        SizedBox(height: 8),
+        _ExplanationItem(
+          icon: Icons.trending_up,
+          text: 'Llevas 3 días con más del 130% de tu carga promedio',
+        ),
+        _ExplanationItem(
+          icon: Icons.pie_chart,
+          text: 'El 60% de tus tareas de hoy son Q1 (urgentes) y casi ninguna Q2',
+        ),
+        _ExplanationItem(
+          icon: Icons.psychology,
+          text: 'Tu patrón muestra que en días así, sueles completar <50%',
+        ),
+        SizedBox(height: 12),
+        EisenButton(
+          label: 'Ver sugerencias',
+          onPressed: () => _showRescheduleSuggestions(),
+        ),
+      ],
+    ),
+  );
+}
+
+class _ExplanationItem extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(left: 8, bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: Colors.grey.shade700),
+          SizedBox(width: 8),
+          Expanded(child: Text(text, style: TextStyle(fontSize: 14))),
+        ],
+      ),
+    );
+  }
+}
+```
+
+**Transparencia en nudges** (ya existe "¿Por qué veo esto?", pero se puede enriquecer con LLM):
+
+```dart
+// Versión enriquecida con explicación generativa
+Future<String> generateNudgeExplanation(Nudge nudge, UserBehaviorSnapshot history) async {
+  final prompt = '''
+Nudge type: ${nudge.type}
+User pattern: ${history.summary}
+Triggered because: ${nudge.metadata}
+
+Explain in 2-3 sentences (Spanish, friendly tone) why this nudge is shown and how it helps.
+''';
+
+  return await llm.complete(prompt);
+}
+```
+
+**UI Integration:**
+
+```dart
+// Home screen - Daily Planner Card
+Widget _buildDailyPlannerCard() {
+  final plan = ref.watch(dailyPlanProvider);
+  
+  return EisenCard(
+    child: Column(
+      children: [
+        EisenSectionHeader(title: '🤖 Plan del día', subtitle: 'Generado con IA'),
+        if (plan.isLoading) CircularProgressIndicator(),
+        if (plan.hasValue) ...[
+          Text(plan.value!.greeting), // "Buenos días! Hoy tienes 8 tareas..."
+          ...plan.value!.blocks.map((block) => TimeBlockWidget(block)),
+          EisenButton(
+            label: 'Aplicar plan',
+            onPressed: () => _applyPlan(plan.value!),
+          ),
+        ],
+      ],
+    ),
+  );
+}
+
+// Task Editor - Breakdown Assistant
+IconButton(
+  icon: Icon(Icons.auto_awesome),
+  tooltip: 'Dividir con IA',
+  onPressed: () async {
+    final subtasks = await ref.read(llmServiceProvider).breakdownTask(task);
+    _showSubtasksDialog(subtasks);
+  },
+)
+```
+
+**Privacy considerations:**
+- LLM calls son opt-in (toggle en Settings)
+- Datos enviados son mínimos y anonimizados
+- Opción de LLM local (Ollama, Llama.cpp) para privacidad total
+- Clear disclosure: "Esta feature envía datos a OpenAI"
+
+---
+
+##### **Roadmap de Implementación**
+
+**Fase 1: Instrumentación (2-3 semanas, 8-12h)**
+- [ ] Implementar UserEvent system
+- [ ] Crear AnalyticsService + UserBehaviorSnapshot
+- [ ] Agregar logging en todos los eventos clave
+- [ ] UI de privacy controls en Settings
+- [ ] Tests unitarios de agregaciones
+
+**Fase 2: IA Clásica - Scoring (3-4 semanas, 15-20h)**
+- [ ] Entrenar modelos offline con datos sintéticos
+- [ ] Implementar TaskCompletionModel
+- [ ] Implementar OverloadRiskModel
+- [ ] Implementar FocusWindowModel
+- [ ] UI de insights en Stats
+- [ ] Badges de riesgo en matriz
+
+**Fase 3: IA Adaptativa (3-4 semanas, 20-25h)**
+- [ ] Multi-armed bandits para nudges
+- [ ] Clustering de arquetipos
+- [ ] Personalización de sugerencias
+- [ ] UI de "Tu perfil de productividad"
+- [ ] Tests A/B internos
+
+**Fase 4: IA Generativa - MVP (4-5 semanas, 30-40h)**
+- [ ] Integración LLM service (OpenAI)
+- [ ] Daily planner AI
+- [ ] Task breakdown assistant
+- [ ] Natural language parsing
+- [ ] Privacy flows completos
+
+**Fase 5: Polish y Optimización (2-3 semanas, 10-15h)**
+- [ ] Optimizar performance (caching, batch)
+- [ ] Local LLM option (Ollama)
+- [ ] Mejoras UX según feedback
+- [ ] Documentación completa
+
+**Total estimado**: 16 semanas, 80-120h de desarrollo
+
+---
+
+##### **Lo que Hace Esta Estrategia Realmente Disruptiva**
+
+No se trata solo de "agregar ML y ya". Esta arquitectura posiciona a Eisen como la app de productividad más inteligente del mercado:
+
+**1. Productivity Graph Personalizado**
+
+En lugar de solo gestionar tareas aisladas, Eisen construye un **grafo de conocimiento**:
+
+```
+Tareas ↔ Proyectos ↔ Horarios ↔ Estados de foco ↔ Nudges ↔ Arquetipos
+```
+
+**Capacidades sobre el grafo**:
+- **Detectar cuellos de botella**: Tareas que bloquean muchas otras (análisis de dependencias)
+- **Identificar proyectos zombies**: Proyectos que solo se mueven en horarios subóptimos
+- **Detectar loops de procrastinación**: Ciclos de tareas que se reprograman entre sí
+- **Propagación de impacto**: "Si mueves esta tarea, 3 dependientes se reprograman automáticamente"
+
+**Ejemplo práctico**:
+```dart
+// Análisis de grafo
+final bottlenecks = await productivityGraphService.findBottlenecks();
+// Output: ["Aprobar presupuesto" bloquea 5 tareas de 2 proyectos]
+
+final zombieProjects = await productivityGraphService.findZombieProjects();
+// Output: ["Proyecto X" solo tiene actividad después de 20:00, fuera de tus picos]
+```
+
+**2. Sistema de Hábitos sin Gamificación Básica**
+
+Otras apps usan badges y streaks (motivación extrínseca frágil). Eisen adopta un enfoque diferente:
+
+**Rituales basados en decisiones clave**:
+- "Cuando abres Eisen en la mañana, te muestro **3 decisiones** que realmente cambian tu semana"
+- No es "completar 10 tareas para ganar estrella", es "estas 3 cosas hoy previenen crisis mañana"
+
+**Reducción de carga cognitiva**:
+- La IA no solo **mide**, sino que **reduce decisiones** (el cuello de botella real de productividad)
+- En lugar de 20 tareas, prioriza automáticamente las 5 que tienen más impacto
+- Pre-decide bloques de tiempo óptimos basados en tu patrón
+
+**Ejemplo UI**:
+```dart
+Widget _buildMorningRitualCard() {
+  final keyDecisions = ref.watch(keyDecisionsProvider);
+  
+  return EisenCard(
+    child: Column(
+      children: [
+        Text('☀️ Buenos días', style: headlineStyle),
+        Text('3 decisiones clave para hoy:'),
+        SizedBox(height: 16),
+        
+        ...keyDecisions.map((decision) => _DecisionCard(
+          number: decision.order,
+          title: decision.title,
+          impact: decision.impactScore, // High/Medium/Low
+          action: decision.action,
+          reason: decision.reason,
+        )),
+        
+        // No distracciones: solo lo esencial
+      ],
+    ),
+  );
+}
+
+// Ejemplo de decisión:
+// 1. "Mueve 'Revisar propuesta' a mañana 9am"
+//    Impacto: Alto (desbloquea 3 tareas urgentes)
+//    Razón: Tu mejor momento + evita cuello de botella
+```
+
+**3. On-Device-First + Explicabilidad Total**
+
+**Privacidad radical**:
+- Gran parte de la lógica (eventos, scoring simple, bandits) es **100% local**
+- Lo que se manda a backend es **agregado y anonimizado**
+- Usuario puede **exportar o borrar todo** en cualquier momento
+- Opción de LLM local (Ollama) para privacidad total
+
+**Transparencia en cada sugerencia**:
+```dart
+// Cada sugerencia tiene "¿Por qué veo esto?" explicado
+Widget _buildNudgeWithExplanation(Nudge nudge) {
+  return Card(
+    child: Column(
+      children: [
+        Text(nudge.title),
+        Text(nudge.description),
+        
+        // Explicación clara
+        ExpansionTile(
+          title: Text('¿Por qué veo esto?'),
+          children: [
+            Text('Factores detectados:'),
+            ...nudge.factors.map((f) => _FactorItem(f)),
+            // Ej: "Llevas 3 días >130% carga promedio"
+            //     "60% de tareas hoy son Q1"
+            //     "Tu patrón muestra <50% completado en días así"
+          ],
+        ),
+        
+        // Acciones
+        ...nudge.actions.map((a) => EisenButton(label: a.label, ...)),
+      ],
+    ),
+  );
+}
+```
+
+**4. Evolución Progresiva Sin Fricción**
+
+Cada capa añade valor **sin requerir las anteriores**:
+- Usuario sin datos históricos → Nudges básicos (reglas simples)
+- Con 1 semana de datos → Scoring personalizado
+- Con 2-3 semanas → Arquetipos y bandits
+- Opt-in a LLM → Asistencia generativa
+
+**No hay "cliff" de funcionalidad**: La app es útil desde día 1 y se vuelve más inteligente con el tiempo.
+
+---
+
+##### **Roadmap Corto y Concreto** (Si empezamos mañana)
+
+**Semana 1-2: Fundación de Datos (8-12h)**
+- [ ] Implementar `UserEvent` system con tipos completos
+- [ ] Crear `AnalyticsService` + `UserBehaviorSnapshot`
+- [ ] Agregar logging en eventos clave:
+  - Task created/completed/rescheduled
+  - Focus session started/completed/abandoned
+  - Nudge seen/acted/dismissed
+  - App opened/closed, feature used
+- [ ] UI de privacy controls en Settings → Data & Privacy
+  - "Borrar todo mi historial"
+  - "Restablecer ID anónimo"
+  - "Exportar datos"
+- [ ] Tests unitarios de agregaciones (daily/weekly snapshots)
+
+**Entregable**: Sistema de instrumentación funcionando, datos fluyendo
+
+---
+
+**Semana 3-4: Modelos Básicos de Scoring (15-20h)**
+- [ ] Crear modelos offline con datos sintéticos:
+  - `TaskCompletionModel` (overload score 0-1)
+  - `FocusWindowModel` (mejores horas)
+  - `ProcrastinationModel` (score por tarea)
+- [ ] Implementar feature engineering en Dart
+- [ ] Exportar pesos de modelos a JSON/Dart constants
+- [ ] Integrar scores en Stats:
+  - Widget "Riesgo de sobrecarga hoy"
+  - Widget "Tu mejor hora para foco"
+  - Sección "Tendencias"
+- [ ] Badges de riesgo en matriz (⚠️ en tareas problemáticas)
+- [ ] Tests de precisión de modelos
+
+**Entregable**: Insights predictivos visibles en UI, usuarios ven valor inmediato
+
+---
+
+**Semana 5-6: IA Adaptativa - Bandits + Arquetipos (20-25h)**
+- [ ] Implementar `AdaptiveNudgeSelector` con Thompson Sampling
+- [ ] Contextual bandits (hora del día, overload, etc.)
+- [ ] Sistema de recompensas (inmediata + diferida)
+- [ ] Clustering de arquetipos:
+  - `ArchetypeDetector` (K-means simple)
+  - Categorías: morning/night, sprinter/marathoner, planner/reactive
+- [ ] Personalización de nudges por arquetipo
+- [ ] UI "Tu perfil de productividad" en Stats
+- [ ] A/B testing interno (bandits vs fixed)
+
+**Entregable**: Nudges adaptativos funcionando, sugerencias personalizadas
+
+---
+
+**Semana 7-10: IA Generativa MVP (30-40h)**
+- [ ] Integrar LLM service (OpenAI GPT-4o-mini)
+- [ ] Daily planner AI:
+  - Prompt engineering optimizado
+  - Modal interactivo con bloques arrastrables
+  - Aplicar plan → actualiza due dates
+- [ ] Task breakdown assistant:
+  - Bottom sheet con subtareas sugeridas
+  - Checkboxes para aceptar parcialmente
+  - Crear subtareas automáticamente
+- [ ] Natural language parsing:
+  - "Mañana a las 10 llamar a Juan" → Task
+  - Detección de proyecto/cuadrante
+- [ ] Privacy flows completos:
+  - Toggle opt-in en Settings
+  - Disclosure de datos enviados
+  - Opción LLM local (Ollama) - opcional
+- [ ] Tests de integración LLM
+
+**Entregable**: Copiloto de planificación funcional, asistencia generativa visible
+
+---
+
+**Semana 11-12: Polish y Optimización (10-15h)**
+- [ ] Optimizar performance:
+  - Caching de snapshots agregados
+  - Batch processing de eventos
+  - Debouncing de cálculos ML
+- [ ] Mejoras UX según testing:
+  - Animaciones de insights
+  - Empty states para usuarios nuevos
+  - Onboarding de features ML
+- [ ] Documentación completa:
+  - User guide "Cómo funciona la IA"
+  - Developer docs para modelos
+  - Privacy policy actualizada
+- [ ] Preparar para A/B testing en producción
+
+**Entregable**: Sistema completo, optimizado, documentado, listo para usuarios
+
+---
+
+**Total: 12 semanas, 80-110h de desarrollo progresivo**
+
+**Hitos verificables**:
+- Semana 2: Datos fluyendo ✓
+- Semana 4: Insights predictivos ✓
+- Semana 6: Personalización adaptativa ✓
+- Semana 10: Asistencia generativa ✓
+- Semana 12: Sistema completo ✓
+
+---
+
+##### **Diferenciadores Disruptivos**
+
+Esta estrategia posiciona a Eisen como la app de productividad más inteligente:
+
+1. **On-device ML primero**: Privacidad sin compromisos
+2. **Progresividad**: Cada capa añade valor sin requerir las anteriores
+3. **Transparencia**: "¿Por qué veo esto?" en cada sugerencia
+4. **User control**: Opt-out granular, reset de datos
+
+**Comparación con competencia:**
+
+| Feature | Todoist | Notion | TickTick | **Eisen (con esta estrategia)** |
+|---------|---------|--------|----------|----------------------------------|
+| Task scoring | ❌ | ❌ | ⚠️ Básico | ✅ Personalizado |
+| Adaptive nudges | ❌ | ❌ | ❌ | ✅ Multi-armed bandits |
+| AI daily planner | ❌ | ⚠️ Página en blanco | ❌ | ✅ Optimizado por perfil |
+| Privacy-first ML | N/A | N/A | N/A | ✅ On-device scoring |
 
 ---
 
@@ -609,13 +2091,13 @@ Evaluación exhaustiva de cada característica según commit **db8b9f2**.
 | Notificaciones | ✅ | ✅ | ✅ | ❌ | P1 | 1h tests |
 | Tracking sesiones | ✅ | ✅ | ✅ | ❌ | P1 | 2h tests |
 | Integración tareas | ✅ | ✅ | ✅ | ❌ | P1 | 1h tests |
-| **Insights / Nudges** | ✅ | ✅ | ✅ | ⚠️ | P2 | 0h |
-| Engine básico | ✅ | ✅ | ✅ | ❌ | P2 | - |
-| Reglas implementadas (9) | ✅ | ✅ | ✅ | ❌ | P2 | - |
-| Accionabilidad | ✅ | ✅ | ✅ | ❌ | P2 | - |
-| Tracking completo | ✅ | ✅ | ✅ | ❌ | P2 | - |
-| Notificaciones push | ✅ | ✅ | ✅ | ⚠️ | P2 | - |
-| Tests notificaciones | ⚠️ | N/A | ⚠️ | ⚠️ | P2 | 2-3h más |
+| **Insights / Nudges** | ✅ | ✅ | ✅ | ✅ | P2 | 0h |
+| Engine básico | ✅ | ✅ | ✅ | ✅ | P2 | - |
+| Reglas implementadas (9) | ✅ | ✅ | ✅ | ✅ | P2 | - |
+| Accionabilidad | ✅ | ✅ | ✅ | ✅ | P2 | - |
+| Tracking completo | ✅ | ✅ | ✅ | ✅ | P2 | - |
+| Notificaciones push | ✅ | ✅ | ✅ | ✅ | P2 | - |
+| Tests notificaciones | ✅ | N/A | ✅ | ✅ | P2 | - |
 | **Design System** | ⚠️ | ⚠️ | ⚠️ | ❌ | P1 | 10-13h |
 | Tokens definidos | ✅ | ✅ | ✅ | ❌ | P1 | - |
 | Unificación | ❌ | ❌ | ❌ | ❌ | P1 | 6-8h |
@@ -902,11 +2384,11 @@ final trendsProvider = FutureProvider<List<TrendPoint>>((ref) async {
 ### 8.1 Cobertura Actual
 
 ```
-Coverage: ~15-20% (estimated)
+Coverage: ~15-20% (estimado)
 
-Unit Tests: ⚠️ Parcial
-Widget Tests: ⚠️ Muy limitados
-Golden Tests: ⚠️ Básico
+Unit Tests: ⚠️ Parcial (suite completa pasa a 23 Nov PM, incluye nudges narratives/notifications)
+Widget Tests: ⚠️ Limitados pero Gantt/Dependencies en verde
+Golden Tests: ⚠️ Básico (responsive_matrix regenerados)
 Integration Tests: ❌ No existen
 ```
 
