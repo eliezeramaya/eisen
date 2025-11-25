@@ -48,195 +48,192 @@ class _ManageDependenciesSheetState
       return true;
     }).toList();
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header
-          Row(
-            children: [
-              Icon(Icons.link, color: theme.colorScheme.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Dependencies for "${widget.task.title}"',
-                  style: theme.textTheme.titleLarge,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.7,
+      maxChildSize: 0.9,
+      minChildSize: 0.5,
+      builder: (context, scrollController) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
           ),
-          const SizedBox(height: 16),
-
-          // Error message
-          if (_errorMessage != null) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.warning,
-                    color: theme.colorScheme.error,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _errorMessage!,
-                      style: TextStyle(
-                        color: theme.colorScheme.onErrorContainer,
+          child: SingleChildScrollView(
+            controller: scrollController,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.link, color: theme.colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Dependencies for "${widget.task.title}"',
+                        style: theme.textTheme.titleLarge,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (_errorMessage != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.warning,
+                          color: theme.colorScheme.error,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: TextStyle(
+                              color: theme.colorScheme.onErrorContainer,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                Text(
+                  'Prerequisites (${currentDeps.length})',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                if (currentDeps.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      'No dependencies yet. This task can start anytime.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  ...currentDeps.map((dep) {
+                    final prerequisiteTask = allTasks.firstWhere(
+                      (t) => t.id == dep.prerequisiteId,
+                      orElse: () => widget.task,
+                    );
+
+                    return _DependencyTile(
+                      prerequisiteTask: prerequisiteTask,
+                      dependency: dep,
+                      onRemove: () {
+                        controller.removeDependency(
+                          prerequisiteId: dep.prerequisiteId,
+                          dependentId: dep.dependentId,
+                        );
+                        setState(() => _errorMessage = null);
+                      },
+                      onTypeChange: (newType) {
+                        controller.updateDependency(
+                          prerequisiteId: dep.prerequisiteId,
+                          dependentId: dep.dependentId,
+                          type: newType,
+                        );
+                      },
+                    );
+                  }),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
+                Text(
+                  'Add Dependency',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                if (availableTasks.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      'No more tasks available to add as prerequisites.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else ...[
+                  DropdownButtonFormField<String>(
+                    value: _selectedPrerequisiteId,
+                    decoration: const InputDecoration(
+                      labelText: 'Select prerequisite task',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: availableTasks.map((task) {
+                      return DropdownMenuItem(
+                        value: task.id,
+                        child: Text(
+                          task.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedPrerequisiteId = value;
+                        _errorMessage = null;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<DependencyType>(
+                    value: _selectedType,
+                    decoration: const InputDecoration(
+                      labelText: 'Dependency type',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: DependencyType.values.map((type) {
+                      return DropdownMenuItem(
+                        value: type,
+                        child: Text(_dependencyTypeLabel(type)),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _selectedType = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    key: const ValueKey('add-dependency-button'),
+                    onPressed: _selectedPrerequisiteId == null
+                        ? null
+                        : () => _addDependency(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Dependency'),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // Current dependencies list
-          Text(
-            'Prerequisites (${currentDeps.length})',
-            style: theme.textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-
-          if (currentDeps.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                'No dependencies yet. This task can start anytime.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                SizedBox(
+                  height: MediaQuery.of(context).viewInsets.bottom + 16,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            )
-          else
-            ...currentDeps.map((dep) {
-              final prerequisiteTask = allTasks.firstWhere(
-                (t) => t.id == dep.prerequisiteId,
-                orElse: () => widget.task,
-              );
-
-              return _DependencyTile(
-                prerequisiteTask: prerequisiteTask,
-                dependency: dep,
-                onRemove: () {
-                  controller.removeDependency(
-                    prerequisiteId: dep.prerequisiteId,
-                    dependentId: dep.dependentId,
-                  );
-                  setState(() => _errorMessage = null);
-                },
-                onTypeChange: (newType) {
-                  controller.updateDependency(
-                    prerequisiteId: dep.prerequisiteId,
-                    dependentId: dep.dependentId,
-                    type: newType,
-                  );
-                },
-              );
-            }),
-
-          const SizedBox(height: 16),
-          const Divider(),
-          const SizedBox(height: 16),
-
-          // Add new dependency section
-          Text(
-            'Add Dependency',
-            style: theme.textTheme.titleMedium,
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-
-          if (availableTasks.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                'No more tasks available to add as prerequisites.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            )
-          else ...[
-            // Task selector
-            DropdownButtonFormField<String>(
-              value: _selectedPrerequisiteId,
-              decoration: const InputDecoration(
-                labelText: 'Select prerequisite task',
-                border: OutlineInputBorder(),
-              ),
-              items: availableTasks.map((task) {
-                return DropdownMenuItem(
-                  value: task.id,
-                  child: Text(
-                    task.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedPrerequisiteId = value;
-                  _errorMessage = null;
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-
-            // Type selector
-            DropdownButtonFormField<DependencyType>(
-              value: _selectedType,
-              decoration: const InputDecoration(
-                labelText: 'Dependency type',
-                border: OutlineInputBorder(),
-              ),
-              items: DependencyType.values.map((type) {
-                return DropdownMenuItem(
-                  value: type,
-                  child: Text(_dependencyTypeLabel(type)),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => _selectedType = value);
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Add button
-            FilledButton.icon(
-              onPressed: _selectedPrerequisiteId == null
-                  ? null
-                  : () => _addDependency(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Dependency'),
-            ),
-          ],
-
-          SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 16),
-        ],
-      ),
+        );
+      },
     );
   }
 

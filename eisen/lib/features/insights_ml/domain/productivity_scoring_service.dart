@@ -195,9 +195,9 @@ class HeuristicProductivityScoringService
     final today = snaps.isNotEmpty
         ? snaps.firstWhere(
             (s) => s.day == DateTime(dayStart.year, dayStart.month, dayStart.day),
-            orElse: () => const UserBehaviorSnapshot(day: DateTime(2000)),
+            orElse: () => UserBehaviorSnapshot(day: DateTime(2000, 1, 1)),
           )
-        : const UserBehaviorSnapshot(day: DateTime(2000));
+        : UserBehaviorSnapshot(day: DateTime(2000, 1, 1));
 
     final trailing = await behaviorService.getDailySnapshots(
       from: dayStart.subtract(const Duration(days: 7)),

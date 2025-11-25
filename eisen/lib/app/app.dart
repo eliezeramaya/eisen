@@ -9,6 +9,7 @@ import 'package:eisen/features/settings/domain/language_controller.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/theme/density.dart';
 import 'package:eisen/utils/breakpoints.dart';
+import 'package:eisen/core/notifications/notifications_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +29,26 @@ class EisenApp extends ConsumerWidget {
     final minimal = ref.watch(
       matrixControllerProvider.select((s) => s.minimal),
     );
+    final router = createRouter();
+    NotificationsService.setOnNudgeSelected((payload) async {
+      switch (payload) {
+        case 'lowQ2':
+        case 'procrastination':
+        case 'noFocusSessions':
+          router.go('/focus');
+          break;
+        case 'dailyOverload':
+        case 'overload':
+          router.go('/matrix');
+          break;
+        case 'quadrantImbalance':
+        case 'excessiveReschedules':
+          router.go('/stats');
+          break;
+        default:
+          router.go('/stats');
+      }
+    });
 
     final light = buildAppTheme(Brightness.light);
     final dark = buildAppTheme(Brightness.dark);
@@ -62,9 +83,8 @@ class EisenApp extends ConsumerWidget {
           data: (v) => v,
           orElse: () => null,
         );
-    final themed = a11y?.highContrast == true
-        ? _withHighContrast(themedBase)
-        : themedBase;
+    final themed =
+        a11y?.highContrast == true ? _withHighContrast(themedBase) : themedBase;
     final darkThemed = a11y?.highContrast == true
         ? _withHighContrast(darkThemedBase)
         : darkThemedBase;
@@ -83,11 +103,9 @@ class EisenApp extends ConsumerWidget {
         final scaledChild = MediaQuery(
           data: mq.copyWith(
             textScaler: TextScaler.linear(tsf),
-            accessibleNavigation: a11y?.reduceAnimations == true
-                ? true
-                : mq.accessibleNavigation,
-            highContrast:
-                a11y?.highContrast == true ? true : mq.highContrast,
+            accessibleNavigation:
+                a11y?.reduceAnimations == true ? true : mq.accessibleNavigation,
+            highContrast: a11y?.highContrast == true ? true : mq.highContrast,
           ),
           child: child ?? const SizedBox.shrink(),
         );
@@ -125,7 +143,7 @@ class EisenApp extends ConsumerWidget {
           ? darkThemed.copyWith(pageTransitionsTheme: _noTransitions)
           : darkThemed,
       themeMode: themeMode,
-      routerConfig: createRouter(),
+      routerConfig: router,
       locale: languageLocale ?? _resolveLocale(ref.watch(uiPrefsProvider)),
       localeResolutionCallback: (device, supported) {
         final forcedLocale = ref
@@ -152,9 +170,8 @@ ThemeData _withHighContrast(ThemeData base) {
   final cs = base.colorScheme;
   final onSurface =
       cs.brightness == Brightness.dark ? Colors.white : Colors.black;
-  final onSurfaceVariant = cs.brightness == Brightness.dark
-      ? Colors.white70
-      : Colors.black87;
+  final onSurfaceVariant =
+      cs.brightness == Brightness.dark ? Colors.white70 : Colors.black87;
   final surface =
       cs.brightness == Brightness.dark ? Colors.black : Colors.white;
   return base.copyWith(

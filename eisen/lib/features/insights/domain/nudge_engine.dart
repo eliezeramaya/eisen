@@ -2,6 +2,9 @@ import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/focus/domain/focus_controller.dart';
 import 'package:eisen/features/insights/domain/nudge.dart';
+import 'package:eisen/features/insights_adaptive/domain/adaptive_policy_engine.dart';
+import 'package:eisen/features/insights_adaptive/domain/adaptive_providers.dart';
+import 'package:eisen/features/insights_adaptive/domain/bandit_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Contract for any component capable of generating nudges (insights).
@@ -47,7 +50,103 @@ class DefaultNudgeEngine implements NudgeEngine {
     nudges
         .addAll(await _checkLateNightWork(tasks, windowStart, windowEnd, now));
 
+    // Aplicar política adaptativa para priorizar un nudge concreto
+    final adaptive = ref.read(adaptivePolicyEngineProvider);
+    final selectedArm = await adaptive.selectBestNudgeArm(now);
+    final prioritized = _mapArmToNudge(
+      selectedArm,
+      tasks: tasks,
+      now: now,
+    );
+    if (prioritized != null) {
+      // Deduplicar por id y poner al frente
+      nudges.removeWhere((n) => n.id == prioritized.id);
+      nudges.insert(0, prioritized);
+    }
+
     return nudges;
+  }
+
+  Nudge? _mapArmToNudge(
+    NudgeArm arm, {
+    required List<Task> tasks,
+    required DateTime now,
+  }) {
+    switch (arm) {
+      case NudgeArm.focusBlock:
+        return Nudge(
+          id: 'bandit-focus-block',
+          type: NudgeType.lowQ2,
+          title: 'Bloquea foco Q2',
+          message:
+              'Reserva 60-90 minutos hoy para avanzar en una tarea importante no urgente.',
+          severity: NudgeSeverity.mediumHigh,
+          category: NudgeCategory.focus,
+          createdAt: now,
+          actions: const [
+            NudgeAction(
+              type: NudgeActionType.openFocus,
+              label: 'Abrir Focus',
+              route: '/focus',
+            ),
+          ],
+        );
+      case NudgeArm.reduceTodayLoad:
+        return Nudge(
+          id: 'bandit-reduce-load',
+          type: NudgeType.overload,
+          title: 'Reduce la carga de hoy',
+          message:
+              'Tu día luce pesado. Mueve 1–2 tareas a mañana para proteger tu foco.',
+          severity: NudgeSeverity.high,
+          category: NudgeCategory.productivity,
+          createdAt: now,
+          actions: const [
+            NudgeAction(
+              type: NudgeActionType.openGantt,
+              label: 'Reorganizar',
+              route: '/workflow-plan',
+            ),
+          ],
+        );
+      case NudgeArm.splitBigTask:
+        final big = tasks.where((t) => t.minutes >= 120).toList();
+        final target = big.isNotEmpty ? big.first.title : 'Tarea grande';
+        return Nudge(
+          id: 'bandit-split-task',
+          type: NudgeType.procrastination,
+          title: 'Divide una tarea grande',
+          message: '“$target” puede dividirse en pasos pequeños para avanzar hoy.',
+          severity: NudgeSeverity.mediumHigh,
+          category: NudgeCategory.organization,
+          createdAt: now,
+          actions: const [
+            NudgeAction(
+              type: NudgeActionType.openMatrix,
+              label: 'Abrir Matriz',
+              route: '/matrix',
+            ),
+          ],
+        );
+      case NudgeArm.dailyShutdown:
+        return Nudge(
+          id: 'bandit-shutdown',
+          type: NudgeType.lateNightWork,
+          title: 'Define tu cierre del día',
+          message:
+              'Termina antes con un ritual simple: revisar mañana, cerrar apps y anotar pendientes.',
+          severity: NudgeSeverity.medium,
+          category: NudgeCategory.health,
+          createdAt: now,
+          actions: const [
+            NudgeAction(
+              type: NudgeActionType.openSettings,
+              label: 'Configurar cierre',
+              route: '/settings',
+            ),
+          ],
+        );
+    }
   }
 
   /// Regla 1: Bajo Q2 en últimos N días.

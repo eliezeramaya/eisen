@@ -15,6 +15,7 @@ import '../widgets/stats_productivity_scores_section.dart';
 import '../widgets/weekly_focus_trend_section.dart';
 import '../widgets/weekly_summary_section.dart';
 import 'package:eisen/features/insights_ml/presentation/widgets/stats_ml_section.dart';
+import 'package:eisen/features/insights_adaptive/presentation/widgets/stats_adaptive_pattern_card.dart';
 
 /// StatsPage — UX/UI dashboard for motivation with calm visuals.
 class StatsPage extends ConsumerStatefulWidget {
@@ -151,6 +152,8 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                 if (advanced) const StatsProductivityScoresSection(),
                 if (advanced) const SizedBox(height: 16),
                 if (advanced) const StatsMlSection(),
+                if (advanced) const SizedBox(height: 16),
+                if (advanced) const StatsAdaptivePatternCard(),
                 const SizedBox(height: 16),
                 WeeklySummarySection(
                   weekly: weekly,

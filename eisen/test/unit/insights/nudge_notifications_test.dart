@@ -249,12 +249,14 @@ String _getTitleByTypeExposed(NudgeType type) {
 List<Nudge> _prioritizeNudgesExposed(List<Nudge> nudges) {
   final sorted = List<Nudge>.from(nudges);
   sorted.sort((a, b) {
-    final severityCompare =
-        _severityValueExposed(b.severity).compareTo(_severityValueExposed(a.severity));
+    final severityCompare = _severityValueExposed(b.severity)
+        .compareTo(_severityValueExposed(a.severity));
     if (severityCompare != 0) return severityCompare;
 
-    final aValue = a.metadata.values.whereType<num>().fold(0.0, (a, b) => a + b);
-    final bValue = b.metadata.values.whereType<num>().fold(0.0, (a, b) => a + b);
+    final aValue =
+        a.metadata.values.whereType<num>().fold(0.0, (a, b) => a + b);
+    final bValue =
+        b.metadata.values.whereType<num>().fold(0.0, (a, b) => a + b);
     return bValue.compareTo(aValue);
   });
   return sorted;

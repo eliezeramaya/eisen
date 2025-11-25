@@ -16,12 +16,12 @@ class NudgeNotificationService {
     required Nudge nudge,
     required NotificationPrefs prefs,
   }) async {
-    // Check if notifications are enabled
+    // Respetar preferencias globales y de nudges
     if (!prefs.notificationsEnabled || !prefs.nudgesEnabled) {
       return;
     }
 
-    // Check quiet hours
+    // No enviar durante horas silenciosas
     if (_isInQuietHours(prefs)) {
       return;
     }
@@ -38,7 +38,7 @@ class NudgeNotificationService {
       id: notificationId,
       title: title,
       body: body,
-      payload: nudge.type.toString(),
+      payload: nudge.type.name, // payload estable para deep-links
     );
   }
 
@@ -66,7 +66,7 @@ class NudgeNotificationService {
       delay: delay,
       title: title,
       body: body,
-      payload: nudge.type.toString(),
+      payload: nudge.type.name,
     );
   }
 
@@ -88,7 +88,7 @@ class NudgeNotificationService {
     // Limit to top 3 nudges by severity
     final topNudges = _prioritizeNudges(nudges).take(3).toList();
 
-    // Send with delays to avoid spamming
+    // Send with delays to avoid spamming (UX: pocos pero importantes)
     for (int i = 0; i < topNudges.length; i++) {
       final nudge = topNudges[i];
       final delay = Duration(seconds: i * 5); // 5 seconds between notifications
@@ -204,8 +204,8 @@ class NudgeNotificationService {
     final sorted = List<Nudge>.from(nudges);
     sorted.sort((a, b) {
       // Compare severity
-      final severityCompare = _severityValue(b.severity)
-          .compareTo(_severityValue(a.severity));
+      final severityCompare =
+          _severityValue(b.severity).compareTo(_severityValue(a.severity));
       if (severityCompare != 0) return severityCompare;
 
       // If same severity, prioritize by metadata values

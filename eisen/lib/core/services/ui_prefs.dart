@@ -25,6 +25,7 @@ class UiPrefsData {
     this.notificationTone = 'default',
     this.workflowPlanEnabled = false,
     this.textScaleLevel = 3,
+    this.advancedInsightsEnabled = true,
     this.ganttTimeScale = 'weeks',
     this.ganttShowBadges = true,
     this.ganttCompactLanes = false,
@@ -60,6 +61,8 @@ class UiPrefsData {
   final bool workflowPlanEnabled;
   // Typography · User text scale (1..5). 3 = default
   final int textScaleLevel;
+  // Insights/IA toggle
+  final bool advancedInsightsEnabled;
   // Calendar/Gantt preferences
   final String ganttTimeScale; // 'days' | 'weeks' | 'months'
   final bool ganttShowBadges;
@@ -91,6 +94,7 @@ class UiPrefsData {
     String? notificationTone,
     bool? workflowPlanEnabled,
     int? textScaleLevel,
+    bool? advancedInsightsEnabled,
     String? ganttTimeScale,
     bool? ganttShowBadges,
     bool? ganttCompactLanes,
@@ -119,6 +123,8 @@ class UiPrefsData {
         notificationTone: notificationTone ?? this.notificationTone,
         workflowPlanEnabled: workflowPlanEnabled ?? this.workflowPlanEnabled,
         textScaleLevel: textScaleLevel ?? this.textScaleLevel,
+        advancedInsightsEnabled:
+            advancedInsightsEnabled ?? this.advancedInsightsEnabled,
         ganttTimeScale: ganttTimeScale ?? this.ganttTimeScale,
         ganttShowBadges: ganttShowBadges ?? this.ganttShowBadges,
         ganttCompactLanes: ganttCompactLanes ?? this.ganttCompactLanes,
@@ -148,6 +154,7 @@ class UiPrefsData {
         'notificationTone': notificationTone,
         'workflowPlanEnabled': workflowPlanEnabled,
         'textScaleLevel': textScaleLevel,
+        'advancedInsightsEnabled': advancedInsightsEnabled,
         'ganttTimeScale': ganttTimeScale,
         'ganttShowBadges': ganttShowBadges,
         'ganttCompactLanes': ganttCompactLanes,
@@ -204,6 +211,8 @@ class UiPrefsData {
       notificationTone: (json['notificationTone'] as String?) ?? 'default',
       workflowPlanEnabled: (json['workflowPlanEnabled'] as bool?) ?? false,
       textScaleLevel: (json['textScaleLevel'] as int?) ?? 3,
+      advancedInsightsEnabled:
+          (json['advancedInsightsEnabled'] as bool?) ?? true,
       ganttTimeScale: (json['ganttTimeScale'] as String?) ?? 'weeks',
       ganttShowBadges: (json['ganttShowBadges'] as bool?) ?? true,
       ganttCompactLanes: (json['ganttCompactLanes'] as bool?) ?? false,
@@ -356,6 +365,11 @@ class UiPrefsController extends Notifier<UiPrefsData> {
 
   Future<void> setNotificationTone(String tone) async {
     state = state.copyWith(notificationTone: tone);
+    await _save();
+  }
+
+  Future<void> setAdvancedInsightsEnabled(bool v) async {
+    state = state.copyWith(advancedInsightsEnabled: v);
     await _save();
   }
 

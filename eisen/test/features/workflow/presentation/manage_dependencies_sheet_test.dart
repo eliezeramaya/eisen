@@ -105,7 +105,7 @@ void main() {
     testWidgets('displays empty state when no dependencies', (tester) async {
       await tester.pumpWidget(buildWidget());
 
-      expect(find.text('No dependencies yet'), findsOneWidget);
+      expect(find.textContaining('No dependencies yet'), findsOneWidget);
     });
 
     testWidgets('displays available tasks dropdown', (tester) async {
@@ -133,44 +133,56 @@ void main() {
       await tester.pumpWidget(buildWidget());
 
       // Should have type selector (default to Finish-to-Start)
-      expect(find.text('Finish-to-Start'), findsOneWidget);
+      expect(find.textContaining('Finish-to-Start'), findsOneWidget);
     });
 
     testWidgets('can change dependency type', (tester) async {
       await tester.pumpWidget(buildWidget());
 
       // Tap type selector
-      await tester.tap(find.text('Finish-to-Start'));
+      await tester.tap(find.textContaining('Finish-to-Start'));
       await tester.pumpAndSettle();
 
       // Should show all 4 types
-      expect(find.text('Start-to-Start').hitTestable(), findsOneWidget);
-      expect(find.text('Finish-to-Finish').hitTestable(), findsOneWidget);
-      expect(find.text('Start-to-Finish').hitTestable(), findsOneWidget);
+      expect(
+        find.textContaining('Start-to-Start').hitTestable(),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Finish-to-Finish').hitTestable(),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Start-to-Finish').hitTestable(),
+        findsOneWidget,
+      );
 
       // Select different type
-      await tester.tap(find.text('Start-to-Start').hitTestable());
+      await tester.tap(find.textContaining('Start-to-Start').hitTestable());
       await tester.pumpAndSettle();
 
       // Should update selection
-      expect(find.text('Start-to-Start'), findsOneWidget);
+      expect(find.textContaining('Start-to-Start'), findsOneWidget);
     });
 
     testWidgets('displays add dependency button', (tester) async {
       await tester.pumpWidget(buildWidget());
 
-      expect(find.text('Add Dependency'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('add-dependency-button')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('add button is disabled when no task selected', (tester) async {
       await tester.pumpWidget(buildWidget());
 
-      final addButton = find.text('Add Dependency');
+      final addButton = find.byKey(const ValueKey('add-dependency-button'));
       expect(addButton, findsOneWidget);
 
       // Button should be present (exact disabled state depends on implementation)
-      final button = tester.widget<ElevatedButton>(
-        find.widgetWithText(ElevatedButton, 'Add Dependency'),
+      final button = tester.widget<FilledButton>(
+        addButton,
       );
       expect(button.onPressed, isNull);
     });
@@ -185,12 +197,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap add button
-      await tester.tap(find.text('Add Dependency'));
+      final addButton = find.byKey(const ValueKey('add-dependency-button'));
+      await tester.ensureVisible(addButton);
+      await tester.tap(addButton);
       await tester.pumpAndSettle();
 
       // Should show the added dependency in the list
       expect(find.text('Prerequisite Task'), findsWidgets);
-      expect(find.text('No dependencies yet'), findsNothing);
+      expect(find.textContaining('No dependencies yet'), findsNothing);
     });
 
     testWidgets('displays existing dependencies', (tester) async {
@@ -222,7 +236,10 @@ void main() {
 
       // Should display existing dependency
       expect(find.text('Prerequisite Task'), findsOneWidget);
-      expect(find.text('Finish-to-Start'), findsWidgets);
+      expect(
+        find.text('Starts when prerequisite finishes'),
+        findsWidgets,
+      );
     });
 
     testWidgets('can remove an existing dependency', (tester) async {
@@ -253,11 +270,11 @@ void main() {
       expect(find.text('Prerequisite Task'), findsOneWidget);
 
       // Find and tap remove button (delete icon)
-      await tester.tap(find.byIcon(Icons.delete).first);
+      await tester.tap(find.byIcon(Icons.delete_outline).first);
       await tester.pumpAndSettle();
 
       // Dependency should be removed
-      expect(find.text('No dependencies yet'), findsOneWidget);
+      expect(find.textContaining('No dependencies yet'), findsOneWidget);
     });
 
     testWidgets('shows error message when adding cyclic dependency',
@@ -297,13 +314,15 @@ void main() {
       await tester.pumpAndSettle();
 
       // Try to add (should fail with cycle error)
-      await tester.tap(find.text('Add Dependency'));
+      final addButton = find.byKey(const ValueKey('add-dependency-button'));
+      await tester.ensureVisible(addButton);
+      await tester.tap(addButton);
       await tester.pumpAndSettle();
 
       // Should show error message
       expect(find.byIcon(Icons.warning), findsOneWidget);
       expect(
-        find.textContaining('cycle', findRichText: true),
+        find.textContaining('Cycle', findRichText: true),
         findsOneWidget,
         reason: 'Should display error message about cycle',
       );

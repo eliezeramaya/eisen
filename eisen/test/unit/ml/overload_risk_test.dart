@@ -31,29 +31,29 @@ class _FakeBehavior implements UserBehaviorService {
 void main() {
   test('computeDailyOverloadRisk scales with planned vs average', () async {
     final behavior = _FakeBehavior([
-      const UserBehaviorSnapshot(day: const DateTime(2025, 1, 9), tasksCreated: 10),
-      const UserBehaviorSnapshot(day: const DateTime(2025, 1, 8), tasksCompleted: 2),
-      const UserBehaviorSnapshot(day: const DateTime(2025, 1, 7), tasksCompleted: 2),
+      UserBehaviorSnapshot(day: DateTime(2025, 1, 9), tasksCreated: 10),
+      UserBehaviorSnapshot(day: DateTime(2025, 1, 8), tasksCompleted: 2),
+      UserBehaviorSnapshot(day: DateTime(2025, 1, 7), tasksCompleted: 2),
     ]);
     final service = HeuristicProductivityScoringService(
       behaviorService: behavior,
       analyticsService: _FakeAnalytics(),
     );
     final risk =
-        await service.computeDailyOverloadRisk(const DateTime(2025, 1, 9));
+        await service.computeDailyOverloadRisk(DateTime(2025, 1, 9));
     expect(risk.score, greaterThan(0.6));
 
     final behaviorLow = _FakeBehavior([
-      const UserBehaviorSnapshot(day: const DateTime(2025, 1, 9), tasksCreated: 1),
-      const UserBehaviorSnapshot(day: const DateTime(2025, 1, 8), tasksCompleted: 3),
-      const UserBehaviorSnapshot(day: const DateTime(2025, 1, 7), tasksCompleted: 3),
+      UserBehaviorSnapshot(day: DateTime(2025, 1, 9), tasksCreated: 1),
+      UserBehaviorSnapshot(day: DateTime(2025, 1, 8), tasksCompleted: 3),
+      UserBehaviorSnapshot(day: DateTime(2025, 1, 7), tasksCompleted: 3),
     ]);
     final lowService = HeuristicProductivityScoringService(
       behaviorService: behaviorLow,
       analyticsService: _FakeAnalytics(),
     );
     final lowRisk =
-        await lowService.computeDailyOverloadRisk(const DateTime(2025, 1, 9));
+        await lowService.computeDailyOverloadRisk(DateTime(2025, 1, 9));
     expect(lowRisk.score, lessThan(risk.score));
   });
 }

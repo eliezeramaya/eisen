@@ -24,6 +24,8 @@ import 'package:eisen/features/insights/domain/nudge.dart';
 import 'package:eisen/features/insights/domain/nudge_controller.dart';
 import 'package:eisen/features/insights_ml/domain/productivity_scoring_service.dart';
 import 'package:eisen/features/insights_ml/domain/productivity_scores.dart';
+import 'package:eisen/features/insights_adaptive/domain/adaptive_providers.dart';
+import 'package:eisen/features/insights_adaptive/domain/cluster_models.dart';
 import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/l10n/app_localizations_en.dart';
@@ -160,12 +162,18 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         ? ref.watch(todayProductivityScoreProvider)
         : const AsyncData<DailyProductivityScore?>(null);
     final overloadRiskAsync = ref.watch(overloadRiskTodayProvider);
-    final overloadRisk = overloadRiskAsync.valueOrNull;
+    final overloadRisk =
+        overloadRiskAsync.maybeWhen(data: (v) => v, orElse: () => null);
     final warningTasks = tasks
         .where((t) =>
             t.completedAt == null && _procrastinationScore(t) >= 0.75)
         .map((t) => t.id)
         .toSet();
+    final adaptiveProfileAsync = ref.watch(
+      FutureProvider<UserProductivityProfile>((ref) {
+        return ref.read(adaptivePolicyEngineProvider).getCurrentProfile();
+      }),
+    );
 
     return Scaffold(
       key: _scaffoldKey,
@@ -324,6 +332,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                 tasks: tasks,
                                 nudge: firstNudge,
                                 overloadRisk: overloadRisk,
+                                profileAsync: adaptiveProfileAsync,
                                 onDismissNudge: () {
                                   if (firstNudge != null) {
                                     nudgeCtrl.dismissNudge(firstNudge);
@@ -994,6 +1003,7 @@ Widget _buildBanner({
   required List<Task> tasks,
   required Nudge? nudge,
   OverloadRisk? overloadRisk,
+  AsyncValue<UserProductivityProfile>? profileAsync,
   required VoidCallback onDismissNudge,
   required VoidCallback onOpenStats,
   required VoidCallback onOpenQ2Picker,
@@ -1004,7 +1014,14 @@ Widget _buildBanner({
   scoreAsync.whenData((s) => score = s);
 
   Widget? banner;
-  if (overloadRisk != null && overloadRisk.score >= 0.8) {
+  if (profileAsync != null && profileAsync.value?.cluster != null) {
+    final cluster = profileAsync.value!.cluster;
+    final bannerContent = _adaptiveBanner(cluster, onOpenStats, onOpenQ2Picker);
+    if (bannerContent != null) {
+      banner = bannerContent;
+    }
+  }
+  if (banner == null && overloadRisk != null && overloadRisk.score >= 0.8) {
     banner = EisenCard(
       margin: const EdgeInsets.fromLTRB(
         EisenSpacing.md,
@@ -1170,6 +1187,89 @@ void _openQ2Picker(BuildContext context, List<Task> tasks) {
       );
     },
   );
+}
+
+Widget? _adaptiveBanner(
+  ProductivityCluster cluster,
+  VoidCallback onOpenStats,
+  VoidCallback onOpenQ2Picker,
+) {
+  switch (cluster) {
+    case ProductivityCluster.morningStrong:
+      return EisenCard(
+        margin: const EdgeInsets.fromLTRB(
+          EisenSpacing.md,
+          EisenSpacing.md,
+          EisenSpacing.md,
+          EisenSpacing.sm,
+        ),
+        padding: const EdgeInsets.all(EisenSpacing.sm),
+        child: Row(
+          children: [
+            const Icon(Icons.wb_sunny_outlined),
+            const SizedBox(width: EisenSpacing.sm),
+            const Expanded(
+              child: Text(
+                  'Tus mañanas rinden más. Mueve una tarea Q2 a primera hora.'),
+            ),
+            TextButton(
+              onPressed: onOpenQ2Picker,
+              child: const Text('Mover Q2'),
+            ),
+          ],
+        ),
+      );
+    case ProductivityCluster.nightSprinter:
+      return EisenCard(
+        margin: const EdgeInsets.fromLTRB(
+          EisenSpacing.md,
+          EisenSpacing.md,
+          EisenSpacing.md,
+          EisenSpacing.sm,
+        ),
+        padding: const EdgeInsets.all(EisenSpacing.sm),
+        child: Row(
+          children: [
+            const Icon(Icons.nightlight_round),
+            const SizedBox(width: EisenSpacing.sm),
+            const Expanded(
+              child:
+                  Text('Has trabajado tarde varios días. Prueba un cierre antes.'),
+            ),
+            TextButton(
+              onPressed: onOpenStats,
+              child: const Text('Configurar cierre'),
+            ),
+          ],
+        ),
+      );
+    case ProductivityCluster.starterButNotFinisher:
+      return EisenCard(
+        margin: const EdgeInsets.fromLTRB(
+          EisenSpacing.md,
+          EisenSpacing.md,
+          EisenSpacing.md,
+          EisenSpacing.sm,
+        ),
+        padding: const EdgeInsets.all(EisenSpacing.sm),
+        child: Row(
+          children: [
+            const Icon(Icons.call_split),
+            const SizedBox(width: EisenSpacing.sm),
+            const Expanded(
+              child: Text(
+                  'Inicias muchas tareas. Divide una grande en pasos pequeños hoy.'),
+            ),
+            TextButton(
+              onPressed: onOpenQ2Picker,
+              child: const Text('Dividir'),
+            ),
+          ],
+        ),
+      );
+    case ProductivityCluster.unknown:
+      return null;
+  }
 }
 
 double _procrastinationScore(Task task) {

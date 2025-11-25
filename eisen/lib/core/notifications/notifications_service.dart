@@ -4,13 +4,26 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 class NotificationsService {
   static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
+  static Future<void> Function(String payload)? _onNudgeSelected;
+
+  static void setOnNudgeSelected(
+      Future<void> Function(String payload)? handler) {
+    _onNudgeSelected = handler;
+  }
 
   static Future<void> init() async {
     if (_initialized) return;
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings();
-    await _plugin
-        .initialize(const InitializationSettings(android: android, iOS: ios));
+    await _plugin.initialize(
+      const InitializationSettings(android: android, iOS: ios),
+      onDidReceiveNotificationResponse: (resp) async {
+        final payload = resp.payload;
+        if (payload != null) {
+          await _onNudgeSelected?.call(payload);
+        }
+      },
+    );
     _initialized = true;
   }
 
@@ -146,7 +159,7 @@ class NotificationsService {
           presentSound: true,
         ),
       );
-      
+
       // Use simple delayed notification
       await Future.delayed(delay, () async {
         await _plugin.show(id, title, body, details, payload: payload);

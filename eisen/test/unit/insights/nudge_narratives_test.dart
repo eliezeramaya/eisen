@@ -382,6 +382,36 @@ void main() {
             expect(nudge.metadata.containsKey('q1Today'), true);
             expect(nudge.metadata.containsKey('totalMinutes'), true);
             break;
+          case NudgeType.procrastination:
+            expect(nudge.metadata.containsKey('bigTasksCount'), true);
+            expect(nudge.metadata.containsKey('oldestDays'), true);
+            expect(nudge.metadata.containsKey('threshold'), true);
+            break;
+          case NudgeType.quadrantImbalance:
+            expect(nudge.metadata.containsKey('total'), true);
+            expect(nudge.metadata.containsKey('share'), true);
+            expect(
+              nudge.metadata.keys
+                  .any((k) => k == 'q1' || k == 'q3' || k == 'q4'),
+              true,
+            );
+            break;
+          case NudgeType.noProject:
+            expect(nudge.metadata.containsKey('noProject'), true);
+            expect(nudge.metadata.containsKey('total'), true);
+            expect(nudge.metadata.containsKey('ratio'), true);
+            break;
+          case NudgeType.dailyOverload:
+            expect(nudge.metadata.containsKey('dueToday'), true);
+            expect(nudge.metadata.containsKey('totalMinutes'), true);
+            break;
+          case NudgeType.noFocusSessions:
+            expect(nudge.metadata.containsKey('daysSinceLastSession'), true);
+            break;
+          case NudgeType.lateNightWork:
+            expect(nudge.metadata.containsKey('lateNightTasks'), true);
+            expect(nudge.metadata.containsKey('distinctNights'), true);
+            break;
         }
       }
     });

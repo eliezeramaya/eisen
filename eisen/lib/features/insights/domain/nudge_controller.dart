@@ -1,10 +1,15 @@
 import 'dart:async';
 
+import 'package:eisen/core/analytics/analytics_service.dart';
+import 'package:eisen/core/analytics/user_event.dart';
 import 'package:eisen/features/insights/data/nudge_tracking_repository.dart';
 import 'package:eisen/features/insights/domain/nudge.dart';
 import 'package:eisen/features/insights/domain/nudge_engine.dart';
 import 'package:eisen/features/insights/domain/nudge_notification_service.dart';
 import 'package:eisen/features/insights/domain/nudge_tracking.dart';
+import 'package:eisen/features/insights_adaptive/domain/adaptive_providers.dart';
+import 'package:eisen/features/insights_adaptive/domain/bandit_models.dart';
+import 'package:eisen/features/settings/domain/notification_prefs.dart';
 import 'package:eisen/features/settings/domain/notification_prefs_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -109,6 +114,18 @@ class NudgeController extends AsyncNotifier<NudgesState> {
       final updated = existing?.markAsSeen() ??
           NudgeTrackingData(nudgeId: nudge.id).markAsSeen();
       trackings.add(updated);
+
+      unawaited(_logEvent(
+        UserEvent(
+          type: UserEventType.nudgeShown,
+          timestamp: DateTime.now(),
+          metadata: {
+            'nudgeId': nudge.id,
+            'nudgeType': nudge.type.name,
+            'severity': nudge.severity.name,
+          },
+        ),
+      ));
     }
 
     await trackingRepo.saveMultiple(trackings);
@@ -130,6 +147,17 @@ class NudgeController extends AsyncNotifier<NudgesState> {
     await _trackDismissal(nudge.id);
   }
 
+  Future<void> markUseful(Nudge nudge) async {
+    await _trackAction(nudge.id);
+  }
+
+  Future<void> resetLearning() async {
+    final trackingRepo = ref.read(nudgeTrackingRepositoryProvider);
+    await trackingRepo.clearAll();
+    await _persistDismissed(<String>{});
+    state = const AsyncData(NudgesState(nudges: [], lastCalculatedAt: null));
+  }
+
   Future<void> _trackDismissal(String nudgeId) async {
     final trackingRepo = ref.read(nudgeTrackingRepositoryProvider);
     final existing = await trackingRepo.getTracking(nudgeId);
@@ -147,6 +175,18 @@ class NudgeController extends AsyncNotifier<NudgesState> {
 
     // Registrar acción en tracking
     await _trackAction(nudge.id);
+    _registerAdaptiveReward(nudge, true);
+    unawaited(_logEvent(
+      UserEvent(
+        type: UserEventType.nudgeActionExecuted,
+        timestamp: DateTime.now(),
+        metadata: {
+          'nudgeId': nudge.id,
+          'nudgeType': nudge.type.name,
+          'actionType': action.type.name,
+        },
+      ),
+    ));
   }
 
   Future<void> _trackAction(String nudgeId) async {
@@ -157,9 +197,24 @@ class NudgeController extends AsyncNotifier<NudgesState> {
     await trackingRepo.saveTracking(updated);
   }
 
+  void _registerAdaptiveReward(Nudge nudge, bool acted) {
+    final arm = switch (nudge.id) {
+      'bandit-focus-block' => NudgeArm.focusBlock,
+      'bandit-reduce-load' => NudgeArm.reduceTodayLoad,
+      'bandit-split-task' => NudgeArm.splitBigTask,
+      'bandit-shutdown' => NudgeArm.dailyShutdown,
+      _ => null,
+    };
+    if (arm == null) return;
+    final adaptive = ref.read(adaptivePolicyEngineProvider);
+    unawaited(adaptive.registerNudgeOutcome(arm, acted));
+  }
+
   /// Envía notificaciones para nudges de alta prioridad que son nuevos
   Future<void> _sendNotificationsIfNeeded(
-      List<Nudge> nudges, notificationPrefs) async {
+    List<Nudge> nudges,
+    NotificationPrefs notificationPrefs,
+  ) async {
     // Solo enviar notificaciones para nudges de severidad alta o mediumHigh
     final highPriorityNudges = nudges
         .where((n) =>
@@ -182,7 +237,7 @@ class NudgeController extends AsyncNotifier<NudgesState> {
     }
 
     if (newNudges.isNotEmpty) {
-      // Enviar notificaciones en batch (máximo 3)
+      // Enviar notificaciones en batch (máximo 3) para no saturar
       await NudgeNotificationService.sendBatchNudges(
         nudges: newNudges,
         prefs: notificationPrefs,
@@ -211,3 +266,11 @@ final nudgeControllerProvider =
     AsyncNotifierProvider<NudgeController, NudgesState>(
   NudgeController.new,
 );
+
+extension _NudgeAnalytics on NudgeController {
+  AnalyticsService _analytics() => ref.read(analyticsServiceProvider);
+
+  Future<void> _logEvent(UserEvent event) {
+    return _analytics().logEvent(event);
+  }
+}

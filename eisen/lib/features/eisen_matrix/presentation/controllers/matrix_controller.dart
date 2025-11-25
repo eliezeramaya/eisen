@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:eisen/core/analytics/analytics_service.dart';
+import 'package:eisen/core/analytics/user_event.dart';
 import 'package:eisen/core/haptics/haptics_service.dart';
 import 'package:eisen/core/services/storage_prefs.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
@@ -529,6 +531,20 @@ class MatrixController extends Notifier<MatrixState> {
 
     _computeLayoutUseCase.markDirty({quadrant});
     unawaited(persist());
+    unawaited(_logEvent(
+      UserEvent(
+        type: UserEventType.taskCreated,
+        timestamp: DateTime.now(),
+        metadata: {
+          'taskId': task.id,
+          'quadrant': quadrant.name,
+          'projectId': task.projectId,
+          'due': task.due?.toIso8601String(),
+          'minutes': task.minutes,
+          'priority': task.priority,
+        },
+      ),
+    ));
 
     return task.id;
   }
@@ -553,6 +569,24 @@ class MatrixController extends Notifier<MatrixState> {
     _computeLayoutUseCase.markDirty(dirtyQuadrants);
 
     unawaited(persist());
+
+    // Instrumentar replanificaciones (cambio de due o replanCount).
+    final dueChanged = prev.due != next.due;
+    final replanChanged = prev.replanCount != next.replanCount;
+    if (dueChanged || replanChanged) {
+      unawaited(_logEvent(
+        UserEvent(
+          type: UserEventType.taskRescheduled,
+          timestamp: DateTime.now(),
+          metadata: {
+            'taskId': next.id,
+            'oldDue': prev.due?.toIso8601String(),
+            'newDue': next.due?.toIso8601String(),
+            'replanCount': next.replanCount,
+          },
+        ),
+      ));
+    }
   }
 
   void deleteTask(String id) {
@@ -586,6 +620,29 @@ class MatrixController extends Notifier<MatrixState> {
     // Haptic feedback on task completion
     final haptics = ref.read(hapticsServiceProvider);
     haptics.light();
+
+    final completed = state.tasks.firstWhere(
+      (t) => t.id == id,
+      orElse: () => Task(
+        id: id,
+        title: '',
+        quadrant: Quadrant.q2,
+        priority: 5,
+        minutes: 60,
+      ),
+    );
+    unawaited(_logEvent(
+      UserEvent(
+        type: UserEventType.taskCompleted,
+        timestamp: DateTime.now(),
+        metadata: {
+          'taskId': completed.id,
+          'quadrant': completed.quadrant.name,
+          'projectId': completed.projectId,
+          'due': completed.due?.toIso8601String(),
+        },
+      ),
+    ));
   }
 
   /// Resets the matrix view to the initial "home" state.
@@ -932,6 +989,14 @@ class MatrixController extends Notifier<MatrixState> {
 
 final matrixControllerProvider =
     NotifierProvider<MatrixController, MatrixState>(MatrixController.new);
+
+extension _MatrixAnalytics on MatrixController {
+  AnalyticsService _analytics() => ref.read(analyticsServiceProvider);
+
+  Future<void> _logEvent(UserEvent event) {
+    return _analytics().logEvent(event);
+  }
+}
 
 // Example of selective providers to minimize rebuilds where used
 final matrixVersionProvider = Provider<int>(

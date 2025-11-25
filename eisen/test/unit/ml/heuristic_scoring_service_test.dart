@@ -39,16 +39,16 @@ class _FakeBehavior implements UserBehaviorService {
   }) async {
     return snapshots
         .where((s) =>
-            !s.day.isBefore(const DateTime(from.year, from.month, from.day)) &&
+            !s.day.isBefore(DateTime(from.year, from.month, from.day)) &&
             s.day.isBefore(
-                const DateTime(to.year, to.month, to.day).add(const Duration(days: 1))))
+                DateTime(to.year, to.month, to.day).add(const Duration(days: 1))))
         .toList();
   }
 }
 
 void main() {
   group('HeuristicProductivityScoringService', () {
-    final now = const DateTime(2025, 1, 10, 9);
+    final now = DateTime(2025, 1, 10, 9);
     final analytics = _FakeAnalytics([
       UserEvent(
         type: UserEventType.focusSessionEnded,
@@ -62,13 +62,13 @@ void main() {
       ),
     ]);
     final behavior = _FakeBehavior([
-      const UserBehaviorSnapshot(
-        day: const DateTime(2025, 1, 9),
+      UserBehaviorSnapshot(
+        day: DateTime(2025, 1, 9),
         tasksCreated: 5,
         tasksCompleted: 3,
       ),
-      const UserBehaviorSnapshot(
-        day: const DateTime(2025, 1, 10),
+      UserBehaviorSnapshot(
+        day: DateTime(2025, 1, 10),
         tasksCreated: 6,
         tasksCompleted: 2,
       ),
@@ -116,7 +116,10 @@ void main() {
     });
 
     test('computeFocusWindows finds best hour bucket', () async {
-      final windows = await service.computeFocusWindows();
+      final windows = await service.computeFocusWindows(
+        from: now.subtract(const Duration(days: 1)),
+        to: now.add(const Duration(days: 1)),
+      );
       expect(windows, isNotEmpty);
       // Highest duration/count bucket is hour 9 (50 minutes) vs hour 6 (20)
       expect(windows.first.start.hour, 9);

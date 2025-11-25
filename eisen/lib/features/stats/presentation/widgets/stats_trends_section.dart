@@ -51,6 +51,14 @@ class StatsTrendsSection extends ConsumerWidget {
             ),
           ],
         ),
+        const SizedBox(height: _eisenSpacingXs),
+        Text(
+          'Insights avanzados sobre tu ritmo y equilibrio.',
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
         const SizedBox(height: _eisenSpacingMd),
         // Range selector chips
         _RangeSelector(currentRange: currentRange),
