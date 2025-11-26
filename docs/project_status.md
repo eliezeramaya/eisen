@@ -3,7 +3,7 @@
 **Estado del repositorio**: Commit `latest` | Versión `1.1.0+2`  
 **Documento técnico maestro** para desarrollo con VS Code + Copilot  
 **Autor**: ChatGPT – Ingeniería UX/UI & Flutter Clean Architecture  
-**Última actualización**: 25 de November 2025
+**Última actualización**: 26 de November 2025
 
 ---
 
@@ -2422,14 +2422,14 @@ Integration Tests: ❌ No existen
 ### 9.1 Estado Actual
 
 ```
-Progreso Global: 73% completo
+Progreso Global: 80% completo
 
 P0: 85% (21-30h restantes)
 P1: 73% (32-43h restantes, 18-21h completadas)
 P2: 70% (13-25h restantes, 29-32h completadas)
 P3: 100% (0h restantes, COMPLETADO)
 
-LOC: ~32095+
+LOC: ~33835+
 Archivos: 223+
 Features completos: 17/17
 Features parciales: 0/17
@@ -2570,7 +2570,7 @@ Este documento representa el estado completo del proyecto **Eisen** con las últ
 ---
 
 **Mantenido por**: ChatGPT + Equipo  
-**Última actualización**: 25 de November 2025
+**Última actualización**: 26 de November 2025
 **Próxima revisión**: Post-Sprint 1
 
 ---
