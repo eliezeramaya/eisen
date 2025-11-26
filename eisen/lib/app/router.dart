@@ -1,7 +1,8 @@
 import 'package:eisen/features/calendar_gantt/presentation/pages/workflow_plan_page.dart';
 import 'package:eisen/features/completed_tasks/presentation/pages/completed_matrix_page.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/matrix_page.dart';
-import 'package:eisen/features/focus/presentation/pages/focus_page.dart';
+import 'package:eisen/features/focus/presentation/pages/focus_dashboard_page.dart';
+import 'package:eisen/features/focus/presentation/pages/pomodoro_session_page.dart';
 import 'package:eisen/features/settings/presentation/pages/settings_screen.dart';
 import 'package:eisen/features/stats/presentation/pages/stats_page.dart';
 import 'package:eisen/ui/list_mode/list_mode_screen.dart';
@@ -34,7 +35,28 @@ final GoRouter _router = GoRouter(
       path: '/focus',
       name: 'focus',
       pageBuilder: (context, state) =>
-          _fadeSlidePage(state, const FocusPage()),
+          _fadeSlidePage(state, const FocusDashboardPage()),
+      routes: [
+        GoRoute(
+          path: 'session',
+          name: 'pomodoro-session',
+          pageBuilder: (context, state) {
+            final durationMinutes = int.tryParse(
+                  state.uri.queryParameters['minutes'] ?? '',
+                ) ??
+                25;
+            final presetLabel = state.uri.queryParameters['label'];
+            return _fadeSlidePage(
+              state,
+              PomodoroSessionPage(
+                initialDuration: Duration(minutes: durationMinutes),
+                presetLabel: presetLabel,
+                autoStart: true,
+              ),
+            );
+          },
+        ),
+      ],
     ),
     GoRoute(
       path: '/settings',
