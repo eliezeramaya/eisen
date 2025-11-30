@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:eisen/features/eisen_matrix/domain/category_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -33,13 +34,16 @@ class UiPrefsData {
     this.ganttShowTodayLine = true,
     this.densityPreset = 'auto', // 'auto' | 'comfy' | 'compact' | 'ultra'
     this.viewMode = 'treemap', // 'treemap' | 'list'
+    this.minTileSizePx =
+        44.0, // 30-44px, responsive (desktop: 30-44, mobile: 40-44)
+    this.categoryColors = const {}, // User color overrides per category
   });
   final ThemeMode themeMode;
   final bool compact;
   final bool showAxisLegends;
   final bool minimal;
   // Treemap layout settings
-  final int topKPerQuadrant; // 5..100
+  final int topKPerQuadrant; // 5..100 (extended for desktop power users)
   final double gamma; // 0.70..1.00
   final double minAreaNormalized; // 2e-5 .. 2e-4
   final double quadrantPadding; // 0.0 .. 0.02
@@ -73,6 +77,11 @@ class UiPrefsData {
   final String densityPreset; // 'auto' | 'comfy' | 'compact' | 'ultra'
   // Matrix view mode (desktop): treemap (default) or list (2x2)
   final String viewMode; // 'treemap' | 'list'
+  // Minimum tile size in pixels (affects treemap density)
+  // Desktop: allows 30-44px | Mobile: enforces 40-44px for touch targets
+  final double minTileSizePx; // 30.0..44.0
+  // Category color overrides (key: normalized category name, value: ARGB color as int)
+  final Map<String, int> categoryColors;
 
   UiPrefsData copyWith({
     ThemeMode? themeMode,
@@ -102,6 +111,8 @@ class UiPrefsData {
     bool? ganttShowTodayLine,
     String? densityPreset,
     String? viewMode,
+    double? minTileSizePx,
+    Map<String, int>? categoryColors,
   }) =>
       UiPrefsData(
         themeMode: themeMode ?? this.themeMode,
@@ -132,6 +143,8 @@ class UiPrefsData {
         ganttShowTodayLine: ganttShowTodayLine ?? this.ganttShowTodayLine,
         densityPreset: densityPreset ?? this.densityPreset,
         viewMode: viewMode ?? this.viewMode,
+        minTileSizePx: minTileSizePx ?? this.minTileSizePx,
+        categoryColors: categoryColors ?? this.categoryColors,
       );
 
   Map<String, Object?> toJson() => {
@@ -162,6 +175,8 @@ class UiPrefsData {
         'ganttShowTodayLine': ganttShowTodayLine,
         'densityPreset': densityPreset,
         'viewMode': viewMode,
+        'minTileSizePx': minTileSizePx,
+        'categoryColors': categoryColors,
       };
 
   static UiPrefsData fromJson(Map<String, Object?> json) {
@@ -220,7 +235,27 @@ class UiPrefsData {
       ganttShowTodayLine: (json['ganttShowTodayLine'] as bool?) ?? true,
       densityPreset: (json['densityPreset'] as String?) ?? 'auto',
       viewMode: (json['viewMode'] as String?) ?? 'treemap',
+      minTileSizePx: (json['minTileSizePx'] is num)
+          ? (json['minTileSizePx'] as num).toDouble().clamp(30.0, 44.0)
+          : 44.0,
+      categoryColors: (json['categoryColors'] is Map)
+          ? Map<String, int>.from(json['categoryColors'] as Map)
+          : const {},
     );
+  }
+
+  /// Get CategoryColorService instance with user overrides applied.
+  CategoryColorService get categoryColorService {
+    return CategoryColorService(
+      overrides: _buildOverridesFromPrefs(),
+    );
+  }
+
+  /// Convert stored int colors (ARGB) to Color objects for CategoryColorService.
+  Map<String, Color> _buildOverridesFromPrefs() {
+    return {
+      for (final entry in categoryColors.entries) entry.key: Color(entry.value),
+    };
   }
 }
 
@@ -398,6 +433,43 @@ class UiPrefsController extends Notifier<UiPrefsData> {
     const allowed = {'treemap', 'list'};
     final m = allowed.contains(mode) ? mode : 'treemap';
     state = state.copyWith(viewMode: m);
+    await _save();
+  }
+
+  /// Toggle between treemap and list view modes.
+  /// Automatically suggests list mode on desktop screens (≥1240px).
+  Future<void> toggleViewMode() async {
+    final newMode = state.viewMode == 'treemap' ? 'list' : 'treemap';
+    await setViewMode(newMode);
+  }
+
+  /// Set minimum tile size in pixels with responsive enforcement.
+  /// Desktop (≥1240px): Allows 30-44px for high density.
+  /// Mobile (<1240px): Enforces minimum 40px for touch accessibility.
+  Future<void> setMinTileSize(double sizePx, {required bool isDesktop}) async {
+    final minAllowed = isDesktop ? 30.0 : 40.0;
+    final maxAllowed = 44.0;
+    final clamped = sizePx.clamp(minAllowed, maxAllowed);
+    state = state.copyWith(minTileSizePx: clamped);
+    await _save();
+  }
+
+  /// Update color override for a specific category.
+  /// Category name will be normalized (lowercase, trimmed) before storage.
+  Future<void> updateCategoryColor(String category, Color color) async {
+    final normalized = category.trim().toLowerCase();
+    final updated = Map<String, int>.from(state.categoryColors);
+    updated[normalized] = color.toARGB32();
+    state = state.copyWith(categoryColors: updated);
+    await _save();
+  }
+
+  /// Remove color override for a category, reverting to hash-based color.
+  Future<void> removeCategoryColor(String category) async {
+    final normalized = category.trim().toLowerCase();
+    final updated = Map<String, int>.from(state.categoryColors);
+    updated.remove(normalized);
+    state = state.copyWith(categoryColors: updated);
     await _save();
   }
 

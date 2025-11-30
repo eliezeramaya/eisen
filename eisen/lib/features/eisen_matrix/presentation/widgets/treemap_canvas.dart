@@ -7,10 +7,11 @@ import 'package:eisen/core/theme/animation_tokens.dart';
 import 'package:eisen/core/theme/app_theme.dart';
 import 'package:eisen/core/ui/ui_tokens.dart';
 import 'package:eisen/core/ui/ui_typography.dart' as typography;
+import 'package:eisen/features/eisen_matrix/domain/category_colors.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
-import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_debug.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/_last_moved_highlight_overlay.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_debug.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -38,6 +39,8 @@ class TreemapCanvas extends StatefulWidget {
     this.lastMovedTaskId,
     this.loading = false,
     this.warningTaskIds = const <String>{},
+    this.minTileSizePx = 44.0, // Default fallback
+    this.categoryColorService, // Optional, falls back to default palette
   });
   final List<Task> tasks;
   final List<TreemapRect> layout;
@@ -60,6 +63,10 @@ class TreemapCanvas extends StatefulWidget {
   final String? lastMovedTaskId;
   final bool loading;
   final Set<String> warningTaskIds;
+  // Minimum tile size for stacking threshold (desktop: 30-44, mobile: 40-44)
+  final double minTileSizePx;
+  // Category color service for consistent category colors (optional)
+  final CategoryColorService? categoryColorService;
 
   @override
   State<TreemapCanvas> createState() => _TreemapCanvasState();
@@ -89,6 +96,10 @@ class _TreemapCanvasState extends State<TreemapCanvas>
   Quadrant? _pulseQuadrant;
   // Increments whenever a new layout list is provided, used to invalidate path cache
   int _layoutVersion = 0;
+
+  // Desktop hover tooltip state
+  String? _hoveredTaskId;
+  Offset? _hoverPosition;
 
   @override
   void initState() {
@@ -250,6 +261,10 @@ class _TreemapCanvasState extends State<TreemapCanvas>
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
+
+        // Check if we're on desktop (for hover tooltip)
+        final isDesktop = constraints.maxWidth >= 1240;
+
         // Provide a safe fallback for theme tokens so tests that don't install the app theme don't crash
         final glassTokens = Theme.of(context).extension<GlassTokens>() ??
             const GlassTokens(
@@ -269,8 +284,8 @@ class _TreemapCanvasState extends State<TreemapCanvas>
         );
         // Compute tiny tiles per quadrant only if no integrated stacks present
         // Adjust minimum area threshold based on density mode to make the change noticeable
-        final double minAreaPx =
-            LayoutConstants.minTileAreaPx * (widget.compact ? 0.7 : 1.0);
+        final double minAreaPx = (widget.minTileSizePx * widget.minTileSizePx) *
+            (widget.compact ? 0.7 : 1.0);
         final tinyByQ = <Quadrant, List<TreemapRect>>{
           Quadrant.q1: [],
           Quadrant.q2: [],
@@ -281,8 +296,8 @@ class _TreemapCanvasState extends State<TreemapCanvas>
           for (final tr in widget.layout) {
             final r = _px(tr.rect01, size);
             // Represent as tiny if smaller than min interactive area (squared)
-            if (r.width < LayoutConstants.minTileSize ||
-                r.height < LayoutConstants.minTileSize ||
+            if (r.width < widget.minTileSizePx ||
+                r.height < widget.minTileSizePx ||
                 r.width * r.height < minAreaPx) {
               tinyByQ[tr.task.quadrant]!.add(tr);
             }
@@ -335,8 +350,8 @@ class _TreemapCanvasState extends State<TreemapCanvas>
             final r01To = _nextRects01[id] ?? tr.rect01;
             final r01 = _lerpSnapRect(r01From, r01To, curveT);
             final r = _px(r01, size);
-            if (r.width >= LayoutConstants.minTileSize &&
-                r.height >= LayoutConstants.minTileSize) {
+            if (r.width >= widget.minTileSizePx &&
+                r.height >= widget.minTileSizePx) {
               overlay.add(
                 Positioned(
                   key: ValueKey('tile_$id'),
@@ -353,7 +368,7 @@ class _TreemapCanvasState extends State<TreemapCanvas>
           // Quadrant dropzone keys for testing
           final halfW = size.width / 2;
           final halfH = size.height / 2;
-          Rect _quadRect(Quadrant q) {
+          Rect quadRect(Quadrant q) {
             switch (q) {
               case Quadrant.q1:
                 return Rect.fromLTWH(0, 0, halfW, halfH);
@@ -365,8 +380,9 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                 return Rect.fromLTWH(halfW, halfH, halfW, halfH);
             }
           }
+
           for (final q in Quadrant.values) {
-            final qRect = _quadRect(q);
+            final qRect = quadRect(q);
             overlay.add(
               Positioned(
                 key: ValueKey('quadrant_${q.name}_dropzone'),
@@ -385,188 +401,236 @@ class _TreemapCanvasState extends State<TreemapCanvas>
           children: [
             Positioned.fill(
               child: MouseRegion(
-                cursor: _draggingId != null
-                    ? SystemMouseCursors.grabbing
-                    : SystemMouseCursors.basic,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapDown: (d) {
-                    final id = _hitTest(d.localPosition, size);
-                    if (id != null) {
-                      final idx = widget.layout.indexWhere(
-                        (e) => e.task.id == id,
-                      );
-                      final tr = idx == -1 ? null : widget.layout[idx];
-                      if (tr != null && tr.stackChildren.isNotEmpty) {
-                        // Open stack sheet for this quadrant
-                        Telemetry.stackOpen(
-                          tr.task.quadrant.name,
-                          tr.stackChildren.length,
-                        );
-                        _openStackSheet(
-                          context,
-                          tr.task.quadrant,
-                          tr.stackChildren,
-                        );
-                        return;
+                // Outer MouseRegion for hover detection (desktop only)
+                onHover: isDesktop
+                    ? (event) {
+                        final hoveredId = _hitTest(event.localPosition, size);
+                        if (hoveredId != _hoveredTaskId) {
+                          setState(() {
+                            _hoveredTaskId = hoveredId;
+                            _hoverPosition = event.localPosition;
+                          });
+                        }
                       }
-                      Telemetry.tileTap(id);
-                    }
-                    widget.onTap?.call(id);
-                  },
-                  onTapUp: (d) {
-                    final id = _hitTest(d.localPosition, size);
-                    if (id != null) {
-                      final idx = widget.layout.indexWhere(
-                        (e) => e.task.id == id,
-                      );
-                      final tr = idx == -1 ? null : widget.layout[idx];
-                      if (tr != null && tr.stackChildren.isNotEmpty) {
-                        Telemetry.stackOpen(
-                          tr.task.quadrant.name,
-                          tr.stackChildren.length,
-                        );
-                        _openStackSheet(
-                          context,
-                          tr.task.quadrant,
-                          tr.stackChildren,
-                        );
-                        return;
+                    : null,
+                onExit: isDesktop
+                    ? (_) {
+                        setState(() {
+                          _hoveredTaskId = null;
+                          _hoverPosition = null;
+                        });
                       }
-                      Telemetry.tileTap(id);
-                    }
-                    widget.onTap?.call(id);
-                  },
-                  onDoubleTapDown: (d) {
-                    final q = _quadrantAt(d.localPosition, size);
-                    if (q != null) {
-                      Telemetry.zoomQuadrant(q.name);
-                      widget.onDoubleTapQuadrant?.call(q);
-                    }
-                  },
-                  onLongPressStart: (d) {
-                    final id = _hitTest(d.localPosition, size);
-                    if (id == null) return;
-                    final idx = widget.tasks.indexWhere((e) => e.id == id);
-                    final t = idx == -1 ? null : widget.tasks[idx];
-                    final msg = t == null
-                        ? 'Tarea'
-                        : '${t.title} • P${t.priority} • ${t.minutes}m';
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(msg),
-                        duration: const Duration(milliseconds: 1200),
-                      ),
-                    );
-                  },
-                  onPanStart: (d) {
-                    if (widget.inlineEditId != null) {
-                      return; // disable drag while editing
-                    }
-                    setState(() {
-                      _draggingId = _hitTest(d.localPosition, size);
-                      _lastPos = d.localPosition;
-                      _hoverQuadrant = _quadrantAt(_lastPos!, size);
-                    });
-                    if (_draggingId != null) {
-                      Telemetry.tileDragStart(_draggingId!);
-                    }
-                  },
-                  onPanEnd: (d) {
-                    if (widget.inlineEditId == null &&
-                        _draggingId != null &&
-                        widget.zoom == null) {
-                      final q = _quadrantAt(_lastPos ?? Offset.zero, size);
+                    : null,
+                child: MouseRegion(
+                  cursor: _draggingId != null
+                      ? SystemMouseCursors.grabbing
+                      : SystemMouseCursors.basic,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: (d) {
+                      final id = _hitTest(d.localPosition, size);
+                      if (id != null) {
+                        final idx = widget.layout.indexWhere(
+                          (e) => e.task.id == id,
+                        );
+                        final tr = idx == -1 ? null : widget.layout[idx];
+                        if (tr != null && tr.stackChildren.isNotEmpty) {
+                          // Open stack sheet for this quadrant
+                          Telemetry.stackOpen(
+                            tr.task.quadrant.name,
+                            tr.stackChildren.length,
+                          );
+                          _openStackSheet(
+                            context,
+                            tr.task.quadrant,
+                            tr.stackChildren,
+                          );
+                          return;
+                        }
+                        Telemetry.tileTap(id);
+                      }
+                      widget.onTap?.call(id);
+                    },
+                    onTapUp: (d) {
+                      final id = _hitTest(d.localPosition, size);
+                      if (id != null) {
+                        final idx = widget.layout.indexWhere(
+                          (e) => e.task.id == id,
+                        );
+                        final tr = idx == -1 ? null : widget.layout[idx];
+                        if (tr != null && tr.stackChildren.isNotEmpty) {
+                          Telemetry.stackOpen(
+                            tr.task.quadrant.name,
+                            tr.stackChildren.length,
+                          );
+                          _openStackSheet(
+                            context,
+                            tr.task.quadrant,
+                            tr.stackChildren,
+                          );
+                          return;
+                        }
+                        Telemetry.tileTap(id);
+                      }
+                      widget.onTap?.call(id);
+                    },
+                    onDoubleTapDown: (d) {
+                      final q = _quadrantAt(d.localPosition, size);
                       if (q != null) {
-                        widget.onDropToQuadrant?.call(_draggingId!, q);
-                        Telemetry.tileDrop(_draggingId!, q.name);
-                        _pulseQuadrant = q;
-                        _pulse.forward(from: 0);
-                        HapticFeedback.lightImpact();
+                        Telemetry.zoomQuadrant(q.name);
+                        widget.onDoubleTapQuadrant?.call(q);
                       }
-                    }
-                    setState(() {
-                      _draggingId = null;
-                      _hoverQuadrant = null;
-                      _lastPos = null;
-                    });
-                  },
-                  onPanUpdate: (d) {
-                    if (widget.inlineEditId != null) return;
-                    setState(() {
-                      _lastPos = d.localPosition;
-                      _hoverQuadrant = _quadrantAt(_lastPos!, size);
-                    });
-                  },
-                  child: Stack(
-                    children: [
-                      RepaintBoundary(
-                        child: CustomPaint(
-                          painter: _TreemapPainter(
-                            widget.layout,
-                            draggingId: _draggingId,
-                            pointer: _lastPos,
-                            hoverQuadrant:
-                                widget.zoom == null ? _hoverQuadrant : null,
-                            presentQuadrant: widget.presentQuadrant,
-                            zoom: widget.zoom,
-                            prevRects01: _prevRects01,
-                            nextRects01: _nextRects01,
-                            t: _t,
-                            tokens: glassTokens,
-                            minimal: widget.minimal,
-                            pulseQuadrant: _pulseQuadrant,
-                            pulseT: _pulseT,
-                            suggested: widget.suggestedIds,
-                            layoutVersion: _layoutVersion,
-                            selectedId: widget.selectedId,
-                            appearingIds: _appearingIds,
-                            outros: _pendingOutros,
-                            outrosVersion: _outrosVersion,
-                            outlineColor: Theme.of(
-                              context,
-                            ).colorScheme.outlineVariant.withValues(alpha: 0.28),
-                            tileBorderColor: UiTokens.stroke(
-                              Theme.of(context).colorScheme,
+                    },
+                    onLongPressStart: (d) {
+                      final id = _hitTest(d.localPosition, size);
+                      if (id == null) return;
+                      final idx = widget.tasks.indexWhere((e) => e.id == id);
+                      final t = idx == -1 ? null : widget.tasks[idx];
+                      final msg = t == null
+                          ? 'Tarea'
+                          : '${t.title} • P${t.priority} • ${t.minutes}m';
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(msg),
+                          duration: const Duration(milliseconds: 1200),
+                        ),
+                      );
+                    },
+                    onPanStart: (d) {
+                      if (widget.inlineEditId != null) {
+                        return; // disable drag while editing
+                      }
+                      setState(() {
+                        _draggingId = _hitTest(d.localPosition, size);
+                        _lastPos = d.localPosition;
+                        _hoverQuadrant = _quadrantAt(_lastPos!, size);
+                      });
+                      if (_draggingId != null) {
+                        Telemetry.tileDragStart(_draggingId!);
+                      }
+                    },
+                    onPanEnd: (d) {
+                      if (widget.inlineEditId == null &&
+                          _draggingId != null &&
+                          widget.zoom == null) {
+                        final q = _quadrantAt(_lastPos ?? Offset.zero, size);
+                        if (q != null) {
+                          widget.onDropToQuadrant?.call(_draggingId!, q);
+                          Telemetry.tileDrop(_draggingId!, q.name);
+                          _pulseQuadrant = q;
+                          _pulse.forward(from: 0);
+                          HapticFeedback.lightImpact();
+                        }
+                      }
+                      setState(() {
+                        _draggingId = null;
+                        _hoverQuadrant = null;
+                        _lastPos = null;
+                      });
+                    },
+                    onPanUpdate: (d) {
+                      if (widget.inlineEditId != null) return;
+                      setState(() {
+                        _lastPos = d.localPosition;
+                        _hoverQuadrant = _quadrantAt(_lastPos!, size);
+                      });
+                    },
+                    child: Stack(
+                      children: [
+                        RepaintBoundary(
+                          child: CustomPaint(
+                            painter: _TreemapPainter(
+                              widget.layout,
+                              draggingId: _draggingId,
+                              pointer: _lastPos,
+                              hoverQuadrant:
+                                  widget.zoom == null ? _hoverQuadrant : null,
+                              presentQuadrant: widget.presentQuadrant,
+                              zoom: widget.zoom,
+                              prevRects01: _prevRects01,
+                              nextRects01: _nextRects01,
+                              t: _t,
+                              tokens: glassTokens,
+                              minimal: widget.minimal,
+                              pulseQuadrant: _pulseQuadrant,
+                              pulseT: _pulseT,
+                              suggested: widget.suggestedIds,
+                              layoutVersion: _layoutVersion,
+                              selectedId: widget.selectedId,
+                              appearingIds: _appearingIds,
+                              outros: _pendingOutros,
+                              outrosVersion: _outrosVersion,
+                              outlineColor: Theme.of(
+                                context,
+                              )
+                                  .colorScheme
+                                  .outlineVariant
+                                  .withValues(alpha: 0.28),
+                              tileBorderColor: UiTokens.stroke(
+                                Theme.of(context).colorScheme,
+                              ),
+                              onSurface:
+                                  Theme.of(context).colorScheme.onSurface,
+                              onSurfaceVariant: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                              tileFillColor: UiTokens.fill(
+                                Theme.of(context).colorScheme,
+                              ),
+                              textScale: widget.textScale,
+                              warningTaskIds: widget.warningTaskIds,
+                              categoryColorService: widget.categoryColorService,
                             ),
-                            onSurface: Theme.of(context).colorScheme.onSurface,
-                            onSurfaceVariant: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                            tileFillColor: UiTokens.fill(
-                              Theme.of(context).colorScheme,
-                            ),
-                            textScale: widget.textScale,
-                            warningTaskIds: widget.warningTaskIds,
+                            isComplex: true,
+                            willChange: true,
+                            child: const SizedBox.expand(),
                           ),
-                          isComplex: true,
-                          willChange: true,
-                          child: const SizedBox.expand(),
                         ),
-                      ),
-                      if (widget.lastMovedTaskId != null)
-                        LastMovedHighlightOverlay(
-                          id: widget.lastMovedTaskId!,
-                          layout: widget.layout,
-                          rectMap: _nextRects01,
-                          size: size,
-                        ),
-                      if (widget.loading)
-                        IgnorePointer(
-                          child: AnimatedOpacity(
-                            opacity: 0.06,
-                            duration:
-                                const Duration(milliseconds: 180),
-                            child: ColoredBox(
-                              color: Colors.black,
+                        if (widget.lastMovedTaskId != null)
+                          LastMovedHighlightOverlay(
+                            id: widget.lastMovedTaskId!,
+                            layout: widget.layout,
+                            rectMap: _nextRects01,
+                            size: size,
+                          ),
+                        if (widget.loading)
+                          IgnorePointer(
+                            child: AnimatedOpacity(
+                              opacity: 0.06,
+                              duration: const Duration(milliseconds: 180),
+                              child: ColoredBox(
+                                color: Colors.black,
+                              ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
+              ), // Close MouseRegion (cursor)
+            ), // Close MouseRegion (hover detection)
+            // Desktop hover tooltip
+            if (isDesktop &&
+                _hoveredTaskId != null &&
+                _hoverPosition != null &&
+                _draggingId == null) // Don't show tooltip while dragging
+              Builder(
+                builder: (context) {
+                  final task = widget.tasks.firstWhere(
+                    (t) => t.id == _hoveredTaskId,
+                    orElse: () => widget.tasks.first,
+                  );
+                  if (task.id != _hoveredTaskId) {
+                    return const SizedBox.shrink();
+                  }
+                  return _TaskHoverTooltip(
+                    task: task,
+                    position: _hoverPosition!,
+                    screenSize: size,
+                    categoryColorService: widget.categoryColorService,
+                  );
+                },
               ),
-            ),
             // Stack overlays per quadrant (place at bottom-right of each quadrant)
             if (!hasStackTiles)
               ...Quadrant.values.map((q) {
@@ -633,8 +697,6 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                                 qColor = glassTokens.q4;
                                 break;
                             }
-                            final tileSize = LayoutConstants
-                                .minTileSize; // square small size
                             final fillAlpha = widget.minimal ? 0.25 : 0.18;
                             final borderColor = widget.minimal
                                 ? Colors.black.withValues(alpha: 0.20)
@@ -644,8 +706,8 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                                 ? const Color(0xFF424242)
                                 : Colors.white;
                             return Container(
-                              width: tileSize,
-                              height: tileSize,
+                              width: widget.minTileSizePx,
+                              height: widget.minTileSizePx,
                               decoration: BoxDecoration(
                                 color: qColor.withValues(alpha: fillAlpha),
                                 borderRadius: BorderRadius.circular(
@@ -686,8 +748,7 @@ class _TreemapCanvasState extends State<TreemapCanvas>
     for (final tr in widget.layout) {
       final r = _px(tr.rect01, size);
       // enforce minimum interactive size
-      if (r.width < LayoutConstants.minTileSize ||
-          r.height < LayoutConstants.minTileSize) {
+      if (r.width < widget.minTileSizePx || r.height < widget.minTileSizePx) {
         continue;
       }
       if (r.contains(pos)) return tr.task.id;
@@ -956,6 +1017,308 @@ class _CheckDot extends StatelessWidget {
   }
 }
 
+/// Desktop hover tooltip widget - shows full task details on mouse hover
+/// Only displayed on desktop platforms with pointer input
+class _TaskHoverTooltip extends StatelessWidget {
+  const _TaskHoverTooltip({
+    required this.task,
+    required this.position,
+    required this.screenSize,
+    this.categoryColorService,
+  });
+
+  final Task task;
+  final Offset position;
+  final Size screenSize;
+  final CategoryColorService? categoryColorService;
+
+  @override
+  Widget build(BuildContext context) {
+    const tooltipWidth = 320.0;
+    const tooltipMaxHeight = 400.0;
+    const padding = 16.0;
+
+    // Position tooltip near cursor, but ensure it stays on screen
+    double left = position.dx + 20;
+    double top = position.dy - 20;
+
+    // Adjust if would go off right edge
+    if (left + tooltipWidth > screenSize.width - padding) {
+      left = position.dx - tooltipWidth - 20;
+    }
+
+    // Adjust if would go off bottom
+    if (top + tooltipMaxHeight > screenSize.height - padding) {
+      top = screenSize.height - tooltipMaxHeight - padding;
+    }
+
+    // Adjust if would go off top
+    if (top < padding) {
+      top = padding;
+    }
+
+    return Positioned(
+      left: left,
+      top: top,
+      child: IgnorePointer(
+        child: Material(
+          elevation: 8,
+          borderRadius: BorderRadius.circular(12),
+          shadowColor: Colors.black45,
+          child: Container(
+            width: tooltipWidth,
+            constraints: const BoxConstraints(maxHeight: tooltipMaxHeight),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+                width: 1,
+              ),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Title
+                  Text(
+                    task.title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Quadrant
+                  _TooltipRow(
+                    icon: Icons.grid_view_rounded,
+                    label: 'Quadrant',
+                    value: task.quadrant.name.toUpperCase(),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Priority & Time
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _TooltipRow(
+                          icon: Icons.priority_high,
+                          label: 'Priority',
+                          value: '${task.priority}/10',
+                        ),
+                      ),
+                      Expanded(
+                        child: _TooltipRow(
+                          icon: Icons.timer_outlined,
+                          label: 'Time',
+                          value: '${task.minutes}m',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Due date
+                  if (task.due != null) ...[
+                    _TooltipRow(
+                      icon: Icons.calendar_today,
+                      label: 'Due',
+                      value: _formatFullDate(task.due!),
+                      isUrgent: task.due!.isBefore(DateTime.now()) ||
+                          task.due!.difference(DateTime.now()).inDays <= 1,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // Category
+                  if (task.category != null && task.category!.isNotEmpty) ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.folder_outlined,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: (categoryColorService ??
+                                    const CategoryColorService())
+                                .getLightVariant(task.category!),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: (categoryColorService ??
+                                      const CategoryColorService())
+                                  .getDarkVariant(task.category!),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            task.category!,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // Tags
+                  if (task.tags.isNotEmpty) ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.label_outline,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: task.tags
+                                .map(
+                                  (tag) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .secondaryContainer
+                                          .withValues(alpha: 0.5),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      tag,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSecondaryContainer,
+                                          ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // Notes preview
+                  if (task.notes != null && task.notes!.isNotEmpty) ...[
+                    const Divider(height: 16),
+                    Text(
+                      'Notes',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      task.notes!,
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 5,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatFullDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = date.difference(now).inDays;
+
+    if (diff < 0) return 'Overdue (${date.day}/${date.month}/${date.year})';
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Tomorrow';
+
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+}
+
+/// Helper widget for tooltip rows
+class _TooltipRow extends StatelessWidget {
+  const _TooltipRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.isUrgent = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool isUrgent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: isUrgent
+              ? Colors.redAccent
+              : Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: isUrgent
+                    ? Colors.redAccent
+                    : Theme.of(context).colorScheme.onSurface,
+                fontWeight: isUrgent ? FontWeight.w600 : FontWeight.normal,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
 class _TreemapPainter extends CustomPainter {
   _TreemapPainter(
     this.layout, {
@@ -984,6 +1347,7 @@ class _TreemapPainter extends CustomPainter {
     required this.tileFillColor,
     this.textScale = 1.0,
     this.warningTaskIds = const <String>{},
+    this.categoryColorService, // Optional category color service
   });
   final List<TreemapRect> layout;
   final String? draggingId;
@@ -1011,6 +1375,7 @@ class _TreemapPainter extends CustomPainter {
   final Color onSurfaceVariant;
   final double textScale;
   final Set<String> warningTaskIds;
+  final CategoryColorService? categoryColorService;
 
   /// Tile path cache for performance optimization.
   ///
@@ -1026,6 +1391,52 @@ class _TreemapPainter extends CustomPainter {
   /// Cache invalidation: Automatic via key = '${task.id}_${rect.hashCode}'
   /// When rect changes, new key is generated and old entry is orphaned.
   static final Map<String, Path> _pathCache = {};
+
+  /// Helper methods for progressive content display based on tile area
+  /// These thresholds ensure visual hierarchy without cluttering small tiles
+
+  /// Show due date when tile has enough space (area > 15,000 px²)
+  bool _showDueDate(double area) => area > 15000;
+
+  /// Show category pill when tile is medium-large (area > 20,000 px²)
+  bool _showCategory(double area) => area > 20000;
+
+  /// Show tags when tile is very large (area > 35,000 px²)
+  bool _showTags(double area) => area > 35000;
+
+  /// Format due date for compact display in tiles
+  /// Returns short format like "15 Nov" or "15/11" depending on proximity
+  String _formatDueDate(DateTime due) {
+    final now = DateTime.now();
+    final diff = due.difference(now).inDays;
+
+    // If overdue or due today, show urgent format
+    if (diff <= 0) return 'Today';
+    if (diff == 1) return 'Tomorrow';
+
+    // For dates within 7 days, show day name
+    if (diff <= 7) {
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return days[due.weekday - 1];
+    }
+
+    // Otherwise show date
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return '${due.day} ${months[due.month - 1]}';
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1351,10 +1762,130 @@ class _TreemapPainter extends CustomPainter {
           maxLines: debugTreemap ? 3 : 1,
         );
         tp.paint(canvas, Offset(drawRect.left + 8, currentY));
-        currentY += tp.height + 2;
+        currentY += tp.height + 4; // Increased spacing for metadata
       }
 
-      // Notes preview (if large size and has notes) - now goes after title
+      // PROGRESSIVE CONTENT: Due date (area > 15,000 px²)
+      if (showLabel &&
+          _showDueDate(area) &&
+          tr.task.due != null &&
+          currentY + 14 < drawRect.bottom - bottomReserved - 6 &&
+          !debugTreemap) {
+        final dueDateText = _formatDueDate(tr.task.due!);
+        final now = DateTime.now();
+        final isOverdue = tr.task.due!.isBefore(now);
+        final isUrgent = tr.task.due!.difference(now).inDays <= 1;
+
+        final dueDateColor = isOverdue
+            ? Colors.redAccent
+            : isUrgent
+                ? Colors.orangeAccent
+                : onSurfaceVariant;
+
+        final responsiveDueDateSize =
+            typography.metaFontSize(size).toDouble() * textScale * 0.95;
+        final dueDatePainter = _textPainter(
+          '📅 $dueDateText',
+          drawRect,
+          responsiveDueDateSize,
+          FontWeight.w500,
+          alpha: 0.9,
+          maxLines: 1,
+          textColor: dueDateColor,
+        );
+        dueDatePainter.paint(canvas, Offset(drawRect.left + 8, currentY));
+        currentY += dueDatePainter.height + 3;
+      }
+
+      // PROGRESSIVE CONTENT: Category pill (area > 20,000 px²)
+      if (showLabel &&
+          _showCategory(area) &&
+          tr.task.category != null &&
+          tr.task.category!.isNotEmpty &&
+          currentY + 18 < drawRect.bottom - bottomReserved - 6 &&
+          !debugTreemap) {
+        final categoryName = tr.task.category!;
+        final service = categoryColorService ?? const CategoryColorService();
+        final categoryBgColor = service.getLightVariant(categoryName);
+        final categoryBorderColor = service.getDarkVariant(categoryName);
+
+        // Draw category pill background
+        final categoryText = categoryName;
+        final responsiveCategorySize =
+            typography.metaFontSize(size).toDouble() * textScale * 0.9;
+        final categoryPainter = _textPainter(
+          categoryText,
+          drawRect,
+          responsiveCategorySize,
+          FontWeight.w600,
+          alpha: 0.85,
+          maxLines: 1,
+          textColor: onSurface,
+        );
+
+        final pillPadding = 6.0;
+        final pillHeight = categoryPainter.height + 4;
+        final pillWidth = categoryPainter.width + pillPadding * 2;
+        final pillRect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            drawRect.left + 8,
+            currentY,
+            math.min(pillWidth, drawRect.width - 16),
+            pillHeight,
+          ),
+          const Radius.circular(8),
+        );
+
+        // Draw pill background
+        final pillPaint = Paint()
+          ..style = PaintingStyle.fill
+          ..color = categoryBgColor;
+        canvas.drawRRect(pillRect, pillPaint);
+
+        // Draw pill border
+        final pillBorderPaint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = categoryBorderColor;
+        canvas.drawRRect(pillRect, pillBorderPaint);
+
+        // Draw category text
+        categoryPainter.paint(
+          canvas,
+          Offset(drawRect.left + 8 + pillPadding, currentY + 2),
+        );
+        currentY += pillHeight + 3;
+      }
+
+      // PROGRESSIVE CONTENT: Tags (area > 35,000 px²)
+      if (showLabel &&
+          _showTags(area) &&
+          tr.task.tags.isNotEmpty &&
+          currentY + 14 < drawRect.bottom - bottomReserved - 6 &&
+          !debugTreemap) {
+        final maxTags = 3; // Limit to first 3 tags
+        final displayTags = tr.task.tags.take(maxTags).toList();
+        final hasMoreTags = tr.task.tags.length > maxTags;
+
+        final tagsText = displayTags.join(' · ') +
+            (hasMoreTags ? ' · +${tr.task.tags.length - maxTags}' : '');
+
+        final responsiveTagSize =
+            typography.metaFontSize(size).toDouble() * textScale * 0.85;
+        final tagsPainter = _textPainter(
+          tagsText,
+          drawRect,
+          responsiveTagSize,
+          FontWeight.w400,
+          alpha: 0.75,
+          maxLines: 1,
+          textColor: onSurfaceVariant,
+        );
+        tagsPainter.paint(canvas, Offset(drawRect.left + 8, currentY));
+        currentY += tagsPainter.height + 2;
+      }
+
+      // Notes preview (if very large size and has notes) - moved after metadata
       if (showLabel &&
           area > 26000 &&
           tr.task.notes != null &&
