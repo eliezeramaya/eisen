@@ -1,3 +1,5 @@
+import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/features/eisen_matrix/presentation/pages/category_manager_page.dart';
 import 'package:eisen/features/settings/application/appearance_preview_controller.dart';
 import 'package:eisen/features/settings/domain/accessibility_controller.dart';
 import 'package:eisen/features/settings/presentation/widgets/appearance_preview_card.dart';
@@ -238,9 +240,7 @@ class _AppearancePanel extends ConsumerWidget {
             onSelectionChanged: (s) {
               final mode = s.first;
               onThemeChanged(mode);
-              ref
-                  .read(appearancePreviewProvider.notifier)
-                  .setThemeMode(mode);
+              ref.read(appearancePreviewProvider.notifier).setThemeMode(mode);
             },
           ),
         ),
@@ -294,12 +294,26 @@ class _AppearancePanel extends ConsumerWidget {
           secondary: const Icon(Icons.label_outline),
           title: const Text('Show axis legends'),
         ),
+        const Divider(height: 24),
+        ListTile(
+          leading: const Icon(Icons.palette),
+          title: const Text('Category Colors'),
+          subtitle: const Text('Customize colors for task categories'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (context) => const CategoryManagerPage(),
+              ),
+            );
+          },
+        ),
       ],
     );
   }
 }
 
-class _LayoutPanel extends StatelessWidget {
+class _LayoutPanel extends ConsumerWidget {
   const _LayoutPanel({
     required this.topK,
     required this.gamma,
@@ -324,7 +338,7 @@ class _LayoutPanel extends StatelessWidget {
   final ValueChanged<bool> onPreview;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
       children: [
         SwitchListTile(
@@ -341,14 +355,31 @@ class _LayoutPanel extends StatelessWidget {
         _sliderTile<int>(
           context: context,
           label: 'Top-K per quadrant',
-          helper: 'Higher = more visible tasks, less “+N”',
+          helper: 'Higher = more visible tasks, less "+N" (desktop: up to 100)',
           value: topK,
           min: 5,
-          max: 60,
-          divisions: 55,
+          max: 100, // Extended from 60 to support power users
+          divisions: 95, // 100 - 5 = 95 steps
           toDouble: (v) => v.toDouble(),
           fromDouble: (d) => d.round(),
           onChanged: onTopK,
+        ),
+        _sliderTile<double>(
+          context: context,
+          label: 'Min tile size (density)',
+          helper: 'Desktop: 30-44px | Mobile: 40-44px for touch targets',
+          value: ref.watch(uiPrefsProvider).minTileSizePx,
+          min: MediaQuery.of(context).size.width >= 1240 ? 30.0 : 40.0,
+          max: 44.0,
+          divisions: MediaQuery.of(context).size.width >= 1240 ? 14 : 4,
+          toDouble: (v) => v,
+          fromDouble: (d) => double.parse(d.toStringAsFixed(1)),
+          onChanged: (v) {
+            final isDesktop = MediaQuery.of(context).size.width >= 1240;
+            ref
+                .read(uiPrefsControllerProvider.notifier)
+                .setMinTileSize(v, isDesktop: isDesktop);
+          },
         ),
         _sliderTile<double>(
           context: context,
