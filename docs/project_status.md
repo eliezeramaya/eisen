@@ -3,7 +3,7 @@
 **Estado del repositorio**: Commit `latest` | Versión `1.1.0+2`  
 **Documento técnico maestro** para desarrollo con VS Code + Copilot  
 **Autor**: ChatGPT – Ingeniería UX/UI & Flutter Clean Architecture  
-**Última actualización**: 16 de December 2025
+**Última actualización**: 17 de December 2025
 
 ---
 
@@ -2570,7 +2570,7 @@ Este documento representa el estado completo del proyecto **Eisen** con las últ
 ---
 
 **Mantenido por**: ChatGPT + Equipo  
-**Última actualización**: 16 de December 2025
+**Última actualización**: 17 de December 2025
 **Próxima revisión**: Post-Sprint 1
 
 ---
