@@ -20,6 +20,13 @@ class FocusTopBar extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
+              if (context.canPop()) ...[
+                _CircleIconButton(
+                  icon: Icons.arrow_back,
+                  onTap: () => context.pop(),
+                ),
+                const SizedBox(width: 8),
+              ],
               _CircleIconButton(
                 icon: Icons.home_outlined,
                 onTap: () => context.go('/matrix'),

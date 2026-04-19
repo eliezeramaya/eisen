@@ -13,6 +13,7 @@ import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_cont
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class WorkflowPlanPage extends ConsumerStatefulWidget {
   const WorkflowPlanPage({super.key});
@@ -97,6 +98,9 @@ class _WorkflowPlanPageState extends ConsumerState<WorkflowPlanPage> {
       appBar: AppBar(
         title: const Text('Workflow plan'),
         backgroundColor: UiTokens.panelDark,
+        leading: context.canPop()
+            ? BackButton(onPressed: () => context.pop())
+            : null,
       ),
       backgroundColor: UiTokens.bgDark,
       body: Padding(
