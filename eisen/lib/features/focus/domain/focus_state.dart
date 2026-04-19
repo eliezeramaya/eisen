@@ -17,14 +17,7 @@ enum FocusPhase {
 }
 
 /// State model for focus timer
-class FocusState {
-  final FocusStatus status;
-  final FocusSessionType type;
-  final FocusPhase phase;
-  final Duration remaining;
-  final Duration total;
-  final Task? linkedTask;
-  final int pomodoroCount; // Cycles completed (for Pomodoro type)
+class FocusState { // Cycles completed (for Pomodoro type)
 
   const FocusState({
     required this.status,
@@ -48,6 +41,13 @@ class FocusState {
       pomodoroCount: 0,
     );
   }
+  final FocusStatus status;
+  final FocusSessionType type;
+  final FocusPhase phase;
+  final Duration remaining;
+  final Duration total;
+  final Task? linkedTask;
+  final int pomodoroCount;
 
   /// Progress from 0.0 to 1.0
   double get progress {

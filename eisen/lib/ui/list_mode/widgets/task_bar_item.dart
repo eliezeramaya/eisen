@@ -50,11 +50,11 @@ class _TaskBarItemState extends State<TaskBarItem> {
                 borderRadius: BorderRadius.circular(12),
                 gradient: LinearGradient(
                   colors: [
-                    widget.color.withOpacity(
-                      _isHovered ? baseOpacity + 0.1 : baseOpacity,
+                    widget.color.withValues(
+                      alpha: _isHovered ? baseOpacity + 0.1 : baseOpacity,
                     ),
-                    widget.color.withOpacity(
-                      _isHovered ? 0.25 : 0.15,
+                    widget.color.withValues(
+                      alpha: _isHovered ? 0.25 : 0.15,
                     ),
                   ],
                   begin: Alignment.centerLeft,
@@ -63,7 +63,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
                 boxShadow: _isHovered
                     ? [
                         BoxShadow(
-                          color: widget.color.withOpacity(0.3),
+                          color: widget.color.withValues(alpha: 0.3),
                           blurRadius: 8,
                           spreadRadius: 0,
                         ),
@@ -104,7 +104,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
                     Icon(
                       Icons.circle,
                       size: 5,
-                      color: widget.color.withOpacity(0.7),
+                      color: widget.color.withValues(alpha: 0.7),
                     ),
                   ],
                 ),

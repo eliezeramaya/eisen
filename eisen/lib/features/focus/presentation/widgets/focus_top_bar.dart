@@ -28,7 +28,7 @@ class FocusTopBar extends ConsumerWidget {
               Text(
                 dateLabel,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: cs.onSurface.withOpacity(0.7),
+                      color: cs.onSurface.withValues(alpha: 0.7),
                       letterSpacing: 1.2,
                     ),
               ),
@@ -53,7 +53,7 @@ class FocusTopBar extends ConsumerWidget {
         ),
         Padding(
           padding: const EdgeInsets.only(top: 12),
-          child: Divider(color: cs.outline.withOpacity(0.12), height: 1),
+          child: Divider(color: cs.outline.withValues(alpha: 0.12), height: 1),
         ),
       ],
     );
@@ -80,13 +80,13 @@ class _CircleIconButton extends StatelessWidget {
         height: 40,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: cs.outlineVariant.withOpacity(0.3)),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.3)),
           color: cs.surface,
         ),
         child: Icon(
           icon,
           size: 20,
-          color: cs.onSurface.withOpacity(0.8),
+          color: cs.onSurface.withValues(alpha: 0.8),
         ),
       ),
     );

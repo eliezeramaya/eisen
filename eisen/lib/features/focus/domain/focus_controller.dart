@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:eisen/core/analytics/analytics_service.dart';
-import 'package:eisen/core/analytics/user_event.dart';
 import 'package:eisen/core/haptics/haptics_service.dart';
 import 'package:eisen/core/notifications/notifications_service.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
@@ -57,17 +55,18 @@ class FocusController extends AsyncNotifier<FocusState> {
     final haptics = ref.read(hapticsServiceProvider);
     await haptics.medium();
 
-    unawaited(_logEvent(
-      UserEvent(
-        type: UserEventType.focusSessionStarted,
-        timestamp: _startedAt!,
-        metadata: {
-          'sessionType': type.name,
-          'plannedMinutes': duration.inMinutes,
-          'linkedTaskId': linkedTask?.id,
-        },
-      ),
-    ));
+    // TODO: Re-enable analytics
+    // unawaited(_logEvent(
+    //   UserEvent(
+    //     type: UserEventType.focusSessionStarted,
+    //     timestamp: _startedAt!,
+    //     metadata: {
+    //       'sessionType': type.name,
+    //       'plannedMinutes': duration.inMinutes,
+    //       'linkedTaskId': linkedTask?.id,
+    //     },
+    //   ),
+    // ));
 
     _startTimer();
   }
@@ -120,18 +119,19 @@ class FocusController extends AsyncNotifier<FocusState> {
       final repo = ref.read(focusRepositoryProvider);
       await repo.saveSession(session);
 
-      unawaited(_logEvent(
-        UserEvent(
-          type: UserEventType.focusSessionEnded,
-          timestamp: session.endedAt ?? DateTime.now(),
-          metadata: {
-            'sessionType': session.type.name,
-            'plannedMinutes': session.plannedDuration.inMinutes,
-            'actualMinutes': session.actualDuration?.inMinutes,
-            'linkedTaskId': session.linkedTask?.id,
-          },
-        ),
-      ));
+      // TODO: Re-enable analytics
+      // unawaited(_logEvent(
+      //   UserEvent(
+      //     type: UserEventType.focusSessionEnded,
+      //     timestamp: session.endedAt ?? DateTime.now(),
+      //     metadata: {
+      //       'sessionType': session.type.name,
+      //       'plannedMinutes': session.plannedDuration.inMinutes,
+      //       'actualMinutes': session.actualDuration?.inMinutes,
+      //       'linkedTaskId': session.linkedTask?.id,
+      //     },
+      //   ),
+      // ));
     }
 
     state = AsyncValue.data(FocusState.idle());
@@ -183,19 +183,20 @@ class FocusController extends AsyncNotifier<FocusState> {
       final repo = ref.read(focusRepositoryProvider);
       await repo.saveSession(session);
 
-      unawaited(_logEvent(
-        UserEvent(
-          type: UserEventType.focusSessionEnded,
-          timestamp: session.endedAt ?? DateTime.now(),
-          metadata: {
-            'sessionType': session.type.name,
-            'plannedMinutes': session.plannedDuration.inMinutes,
-            'actualMinutes': session.actualDuration?.inMinutes,
-            'linkedTaskId': session.linkedTask?.id,
-            'completed': true,
-          },
-        ),
-      ));
+      // TODO: Re-enable analytics
+      // unawaited(_logEvent(
+      //   UserEvent(
+      //     type: UserEventType.focusSessionEnded,
+      //     timestamp: session.endedAt ?? DateTime.now(),
+      //     metadata: {
+      //       'sessionType': session.type.name,
+      //       'plannedMinutes': session.plannedDuration.inMinutes,
+      //       'actualMinutes': session.actualDuration?.inMinutes,
+      //       'linkedTaskId': session.linkedTask?.id,
+      //       'completed': true,
+      //     },
+      //   ),
+      // ));
     }
 
     // Trigger notification and haptic feedback
@@ -336,10 +337,9 @@ final focusControllerProvider =
   FocusController.new,
 );
 
-extension _FocusAnalytics on FocusController {
-  AnalyticsService _analytics() => ref.read(analyticsServiceProvider);
-
-  Future<void> _logEvent(UserEvent event) {
-    return _analytics().logEvent(event);
-  }
-}
+// TODO: Re-implement analytics logging with proper architecture
+// extension _FocusAnalytics on FocusController {
+//   Future<void> _logEvent(UserEvent event) {
+//     return ref.read(analyticsServiceProvider).logEvent(event);
+//   }
+// }

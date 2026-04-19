@@ -244,7 +244,7 @@ class _NotificationsCard extends ConsumerWidget {
               ),
               Switch(
                 value: prefs?.notificationsEnabled ?? true,
-                onChanged: (v) => ctrl.toggleNotifications(v),
+                onChanged: ctrl.toggleNotifications,
               ),
             ],
           ),
@@ -260,26 +260,26 @@ class _NotificationsCard extends ConsumerWidget {
               title: const Text('Recordatorio diario'),
               subtitle: const Text('Te recuerda bloquear tu foco en la mañana'),
               value: prefs.dailyReminderEnabled,
-              onChanged: (v) => ctrl.toggleDailyReminder(v),
+              onChanged: ctrl.toggleDailyReminder,
             ),
             if (prefs.dailyReminderEnabled)
               _TimePickerRow(
                 label: 'Hora del recordatorio',
                 hhmm24: _fmtTime(prefs.dailyReminderTime),
-                onPicked: (t) => ctrl.setDailyReminderTime(t),
+                onPicked: ctrl.setDailyReminderTime,
                 onClear: () => ctrl.setDailyReminderTime(null),
               ),
             SwitchListTile(
               title: const Text('Resumen de fin de día'),
               subtitle: const Text('Repasa pendientes y wins'),
               value: prefs.endOfDaySummary,
-              onChanged: (v) => ctrl.toggleEndOfDaySummary(v),
+              onChanged: ctrl.toggleEndOfDaySummary,
             ),
             if (prefs.endOfDaySummary)
               _TimePickerRow(
                 label: 'Hora del resumen',
                 hhmm24: _fmtTime(prefs.endOfDayTime),
-                onPicked: (t) => ctrl.setEndOfDayTime(t),
+                onPicked: ctrl.setEndOfDayTime,
                 onClear: () => ctrl.setEndOfDayTime(null),
               ),
             const Divider(),
@@ -287,13 +287,13 @@ class _NotificationsCard extends ConsumerWidget {
               title: const Text('Horas silenciosas'),
               subtitle: const Text('Evita alertas en la noche'),
               value: prefs.quietHoursEnabled,
-              onChanged: (v) => ctrl.toggleQuietHours(v),
+              onChanged: ctrl.toggleQuietHours,
             ),
             if (prefs.quietHoursEnabled)
               _QuietHoursRow(
                 start: prefs.quietStart,
                 end: prefs.quietEnd,
-                onChanged: (start, end) => ctrl.setQuietHours(start, end),
+                onChanged: ctrl.setQuietHours,
               ),
             const Divider(),
             _DropdownRow(
@@ -363,7 +363,7 @@ class _NudgesCard extends ConsumerWidget {
               ),
               Switch(
                 value: prefs?.nudgesEnabled ?? true,
-                onChanged: (v) => ctrl.toggleNudges(v),
+                onChanged: ctrl.toggleNudges,
               ),
             ],
           ),

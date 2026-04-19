@@ -47,8 +47,13 @@ class NotificationsService {
       );
       // Fallback in dev: show a one-off notification instead of exact daily schedule
       await _plugin.periodicallyShow(
-          id, title, body, RepeatInterval.daily, details,
-          androidAllowWhileIdle: true);
+        id,
+        title,
+        body,
+        RepeatInterval.daily,
+        details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
     } catch (e) {
       debugPrint('NotificationsService.scheduleDaily skipped: $e');
     }

@@ -37,6 +37,10 @@ class LocalPrefsMatrixRepository implements MatrixRepository {
       categories: (j['categories'] as List?)?.cast<String>() ?? const [],
       notes: j['notes'] as String?,
       category: j['category'] as String?,
+      locationTag: j['locationTag'] as String?,
+      latitude: (j['latitude'] as num?)?.toDouble(),
+      longitude: (j['longitude'] as num?)?.toDouble(),
+      radiusMeters: (j['radiusMeters'] as num?)?.toDouble(),
       createdAt: j['createdAt'] != null
           ? DateTime.tryParse(j['createdAt'] as String)
           : null,
@@ -60,6 +64,10 @@ class LocalPrefsMatrixRepository implements MatrixRepository {
         'categories': t.categories,
         'notes': t.notes,
         'category': t.category,
+        'locationTag': t.locationTag,
+        'latitude': t.latitude,
+        'longitude': t.longitude,
+        'radiusMeters': t.radiusMeters,
         'createdAt': t.createdAt?.toIso8601String(),
         'updatedAt': t.updatedAt?.toIso8601String(),
         'completedAt': t.completedAt?.toIso8601String(),

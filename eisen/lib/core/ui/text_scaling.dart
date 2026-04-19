@@ -26,7 +26,7 @@ double userLevelToFactor(int level) {
 /// with the user's preference, and clamps by screen class for legibility.
 double effectiveTextScaleFactor(BuildContext context, UiPrefsData prefs) {
   final mq = MediaQuery.of(context);
-  final device = mq.textScaleFactor.clamp(0.8, 2.0);
+  final device = mq.textScaler.scale(1.0).clamp(0.8, 2.0);
   final user = userLevelToFactor(prefs.textScaleLevel);
   final raw = (device * user).toDouble();
   // Clamp by screen class to keep within readable standards per device size

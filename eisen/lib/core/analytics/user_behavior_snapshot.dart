@@ -18,6 +18,25 @@ class UserBehaviorSnapshot {
     this.nudgesActed = 0,
   });
 
+  factory UserBehaviorSnapshot.fromJson(Map<String, dynamic> json) {
+    return UserBehaviorSnapshot(
+      day: DateTime.parse(json['day'] as String),
+      tasksCreated: json['tasksCreated'] as int? ?? 0,
+      tasksCompleted: json['tasksCompleted'] as int? ?? 0,
+      tasksRescheduled: json['tasksRescheduled'] as int? ?? 0,
+      tasksCompletedQ1: json['tasksCompletedQ1'] as int? ?? 0,
+      tasksCompletedQ2: json['tasksCompletedQ2'] as int? ?? 0,
+      tasksCompletedQ3: json['tasksCompletedQ3'] as int? ?? 0,
+      tasksCompletedQ4: json['tasksCompletedQ4'] as int? ?? 0,
+      focusSessionsCount: json['focusSessionsCount'] as int? ?? 0,
+      totalFocusDuration: Duration(
+        seconds: json['totalFocusDuration'] as int? ?? 0,
+      ),
+      nudgesShown: json['nudgesShown'] as int? ?? 0,
+      nudgesActed: json['nudgesActed'] as int? ?? 0,
+    );
+  }
+
   /// Fecha normalizada (sin hora) usada como clave del snapshot.
   final DateTime day;
   final int tasksCreated;
@@ -76,23 +95,4 @@ class UserBehaviorSnapshot {
         'nudgesShown': nudgesShown,
         'nudgesActed': nudgesActed,
       };
-
-  factory UserBehaviorSnapshot.fromJson(Map<String, dynamic> json) {
-    return UserBehaviorSnapshot(
-      day: DateTime.parse(json['day'] as String),
-      tasksCreated: json['tasksCreated'] as int? ?? 0,
-      tasksCompleted: json['tasksCompleted'] as int? ?? 0,
-      tasksRescheduled: json['tasksRescheduled'] as int? ?? 0,
-      tasksCompletedQ1: json['tasksCompletedQ1'] as int? ?? 0,
-      tasksCompletedQ2: json['tasksCompletedQ2'] as int? ?? 0,
-      tasksCompletedQ3: json['tasksCompletedQ3'] as int? ?? 0,
-      tasksCompletedQ4: json['tasksCompletedQ4'] as int? ?? 0,
-      focusSessionsCount: json['focusSessionsCount'] as int? ?? 0,
-      totalFocusDuration: Duration(
-        seconds: json['totalFocusDuration'] as int? ?? 0,
-      ),
-      nudgesShown: json['nudgesShown'] as int? ?? 0,
-      nudgesActed: json['nudgesActed'] as int? ?? 0,
-    );
-  }
 }

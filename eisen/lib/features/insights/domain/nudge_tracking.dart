@@ -15,6 +15,26 @@ class NudgeTrackingData {
     this.viewCount = 0,
   });
 
+  /// Crea desde Map (deserialización).
+  factory NudgeTrackingData.fromJson(Map<String, dynamic> json) {
+    return NudgeTrackingData(
+      nudgeId: json['nudgeId'] as String,
+      firstSeenAt: json['firstSeenAt'] != null
+          ? DateTime.parse(json['firstSeenAt'] as String)
+          : null,
+      lastSeenAt: json['lastSeenAt'] != null
+          ? DateTime.parse(json['lastSeenAt'] as String)
+          : null,
+      dismissedAt: json['dismissedAt'] != null
+          ? DateTime.parse(json['dismissedAt'] as String)
+          : null,
+      actedAt: json['actedAt'] != null
+          ? DateTime.parse(json['actedAt'] as String)
+          : null,
+      viewCount: json['viewCount'] as int? ?? 0,
+    );
+  }
+
   /// ID del nudge al que pertenece este tracking.
   final String nudgeId;
 
@@ -95,25 +115,5 @@ class NudgeTrackingData {
       'actedAt': actedAt?.toIso8601String(),
       'viewCount': viewCount,
     };
-  }
-
-  /// Crea desde Map (deserialización).
-  factory NudgeTrackingData.fromJson(Map<String, dynamic> json) {
-    return NudgeTrackingData(
-      nudgeId: json['nudgeId'] as String,
-      firstSeenAt: json['firstSeenAt'] != null
-          ? DateTime.parse(json['firstSeenAt'] as String)
-          : null,
-      lastSeenAt: json['lastSeenAt'] != null
-          ? DateTime.parse(json['lastSeenAt'] as String)
-          : null,
-      dismissedAt: json['dismissedAt'] != null
-          ? DateTime.parse(json['dismissedAt'] as String)
-          : null,
-      actedAt: json['actedAt'] != null
-          ? DateTime.parse(json['actedAt'] as String)
-          : null,
-      viewCount: json['viewCount'] as int? ?? 0,
-    );
   }
 }

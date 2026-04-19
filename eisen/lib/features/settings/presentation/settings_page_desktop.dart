@@ -121,8 +121,8 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
                       height: 220,
                       child: _SettingsSidebar(
                         selected: _section,
-                        onSelect: (s) => setState(
-                            () => _section = _normalizeSection(s)),
+                        onSelect: (s) =>
+                            setState(() => _section = _normalizeSection(s)),
                       ),
                     ),
                     Container(
@@ -131,8 +131,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
                     ),
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                            12, 12, 12, 12),
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                         child: _buildAnimatedContent(),
                       ),
                     ),
@@ -146,16 +145,15 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
                       color: cs.surfaceContainerHigh,
                       child: _SettingsSidebar(
                           selected: _section,
-                          onSelect: (s) => setState(
-                              () => _section = _normalizeSection(s))),
+                          onSelect: (s) =>
+                              setState(() => _section = _normalizeSection(s))),
                     ),
                     Container(
                         width: 1,
                         color: cs.outlineVariant.withValues(alpha: 0.28)),
                     Expanded(
                       child: Padding(
-                        padding:
-                            const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
                         child: _buildAnimatedContent(),
                       ),
                     ),
@@ -237,6 +235,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
   }
 
   void _applyChanges() {
+    final messenger = ScaffoldMessenger.of(context);
     // Apply staged values to providers and persist
     final ctrl = ref.read(matrixControllerProvider.notifier);
     // ThemeMode: cycle toggle until desired (max 3 steps)
@@ -286,7 +285,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
         _origDensity = _stagedDensity;
         // No originals stored for Gantt yet; not used in Cancel
       });
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Settings applied')),
       );
     });
@@ -384,16 +383,13 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       ganttCompactLanes: _stagedGanttCompact,
       ganttWorkweekOnly: _stagedGanttWorkweek,
       ganttShowTodayLine: _stagedGanttToday,
-      onGanttTimeScaleChanged: (v) =>
-          setState(() => _stagedGanttScale = v),
-      onGanttShowBadgesChanged: (v) =>
-          setState(() => _stagedGanttBadges = v),
+      onGanttTimeScaleChanged: (v) => setState(() => _stagedGanttScale = v),
+      onGanttShowBadgesChanged: (v) => setState(() => _stagedGanttBadges = v),
       onGanttCompactLanesChanged: (v) =>
           setState(() => _stagedGanttCompact = v),
       onGanttWorkweekOnlyChanged: (v) =>
           setState(() => _stagedGanttWorkweek = v),
-      onGanttShowTodayLineChanged: (v) =>
-          setState(() => _stagedGanttToday = v),
+      onGanttShowTodayLineChanged: (v) => setState(() => _stagedGanttToday = v),
     );
   }
 }

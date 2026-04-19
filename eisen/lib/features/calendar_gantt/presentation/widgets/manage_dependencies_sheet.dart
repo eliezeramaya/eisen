@@ -175,7 +175,7 @@ class _ManageDependenciesSheetState
                   )
                 else ...[
                   DropdownButtonFormField<String>(
-                    value: _selectedPrerequisiteId,
+                    initialValue: _selectedPrerequisiteId,
                     decoration: const InputDecoration(
                       labelText: 'Select prerequisite task',
                       border: OutlineInputBorder(),
@@ -199,7 +199,7 @@ class _ManageDependenciesSheetState
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<DependencyType>(
-                    value: _selectedType,
+                    initialValue: _selectedType,
                     decoration: const InputDecoration(
                       labelText: 'Dependency type',
                       border: OutlineInputBorder(),

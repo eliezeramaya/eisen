@@ -95,6 +95,10 @@ class Task extends Equatable {
     this.categories = const [],
     this.notes,
     this.category,
+    this.locationTag,
+    this.latitude,
+    this.longitude,
+    this.radiusMeters,
     this.createdAt,
     this.updatedAt,
     this.completedAt,
@@ -126,6 +130,10 @@ class Task extends Equatable {
   final List<String> categories;
   final String? notes;
   final String? category;
+  final String? locationTag;
+  final double? latitude;
+  final double? longitude;
+  final double? radiusMeters;
   // Volatile fields (not persisted): timestamps for freshness/analytics
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -160,6 +168,10 @@ class Task extends Equatable {
     List<String>? categories,
     String? notes,
     String? category,
+    String? locationTag,
+    double? latitude,
+    double? longitude,
+    double? radiusMeters,
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? completedAt,
@@ -190,6 +202,10 @@ class Task extends Equatable {
       categories: categories ?? this.categories,
       notes: notes ?? this.notes,
       category: category ?? this.category,
+      locationTag: locationTag ?? this.locationTag,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      radiusMeters: radiusMeters ?? this.radiusMeters,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       completedAt: completedAt ?? this.completedAt,
@@ -215,6 +231,9 @@ class Task extends Equatable {
   bool get isUrgent => quadrant.isUrgent;
   bool get isImportant => quadrant.isImportant;
   bool get isCompleted => completedAt != null;
+  String get description => notes?.trim() ?? '';
+  bool get hasLocationSignal => locationTag != null || hasCoordinates;
+  bool get hasCoordinates => latitude != null && longitude != null;
 
   /// Progress tracking
   double get subtaskProgress {
@@ -262,6 +281,10 @@ class Task extends Equatable {
         categories,
         notes,
         category,
+        locationTag,
+        latitude,
+        longitude,
+        radiusMeters,
         createdAt,
         updatedAt,
         completedAt,

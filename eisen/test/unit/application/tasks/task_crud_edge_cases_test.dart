@@ -1,9 +1,9 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:eisen/core/services/storage_prefs.dart';
+import 'package:eisen/features/eisen_matrix/data/local_repo.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
-import 'package:eisen/features/eisen_matrix/data/local_repo.dart';
-import 'package:eisen/core/services/storage_prefs.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Error handling and edge case tests for CRUD operations
@@ -171,7 +171,7 @@ void main() {
       final controller = container.read(matrixControllerProvider.notifier);
       const specialTitle = 'Task with 🎯 emoji and @#\$% symbols';
 
-      final id = controller.createTask(
+      controller.createTask(
         title: specialTitle,
         quadrant: Quadrant.q1,
       );

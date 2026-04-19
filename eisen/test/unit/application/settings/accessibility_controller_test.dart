@@ -1,7 +1,7 @@
 import 'package:eisen/features/settings/data/accessibility_prefs_repository.dart';
 import 'package:eisen/features/settings/domain/accessibility_controller.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

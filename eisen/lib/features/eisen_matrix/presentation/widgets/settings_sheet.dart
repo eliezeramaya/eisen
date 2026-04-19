@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:eisen/core/providers/locale_provider.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/l10n/app_localizations.dart';
@@ -156,9 +158,10 @@ class SettingsSheet extends ConsumerWidget {
         label: 'Top-K por cuadrante',
         value: prefs.topKPerQuadrant,
         min: 5,
-        max: 60,
-        divisions: 55,
-        helper: 'Más alto = más tareas visibles, menos “+N”.',
+        max: 100,
+        divisions: 95,
+        helper:
+            'Más alto = más tareas visibles, menos "+N". Desktop: hasta 100.',
         toDouble: (v) => v.toDouble(),
         fromDouble: (d) => d.round(),
         onChanged: (v) =>
@@ -202,6 +205,21 @@ class SettingsSheet extends ConsumerWidget {
         fromDouble: (d) => double.parse(d.toStringAsFixed(3)),
         onChanged: (v) =>
             ref.read(uiPrefsControllerProvider.notifier).setPadding(v),
+      ),
+      _SliderTile<double>(
+        sliderKey: const Key('slider_tile_size'),
+        label: 'Tamaño mínimo de tile',
+        value: prefs.minTileSizePx,
+        min: 40.0,
+        max: 44.0,
+        divisions: 4,
+        helper:
+            'Móvil: 40-44px para targets táctiles. Desktop permite 30-44px.',
+        toDouble: (v) => v,
+        fromDouble: (d) => double.parse(d.toStringAsFixed(1)),
+        onChanged: (v) => ref
+            .read(uiPrefsControllerProvider.notifier)
+            .setMinTileSize(v, isDesktop: false),
       ),
       if (onResetToDemo != null) ...[
         const Divider(height: 24),

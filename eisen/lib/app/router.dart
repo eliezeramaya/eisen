@@ -5,6 +5,7 @@ import 'package:eisen/features/focus/presentation/pages/focus_dashboard_page.dar
 import 'package:eisen/features/focus/presentation/pages/pomodoro_session_page.dart';
 import 'package:eisen/features/settings/presentation/pages/settings_screen.dart';
 import 'package:eisen/features/stats/presentation/pages/stats_page.dart';
+import 'package:eisen/features/tasks/context_aware/presentation/pages/context_aware_tasks_page.dart';
 import 'package:eisen/ui/list_mode/list_mode_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -114,6 +115,14 @@ final GoRouter _router = GoRouter(
       name: 'list-mode',
       pageBuilder: (context, state) =>
           _fadeSlidePage(state, const ListModeScreen()),
+    ),
+    GoRoute(
+      path: '/context-aware-tasks',
+      name: 'context-aware-tasks',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        state,
+        const ContextAwareTasksPage(),
+      ),
     ),
     GoRoute(
       path: '/completed-matrix',

@@ -87,8 +87,8 @@ class ListModeScreen extends ConsumerWidget {
     final maxWeight = allTasks.isEmpty
         ? 1.0
         : allTasks
-              .map(_calculateWeight)
-              .fold<double>(0, (a, b) => a > b ? a : b);
+            .map(_calculateWeight)
+            .fold<double>(0, (a, b) => a > b ? a : b);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -218,11 +218,17 @@ class ListModeScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   gradient: LinearGradient(
-                    colors: [color.withOpacity(0.4), color.withOpacity(0.15)],
+                    colors: [
+                      color.withValues(alpha: 0.4),
+                      color.withValues(alpha: 0.15),
+                    ],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
-                  border: Border.all(color: color.withOpacity(0.3), width: 1),
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -259,7 +265,7 @@ class ListModeScreen extends ConsumerWidget {
                             Text(
                               _getQuadrantLabel(task.quadrant),
                               style: TextStyle(
-                                color: color.withOpacity(0.8),
+                                color: color.withValues(alpha: 0.8),
                                 fontSize: 11,
                                 fontWeight: FontWeight.w400,
                               ),
@@ -330,7 +336,7 @@ class ListModeScreen extends ConsumerWidget {
           Icon(
             Icons.inbox_outlined,
             size: 64,
-            color: const Color(0xFF7C7C7C).withOpacity(0.5),
+            color: const Color(0xFF7C7C7C).withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           const Text(

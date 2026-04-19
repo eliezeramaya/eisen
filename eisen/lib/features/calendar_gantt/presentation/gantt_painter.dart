@@ -51,7 +51,7 @@ class GanttPainter extends CustomPainter {
       final glow = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 6
-        ..color = UiTokens.now.withOpacity(.12);
+        ..color = UiTokens.now.withValues(alpha: 0.12);
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), glow);
     }
 
@@ -62,7 +62,7 @@ class GanttPainter extends CustomPainter {
     final borderPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = UiTokens.barStroke
-      ..color = Colors.white.withOpacity(.06);
+      ..color = Colors.white.withValues(alpha: 0.06);
 
     // Text baseline style with subtle shadow for contrast (AA aid on gradients)
     final titleStyle = TextStyle(
@@ -139,7 +139,7 @@ class GanttPainter extends CustomPainter {
             text: s.title,
             fontSize: titleStyle.fontSize!,
             maxWidth: maxTextWidth,
-            colorValue: palette.text.value);
+            colorValue: palette.text.toARGB32());
         var tp = GanttCaches.text.get(tKey);
         if (tp == null) {
           tp = TextPainter(
@@ -164,7 +164,7 @@ class GanttPainter extends CustomPainter {
             text: badgeLabel,
             fontSize: badgeTextStyle.fontSize!,
             maxWidth: 48,
-            colorValue: palette.text.value);
+            colorValue: palette.text.toARGB32());
         var tp = GanttCaches.text.get(tKey);
         if (tp == null) {
           tp = TextPainter(
@@ -208,7 +208,7 @@ class GanttPainter extends CustomPainter {
         final fill = Paint()..color = const Color(0xFF2EE6B8);
         final stroke = Paint()
           ..style = PaintingStyle.stroke
-          ..color = Colors.white.withOpacity(.20)
+          ..color = Colors.white.withValues(alpha: 0.20)
           ..strokeWidth = 1;
         canvas.drawPath(path, fill);
         canvas.drawPath(path, stroke);

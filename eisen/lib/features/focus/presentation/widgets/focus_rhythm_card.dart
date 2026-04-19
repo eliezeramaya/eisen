@@ -45,7 +45,7 @@ class FocusRhythmCard extends ConsumerWidget {
                     state.focusLabel,
                     key: ValueKey(state.focusLabel),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: cs.onSurface.withOpacity(0.72),
+                          color: cs.onSurface.withValues(alpha: 0.72),
                           letterSpacing: 0.5,
                         ),
                   ),
@@ -83,7 +83,7 @@ class FocusRhythmDial extends StatelessWidget {
               key: ValueKey(progress),
               painter: _DialPainter(
                 progress: progress,
-                trackColor: cs.onSurfaceVariant.withOpacity(0.25),
+                trackColor: cs.onSurfaceVariant.withValues(alpha: 0.25),
                 accentStart: cs.primary,
                 accentEnd: cs.tertiary,
                 handleColor: cs.onSurface,
@@ -92,7 +92,7 @@ class FocusRhythmDial extends StatelessWidget {
                 child: Text(
                   'Low focus → Deep focus',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cs.onSurface.withOpacity(0.6),
+                        color: cs.onSurface.withValues(alpha: 0.6),
                       ),
                 ),
               ),
@@ -130,7 +130,7 @@ class _DialLabel extends StatelessWidget {
     return Text(
       text,
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: cs.onSurfaceVariant.withOpacity(0.8),
+            color: cs.onSurfaceVariant.withValues(alpha: 0.8),
           ),
     );
   }
@@ -232,15 +232,15 @@ class _Pill extends StatelessWidget {
         vertical: EisenSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: cs.onSurface.withOpacity(0.04)),
+        border: Border.all(color: cs.onSurface.withValues(alpha: 0.04)),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
               letterSpacing: 1.5,
-              color: cs.onSurface.withOpacity(0.8),
+              color: cs.onSurface.withValues(alpha: 0.8),
             ),
       ),
     );

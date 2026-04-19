@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:eisen/features/completed_tasks/domain/filters.dart';
 import 'package:eisen/features/completed_tasks/domain/project_category.dart';
+import 'package:flutter/material.dart';
 
 /// Filter bar for completed tasks.
 ///
@@ -40,7 +40,7 @@ class FilterBar extends StatelessWidget {
         color: colorScheme.surfaceContainerHigh,
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.1),
+            color: colorScheme.shadow.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -171,19 +171,19 @@ String _formatDateLabel(CompletedTasksFilter filter) {
 }
 
 String _monthName(int month) => [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-][month - 1];
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
+    ][month - 1];
 
 Future<void> _showDatePicker(
   BuildContext context,

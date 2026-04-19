@@ -51,8 +51,8 @@ void main() {
           tr.rect01.width * size.width,
           tr.rect01.height * size.height,
         );
-        if (r.width < LayoutConstants.minTileSize ||
-            r.height < LayoutConstants.minTileSize) {
+        if (r.width < LayoutConstants.defaultMinTileSize ||
+            r.height < LayoutConstants.defaultMinTileSize) {
           continue;
         }
         if (r.contains(pos)) return tr.task.id;

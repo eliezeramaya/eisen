@@ -1,7 +1,7 @@
 import 'package:eisen/core/design_system/widgets/eisen_card.dart';
 import 'package:eisen/core/design_system/widgets/eisen_section_header.dart';
-import 'package:eisen/features/insights_ml/domain/productivity_scoring_service.dart';
 import 'package:eisen/features/insights_ml/domain/productivity_scores.dart';
+import 'package:eisen/features/insights_ml/domain/productivity_scoring_service.dart';
 import 'package:eisen/features/stats/domain/stats_trends_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,12 +36,8 @@ class StatsMlSection extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Text(
                     'Calculado con tus tareas creadas/completadas recientes.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelSmall
-                        ?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -74,7 +70,8 @@ class StatsMlSection extends ConsumerWidget {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
-                      onPressed: () => Navigator.of(context).pushNamed('/focus'),
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed('/focus'),
                       icon: const Icon(Icons.timer),
                       label: const Text('Crear bloque fijo'),
                     ),
@@ -118,7 +115,7 @@ class _OverloadBar extends StatelessWidget {
                   value: score.clamp(0.0, 1.0),
                   minHeight: 10,
                   color: color,
-                  backgroundColor: color.withOpacity(0.15),
+                  backgroundColor: color.withValues(alpha: 0.15),
                 ),
               ),
             ),

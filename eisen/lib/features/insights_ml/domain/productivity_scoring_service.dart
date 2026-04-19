@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
+import 'package:eisen/core/analytics/analytics_service.dart';
 import 'package:eisen/core/analytics/user_behavior_service.dart';
 import 'package:eisen/core/analytics/user_behavior_snapshot.dart';
-import 'package:eisen/core/analytics/analytics_service.dart';
 import 'package:eisen/core/analytics/user_event.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/insights_ml/domain/productivity_scores.dart';
@@ -226,7 +226,7 @@ class HeuristicProductivityScoringService
     if (task.quadrant == Quadrant.q4) score += 0.2;
     final title = task.title.toLowerCase();
     const vague = ['revisar', 'ver', 'checar', 'check', 'look', 'review'];
-    if (vague.any((v) => title.contains(v))) {
+    if (vague.any(title.contains)) {
       score += 0.1;
     }
     return score.clamp(0.0, 1.0);

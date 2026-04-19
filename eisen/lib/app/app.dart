@@ -99,6 +99,7 @@ class EisenApp extends ConsumerWidget {
     );
 
     return MaterialApp.router(
+      // ignore: deprecated_member_use
       useInheritedMediaQuery: true,
       builder: (ctx, child) {
         // Apply user text scaling on top of device scale with responsive clamps

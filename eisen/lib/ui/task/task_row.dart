@@ -49,16 +49,17 @@ class TaskRow extends StatelessWidget {
                 style: done
                     ? t.textTheme.bodyMedium?.copyWith(
                         decoration: TextDecoration.lineThrough,
-                        color: t.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                        color: t.textTheme.bodyMedium?.color
+                            ?.withValues(alpha: 0.6),
                       )
                     : t.textTheme.bodyMedium,
               ),
             ),
           ),
           const SizedBox(width: 6),
-          _MetaChip('P${task.priority}', t),
+          _metaChip('P${task.priority}', t),
           if (task.due != null) SizedBox(width: s?.insetXs ?? 4),
-          if (task.due != null) _MetaChip(_dueLabel(task.due!), t),
+          if (task.due != null) _metaChip(_dueLabel(task.due!), t),
           SizedBox(width: s?.insetSm ?? 8),
           IconButton(
             onPressed: onOpen,
@@ -93,7 +94,7 @@ class TaskRow extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: selected
-              ? t.colorScheme.primary.withOpacity(0.06)
+              ? t.colorScheme.primary.withValues(alpha: 0.06)
               : Colors.transparent,
           border: Border(bottom: BorderSide(color: borderColor, width: 0.8)),
         ),
@@ -112,7 +113,7 @@ class _ToggleIntent extends Intent {
   const _ToggleIntent();
 }
 
-Widget _MetaChip(String label, ThemeData t) {
+Widget _metaChip(String label, ThemeData t) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
     decoration: BoxDecoration(

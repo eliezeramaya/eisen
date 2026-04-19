@@ -1,6 +1,5 @@
 import 'package:eisen/core/design_system/widgets/eisen_card.dart';
 import 'package:eisen/core/design_system/widgets/eisen_section_header.dart';
-import 'package:eisen/features/insights_adaptive/domain/adaptive_policy_engine.dart';
 import 'package:eisen/features/insights_adaptive/domain/adaptive_providers.dart';
 import 'package:eisen/features/insights_adaptive/domain/cluster_models.dart';
 import 'package:flutter/material.dart';

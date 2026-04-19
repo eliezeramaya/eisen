@@ -55,7 +55,7 @@ void main() {
     test('create + edit + delete sequence', () {
       final cache = LayoutCache();
       final created = create.execute(title: 'Chain', minutes: 20);
-      var edited = update.execute(created, (t) {
+      final edited = update.execute(created, (t) {
         return t.copyWith(minutes: 40, quadrant: Quadrant.q4);
       });
 

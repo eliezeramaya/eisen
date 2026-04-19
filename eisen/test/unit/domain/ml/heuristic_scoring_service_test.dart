@@ -4,8 +4,6 @@ import 'package:eisen/core/analytics/user_behavior_snapshot.dart';
 import 'package:eisen/core/analytics/user_event.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/insights_ml/domain/productivity_scoring_service.dart';
-import 'package:eisen/features/insights_ml/domain/productivity_scores.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeAnalytics implements AnalyticsService {

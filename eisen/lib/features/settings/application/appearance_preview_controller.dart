@@ -15,13 +15,7 @@ class AppearancePreviewState {
     required this.minimal,
     required this.compact,
     required this.textScaleLevel,
-  });
-
-  final ThemeMode themeMode;
-  final String densityPreset; // 'auto' | 'comfy' | 'compact' | 'ultra'
-  final bool minimal;
-  final bool compact;
-  final int textScaleLevel; // 1..5
+  }); // 1..5
 
   factory AppearancePreviewState.fromPrefs(UiPrefsData prefs) {
     return AppearancePreviewState(
@@ -32,6 +26,12 @@ class AppearancePreviewState {
       textScaleLevel: prefs.textScaleLevel,
     );
   }
+
+  final ThemeMode themeMode;
+  final String densityPreset; // 'auto' | 'comfy' | 'compact' | 'ultra'
+  final bool minimal;
+  final bool compact;
+  final int textScaleLevel;
 
   AppearancePreviewState copyWith({
     ThemeMode? themeMode,

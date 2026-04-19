@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// Comprehensive validation tests for Task entity
 /// Tests boundary conditions, edge cases, and invalid inputs

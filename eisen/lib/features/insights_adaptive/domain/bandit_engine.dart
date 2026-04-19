@@ -1,11 +1,7 @@
 import 'package:eisen/features/insights_adaptive/domain/bandit_models.dart';
 
 /// Contexto opcional para bandits contextuales.
-class BanditContext {
-  final DateTime now;
-  final int recentProcrastinationScore; // 0..100
-  final int recentOverloadScore; // 0..100
-  final int recentQ2Ratio; // 0..100
+class BanditContext { // 0..100
 
   const BanditContext({
     required this.now,
@@ -13,6 +9,10 @@ class BanditContext {
     required this.recentOverloadScore,
     required this.recentQ2Ratio,
   });
+  final DateTime now;
+  final int recentProcrastinationScore; // 0..100
+  final int recentOverloadScore; // 0..100
+  final int recentQ2Ratio;
 }
 
 abstract class BanditEngine {

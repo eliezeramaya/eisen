@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:eisen/ui/widgets/app_logo_home_button.dart';
+import 'package:flutter/material.dart';
 
 class AppToolbar extends StatefulWidget {
   const AppToolbar({
@@ -16,10 +16,14 @@ class AppToolbar extends StatefulWidget {
     this.onOpenStats,
     this.onOpenWorkflow,
     this.onOpenProfile,
+    this.onOpenContextTasks,
     this.onToggleMinimal,
     this.onOpenCompletedTasks,
     this.onOpenSpaces,
     this.onOpenFocus,
+    this.onToggleViewMode,
+    this.viewMode = 'treemap',
+    this.showViewModeToggle = false,
     this.minimal = false,
     this.showWorkflowPlan = false,
   });
@@ -34,10 +38,14 @@ class AppToolbar extends StatefulWidget {
   final VoidCallback? onOpenStats;
   final VoidCallback? onOpenWorkflow;
   final VoidCallback? onOpenProfile;
+  final VoidCallback? onOpenContextTasks;
   final VoidCallback? onToggleMinimal;
   final VoidCallback? onOpenCompletedTasks;
   final VoidCallback? onOpenSpaces;
   final VoidCallback? onOpenFocus;
+  final VoidCallback? onToggleViewMode;
+  final String viewMode; // 'treemap' | 'list'
+  final bool showViewModeToggle; // Show toggle on desktop (≥1240px)
   final bool minimal;
   final ThemeMode themeMode;
   final bool showWorkflowPlan;
@@ -104,10 +112,17 @@ class _AppToolbarState extends State<AppToolbar> {
     final statsLabel = isEs ? 'Stats' : 'Stats';
     final workflowLabel = isEs ? 'Workflow' : 'Workflow';
     final focusLabel = isEs ? 'Focus' : 'Focus';
+    final contextLabel = isEs ? 'Contexto' : 'Context';
     final settingsLabel = isEs ? 'Ajustes' : 'Settings';
     final profileLabel = isEs ? 'Perfil' : 'Profile';
     final completedLabel = isEs ? 'Completed' : 'Completed';
     final themeLabel = isEs ? 'Tema' : 'Theme';
+    final viewLabel = widget.viewMode == 'list'
+        ? (isEs ? 'Lista' : 'List')
+        : (isEs ? 'Matriz' : 'Matrix');
+    final viewIcon = widget.viewMode == 'list'
+        ? Icons.view_list_rounded
+        : Icons.grid_view_rounded;
 
     Widget actionButton({
       required VoidCallback? onPressed,
@@ -212,9 +227,14 @@ class _AppToolbarState extends State<AppToolbar> {
                           width: MediaQuery.of(context).size.width / 5,
                           child: Center(
                             child: actionButton(
-                              onPressed: widget.onToggleSearch,
-                              icon: Icons.search,
-                              label: searchLabel,
+                              onPressed: widget.onOpenContextTasks ??
+                                  widget.onToggleSearch,
+                              icon: widget.onOpenContextTasks != null
+                                  ? Icons.place_rounded
+                                  : Icons.search,
+                              label: widget.onOpenContextTasks != null
+                                  ? contextLabel
+                                  : searchLabel,
                             ),
                           ),
                         ),
@@ -257,6 +277,12 @@ class _AppToolbarState extends State<AppToolbar> {
                             icon: Icons.bolt,
                             label: focusLabel,
                           ),
+                        if (widget.onOpenContextTasks != null)
+                          actionButton(
+                            onPressed: widget.onOpenContextTasks,
+                            icon: Icons.place_rounded,
+                            label: contextLabel,
+                          ),
                         if (widget.onOpenCompletedTasks != null)
                           actionButton(
                             onPressed: widget.onOpenCompletedTasks,
@@ -280,6 +306,14 @@ class _AppToolbarState extends State<AppToolbar> {
                             onPressed: widget.onOpenProfile,
                             icon: Icons.account_circle,
                             label: profileLabel,
+                          ),
+                        // View Mode Toggle (Matrix/List) - Desktop only
+                        if (widget.showViewModeToggle &&
+                            widget.onToggleViewMode != null)
+                          actionButton(
+                            onPressed: widget.onToggleViewMode,
+                            icon: viewIcon,
+                            label: viewLabel,
                           ),
                         // Search button (advanced search) moved al final
                         actionButton(
@@ -397,7 +431,7 @@ class _SearchBar extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: cs.surfaceVariant,
+          color: cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(

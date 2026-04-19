@@ -38,14 +38,14 @@ class SettingsSearchDelegate extends SearchDelegate<String?> {
         .toList();
     return ListView.builder(
       itemCount: items.length,
-      itemBuilder: (_, i) {
+      itemBuilder: (context, i) {
         final section = items[i];
         return ListTile(
           leading: const Icon(Icons.arrow_right),
           title: Text(section),
           onTap: () {
             onJumpTo(section);
-            close(_, section);
+            close(context, section);
           },
         );
       },

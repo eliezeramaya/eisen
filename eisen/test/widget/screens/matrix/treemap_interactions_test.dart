@@ -324,7 +324,7 @@ void main() {
       final controller = container.read(matrixControllerProvider.notifier);
 
       // Compute layout with no viewport specified
-      final rects = controller.computeLayout();
+      final rects = await controller.computeLayout();
 
       expect(rects, isA<List<TreemapRect>>(),
           reason: 'Layout should return a list of rectangles');
@@ -349,7 +349,7 @@ void main() {
 
       if (state.tasks.isNotEmpty) {
         // Compute layout for Q1 only
-        final q1Rects = controller.computeLayout(only: Quadrant.q1);
+        final q1Rects = await controller.computeLayout(only: Quadrant.q1);
 
         expect(q1Rects, isA<List<TreemapRect>>(),
             reason: 'Filtered layout should return rectangles');

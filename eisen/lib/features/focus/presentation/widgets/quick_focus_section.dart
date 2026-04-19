@@ -25,7 +25,7 @@ class QuickFocusSection extends StatelessWidget {
             _QuickFocusButton(
               label: '25 min – Clásico',
               icon: Icons.timelapse,
-              color: cs.primary.withOpacity(0.14),
+              color: cs.primary.withValues(alpha: 0.14),
               onTap: () => _startPomodoro(
                 context,
                 const Duration(minutes: 25),
@@ -35,7 +35,7 @@ class QuickFocusSection extends StatelessWidget {
             _QuickFocusButton(
               label: '50 min – Profundo',
               icon: Icons.bolt,
-              color: cs.tertiary.withOpacity(0.16),
+              color: cs.tertiary.withValues(alpha: 0.16),
               onTap: () => _startPomodoro(
                 context,
                 const Duration(minutes: 50),
@@ -45,7 +45,7 @@ class QuickFocusSection extends StatelessWidget {
             _QuickFocusButton(
               label: '90 min – Deep work',
               icon: Icons.waves,
-              color: cs.secondary.withOpacity(0.14),
+              color: cs.secondary.withValues(alpha: 0.14),
               onTap: () => _startPomodoro(
                 context,
                 const Duration(minutes: 90),

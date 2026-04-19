@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:eisen/core/providers/locale_provider.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/l10n/app_localizations.dart';
@@ -245,8 +247,8 @@ class SettingsSheetCompact extends ConsumerWidget {
                 subtitle: Slider(
                   value: prefs.topKPerQuadrant.toDouble(),
                   min: 5,
-                  max: 60,
-                  divisions: 55,
+                  max: 100,
+                  divisions: 95,
                   label: prefs.topKPerQuadrant.toString(),
                   onChanged: (v) => ref
                       .read(uiPrefsControllerProvider.notifier)
@@ -291,6 +293,19 @@ class SettingsSheetCompact extends ConsumerWidget {
                       .setPadding(v),
                 ),
               ),
+              ListTile(
+                title: const Text('Tamaño mínimo de tile'),
+                subtitle: Slider(
+                  value: prefs.minTileSizePx,
+                  min: 40.0,
+                  max: 44.0,
+                  divisions: 4,
+                  label: '${prefs.minTileSizePx.toStringAsFixed(0)}px',
+                  onChanged: (v) => ref
+                      .read(uiPrefsControllerProvider.notifier)
+                      .setMinTileSize(v, isDesktop: false),
+                ),
+              ),
             ],
           ),
         ),
@@ -328,9 +343,9 @@ class _CompactIconButton extends StatelessWidget {
         width: 90,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest.withOpacity(0.3),
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: cs.outline.withOpacity(0.2)),
+          border: Border.all(color: cs.outline.withValues(alpha: 0.2)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

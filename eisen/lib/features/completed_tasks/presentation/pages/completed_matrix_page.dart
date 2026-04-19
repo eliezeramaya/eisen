@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/features/completed_tasks/application/completed_controller.dart';
-import 'package:eisen/features/completed_tasks/presentation/widgets/completed_matrix_view.dart';
+import 'package:eisen/features/completed_tasks/data/completed_tasks_repository.dart';
 import 'package:eisen/features/completed_tasks/domain/filters.dart';
 import 'package:eisen/features/completed_tasks/domain/project_category.dart';
-import 'package:eisen/features/completed_tasks/data/completed_tasks_repository.dart';
+import 'package:eisen/features/completed_tasks/presentation/widgets/completed_matrix_view.dart';
 import 'package:eisen/ui/widgets/app_logo_home_button.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Completed tasks matrix page.
 ///
@@ -89,7 +89,7 @@ class _CompletedMatrixPageState extends ConsumerState<CompletedMatrixPage> {
               color: colorScheme.surfaceContainerHigh,
               boxShadow: [
                 BoxShadow(
-                  color: colorScheme.shadow.withOpacity(0.1),
+                  color: colorScheme.shadow.withValues(alpha: 0.1),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),
@@ -128,7 +128,7 @@ class _CompletedMatrixPageState extends ConsumerState<CompletedMatrixPage> {
           if (state.isShowingAll && state.tasks.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: colorScheme.errorContainer.withOpacity(0.3),
+              color: colorScheme.errorContainer.withValues(alpha: 0.3),
               child: Row(
                 children: [
                   Icon(
@@ -202,7 +202,7 @@ class _CompletedMatrixPageState extends ConsumerState<CompletedMatrixPage> {
                 color: colorScheme.surfaceContainerHighest,
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.shadow.withOpacity(0.1),
+                    color: colorScheme.shadow.withValues(alpha: 0.1),
                     blurRadius: 4,
                     offset: const Offset(0, -2),
                   ),
@@ -592,7 +592,7 @@ class _EmptyState extends StatelessWidget {
             Icon(
               Icons.task_alt,
               size: 80,
-              color: colorScheme.onSurfaceVariant.withOpacity(0.3),
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 24),
             Text(
@@ -606,7 +606,7 @@ class _EmptyState extends StatelessWidget {
             Text(
               'Para el filtro actual: ${filter.description}',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -712,7 +712,7 @@ class _QuadrantBadge extends StatelessWidget {
       margin: const EdgeInsets.only(left: 4),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: color, width: 1),
       ),

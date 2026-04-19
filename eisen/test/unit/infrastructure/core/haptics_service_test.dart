@@ -3,7 +3,6 @@ import 'package:eisen/features/settings/domain/accessibility_controller.dart';
 import 'package:eisen/features/settings/domain/accessibility_prefs.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibration/vibration.dart';
 
 /// Mock HapticsService for testing
 class MockHapticsService implements HapticsService {

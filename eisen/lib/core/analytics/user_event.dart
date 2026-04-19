@@ -22,6 +22,21 @@ class UserEvent {
     this.metadata = const {},
   });
 
+  factory UserEvent.fromJson(Map<String, dynamic> json) {
+    final rawType = json['type'] as String?;
+    final parsedType = UserEventType.values.firstWhere(
+      (t) => t.name == rawType,
+      orElse: () => UserEventType.appOpened,
+    );
+    final ts = json['timestamp'] as String?;
+    return UserEvent(
+      type: parsedType,
+      timestamp: ts != null ? DateTime.parse(ts) : DateTime.now(),
+      metadata:
+          (json['metadata'] as Map?)?.cast<String, dynamic>() ?? const {},
+    );
+  }
+
   final UserEventType type;
   final DateTime timestamp;
   final Map<String, dynamic> metadata;
@@ -43,19 +58,4 @@ class UserEvent {
         'timestamp': timestamp.toIso8601String(),
         'metadata': metadata,
       };
-
-  factory UserEvent.fromJson(Map<String, dynamic> json) {
-    final rawType = json['type'] as String?;
-    final parsedType = UserEventType.values.firstWhere(
-      (t) => t.name == rawType,
-      orElse: () => UserEventType.appOpened,
-    );
-    final ts = json['timestamp'] as String?;
-    return UserEvent(
-      type: parsedType,
-      timestamp: ts != null ? DateTime.parse(ts) : DateTime.now(),
-      metadata:
-          (json['metadata'] as Map?)?.cast<String, dynamic>() ?? const {},
-    );
-  }
 }

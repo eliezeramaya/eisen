@@ -434,7 +434,7 @@ class _GanttInteractionLayerState extends ConsumerState<GanttInteractionLayer> {
   // Zoom via mouse wheel + Ctrl
   void _onPointerSignal(PointerSignalEvent e) {
     if (e is! PointerScrollEvent) return;
-    final keys = RawKeyboard.instance.keysPressed;
+    final keys = HardwareKeyboard.instance.logicalKeysPressed;
     final ctrl = keys.contains(LogicalKeyboardKey.controlLeft) ||
         keys.contains(LogicalKeyboardKey.controlRight) ||
         keys.contains(LogicalKeyboardKey.metaLeft) ||
@@ -625,7 +625,8 @@ class _TooltipCard extends StatelessWidget {
       color: cs.surfaceContainerHigh,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: cs.outlineVariant.withOpacity(.6), width: 1),
+        side: BorderSide(
+            color: cs.outlineVariant.withValues(alpha: 0.6), width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),

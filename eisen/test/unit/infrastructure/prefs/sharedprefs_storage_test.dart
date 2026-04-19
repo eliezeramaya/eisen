@@ -1,7 +1,7 @@
-import 'package:eisen/features/settings/data/notification_prefs_repository.dart';
-import 'package:eisen/features/settings/data/language_prefs_repository.dart';
-import 'package:eisen/features/settings/domain/language_prefs.dart';
 import 'package:eisen/features/settings/data/accessibility_prefs_repository.dart';
+import 'package:eisen/features/settings/data/language_prefs_repository.dart';
+import 'package:eisen/features/settings/data/notification_prefs_repository.dart';
+import 'package:eisen/features/settings/domain/language_prefs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
