@@ -1,5 +1,4 @@
 import 'package:eisen/features/insights/domain/nudge.dart';
-import 'package:eisen/features/insights/domain/nudge_notification_service.dart';
 import 'package:eisen/features/settings/domain/notification_prefs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

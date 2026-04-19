@@ -1,16 +1,10 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:eisen/core/design_system/eisen_tokens.dart';
+import 'package:flutter/material.dart';
 
 /// Circular timer ring widget with animated progress
 class PomodoroTimerRing extends StatelessWidget {
-  final Duration total;
-  final Duration remaining;
-  final bool isRunning;
-  final bool isBreak;
-  final bool reduceAnimations;
-
   const PomodoroTimerRing({
     super.key,
     required this.total,
@@ -19,6 +13,11 @@ class PomodoroTimerRing extends StatelessWidget {
     this.isBreak = false,
     this.reduceAnimations = false,
   });
+  final Duration total;
+  final Duration remaining;
+  final bool isRunning;
+  final bool isBreak;
+  final bool reduceAnimations;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +74,7 @@ class PomodoroTimerRing extends StatelessWidget {
                 style: theme.textTheme.labelMedium?.copyWith(
                   letterSpacing: 2.0,
                   fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -94,15 +93,14 @@ class PomodoroTimerRing extends StatelessWidget {
 
 /// Custom painter for circular progress indicator
 class CircularProgressPainter extends CustomPainter {
-  final double progress;
-  final bool isBreak;
-  final ColorScheme colorScheme;
-
   CircularProgressPainter({
     required this.progress,
     required this.isBreak,
     required this.colorScheme,
   });
+  final double progress;
+  final bool isBreak;
+  final ColorScheme colorScheme;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -111,7 +109,7 @@ class CircularProgressPainter extends CustomPainter {
 
     // Background circle (track)
     final trackPaint = Paint()
-      ..color = colorScheme.surfaceContainerHighest.withOpacity(0.3)
+      ..color = colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 16.0
       ..strokeCap = StrokeCap.round;
@@ -154,7 +152,7 @@ class CircularProgressPainter extends CustomPainter {
     if (progress > 0) {
       final glowPaint = Paint()
         ..color = (isBreak ? colorScheme.secondary : colorScheme.primary)
-            .withOpacity(0.1)
+            .withValues(alpha: 0.1)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 24.0
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);

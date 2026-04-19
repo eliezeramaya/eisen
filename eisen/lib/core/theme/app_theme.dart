@@ -164,8 +164,8 @@ ThemeData buildAppTheme(Brightness brightness) {
       ),
       chipTheme: base.chipTheme.copyWith(
         backgroundColor: surface2,
-        selectedColor: primary.withOpacity(.16),
-        secondarySelectedColor: primary.withOpacity(.24),
+        selectedColor: primary.withValues(alpha: 0.16),
+        secondarySelectedColor: primary.withValues(alpha: 0.24),
         labelStyle: const TextStyle(color: onBg),
         side: const BorderSide(color: outline),
         shape: StadiumBorder(side: const BorderSide(color: outline)),

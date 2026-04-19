@@ -11,7 +11,7 @@ class AppTextScale {
 
   // Device/system text scale factor from MediaQuery, lightly clamped.
   static double device(BuildContext context) =>
-      MediaQuery.of(context).textScaleFactor.clamp(0.8, 2.0);
+      MediaQuery.textScalerOf(context).scale(1.0).clamp(0.8, 2.0);
 
   // User scale factor from preference level (1..5).
   static double userFromLevel(int level) => userLevelToFactor(level);

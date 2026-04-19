@@ -1,6 +1,6 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/features/calendar_gantt/domain/task_dependency.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Provider for managing task dependencies and validation.
 ///

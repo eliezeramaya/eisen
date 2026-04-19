@@ -1,9 +1,9 @@
 import 'package:eisen/core/design_system/eisen_tokens.dart';
 import 'package:eisen/core/design_system/widgets/eisen_card.dart';
 import 'package:eisen/core/design_system/widgets/eisen_section_header.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/features/insights/domain/nudge.dart';
 import 'package:eisen/features/insights/domain/nudge_controller.dart';
-import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';

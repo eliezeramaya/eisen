@@ -1,10 +1,10 @@
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/insights_ml/domain/productivity_scores.dart';
+import 'package:eisen/features/insights_ml/domain/productivity_scoring_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'stats_trends_service.dart';
 import 'trend_points.dart';
-import 'package:eisen/features/insights_ml/domain/productivity_scoring_service.dart';
-import 'package:eisen/features/insights_ml/domain/productivity_scores.dart';
 
 /// Rango de tiempo para visualización de tendencias.
 enum TrendsTimeRange {

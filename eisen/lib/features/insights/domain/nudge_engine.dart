@@ -2,7 +2,7 @@ import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/focus/domain/focus_controller.dart';
 import 'package:eisen/features/insights/domain/nudge.dart';
-import 'package:eisen/features/insights_adaptive/domain/adaptive_policy_engine.dart';
+
 import 'package:eisen/features/insights_adaptive/domain/adaptive_providers.dart';
 import 'package:eisen/features/insights_adaptive/domain/bandit_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -116,7 +116,8 @@ class DefaultNudgeEngine implements NudgeEngine {
           id: 'bandit-split-task',
           type: NudgeType.procrastination,
           title: 'Divide una tarea grande',
-          message: '“$target” puede dividirse en pasos pequeños para avanzar hoy.',
+          message:
+              '“$target” puede dividirse en pasos pequeños para avanzar hoy.',
           severity: NudgeSeverity.mediumHigh,
           category: NudgeCategory.organization,
           createdAt: now,

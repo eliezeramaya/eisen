@@ -1,8 +1,8 @@
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/ui/ui_tokens.dart';
+import 'package:eisen/features/calendar_gantt/application/dependencies_controller.dart';
 import 'package:eisen/features/calendar_gantt/application/gantt_lanes.dart';
 import 'package:eisen/features/calendar_gantt/application/gantt_providers.dart';
-import 'package:eisen/features/calendar_gantt/application/dependencies_controller.dart';
 import 'package:eisen/features/calendar_gantt/demo/gantt_demo_data.dart';
 import 'package:eisen/features/calendar_gantt/domain/calendar_span.dart';
 import 'package:eisen/features/calendar_gantt/domain/task_dependency.dart';
@@ -139,14 +139,13 @@ class _WorkflowPlanPageState extends ConsumerState<WorkflowPlanPage> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.2),
+                                color: Colors.green.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(4),
                                 border: Border.all(
-                                    color: Colors.green.withOpacity(0.5)),
+                                    color: Colors.green.withValues(alpha: 0.5)),
                               ),
                               child: Text(
-                                (Localizations.localeOf(context)
-                                            .languageCode ==
+                                (Localizations.localeOf(context).languageCode ==
                                         'es')
                                     ? '${spans.length} tareas reales'
                                     : '${spans.length} real tasks',
@@ -162,14 +161,14 @@ class _WorkflowPlanPageState extends ConsumerState<WorkflowPlanPage> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.2),
+                                color: Colors.orange.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(4),
                                 border: Border.all(
-                                    color: Colors.orange.withOpacity(0.5)),
+                                    color:
+                                        Colors.orange.withValues(alpha: 0.5)),
                               ),
                               child: Text(
-                                (Localizations.localeOf(context)
-                                            .languageCode ==
+                                (Localizations.localeOf(context).languageCode ==
                                         'es')
                                     ? 'Datos de ejemplo'
                                     : 'Demo data',

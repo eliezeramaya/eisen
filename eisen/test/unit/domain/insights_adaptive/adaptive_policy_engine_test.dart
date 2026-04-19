@@ -3,9 +3,8 @@ import 'package:eisen/features/insights_adaptive/domain/bandit_engine.dart';
 import 'package:eisen/features/insights_adaptive/domain/bandit_models.dart';
 import 'package:eisen/features/insights_adaptive/domain/cluster_models.dart';
 import 'package:eisen/features/insights_adaptive/domain/clustering_service.dart';
-import 'package:eisen/features/insights_ml/domain/productivity_scoring_service.dart';
 import 'package:eisen/features/insights_ml/domain/productivity_scores.dart';
-import 'package:flutter/material.dart';
+import 'package:eisen/features/insights_ml/domain/productivity_scoring_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeBandit implements BanditEngine {

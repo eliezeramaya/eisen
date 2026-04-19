@@ -247,7 +247,8 @@ class _NowChip extends StatelessWidget {
             color: UiTokens.now,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
-              BoxShadow(color: UiTokens.now.withOpacity(.25), blurRadius: 8),
+              BoxShadow(
+                  color: UiTokens.now.withValues(alpha: 0.25), blurRadius: 8),
             ],
           ),
           child: const Text(

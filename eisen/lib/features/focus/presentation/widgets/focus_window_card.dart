@@ -60,7 +60,7 @@ class FocusWindowCard extends ConsumerWidget {
                 Text(
                   'Trabajar en esta franja suele darte tus mejores sesiones de foco profundo.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: cs.onSurface.withOpacity(0.72),
+                        color: cs.onSurface.withValues(alpha: 0.72),
                       ),
                 ),
               ],
@@ -124,7 +124,7 @@ class _FocusWindowBarState extends State<FocusWindowBar> {
             child: Container(
               height: 22,
               decoration: BoxDecoration(
-                color: cs.onSurfaceVariant.withOpacity(0.18),
+                color: cs.onSurfaceVariant.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Stack(
@@ -147,7 +147,7 @@ class _FocusWindowBarState extends State<FocusWindowBar> {
                         borderRadius: BorderRadius.circular(999),
                         boxShadow: [
                           BoxShadow(
-                            color: cs.onSurface.withOpacity(0.2),
+                            color: cs.onSurface.withValues(alpha: 0.2),
                             blurRadius: 10,
                             spreadRadius: 1,
                           ),
@@ -175,7 +175,7 @@ class _HourText extends StatelessWidget {
     return Text(
       text,
       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: cs.onSurfaceVariant.withOpacity(0.8),
+            color: cs.onSurfaceVariant.withValues(alpha: 0.8),
           ),
     );
   }
@@ -194,15 +194,15 @@ class _Pill extends StatelessWidget {
         vertical: EisenSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: cs.onSurface.withOpacity(0.04)),
+        border: Border.all(color: cs.onSurface.withValues(alpha: 0.04)),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
               letterSpacing: 1.5,
-              color: cs.onSurface.withOpacity(0.8),
+              color: cs.onSurface.withValues(alpha: 0.8),
             ),
       ),
     );

@@ -19,7 +19,7 @@ class WeeklyFocusTrendSection extends StatelessWidget {
     final points = (trend ?? const <TrendPoint>[]).toList();
 
     final isEs = Localizations.localeOf(context).languageCode == 'es';
-    String _dayLabel(DateTime d) {
+    String dayLabel(DateTime d) {
       switch (d.weekday) {
         case DateTime.monday:
           return isEs ? 'L' : 'M';
@@ -40,7 +40,7 @@ class WeeklyFocusTrendSection extends StatelessWidget {
     }
 
     final labels =
-        points.map((p) => _dayLabel(p.day)).toList(growable: false);
+        points.map((p) => dayLabel(p.day)).toList(growable: false);
     final focusPerDay =
         points.map((p) => p.focusMinutes).toList(growable: false);
     final maxV = focusPerDay.fold<int>(0, (a, b) => b > a ? b : a);

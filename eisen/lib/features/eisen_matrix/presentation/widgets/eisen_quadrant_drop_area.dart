@@ -32,16 +32,15 @@ class _EisenQuadrantDropAreaState
     final cs = Theme.of(context).colorScheme;
 
     return DragTarget<Task>(
-      onWillAccept: (task) {
-        if (task == null) return false;
+      onWillAcceptWithDetails: (task) {
         setState(() => _hovered = true);
         return true;
       },
       onLeave: (_) {
         setState(() => _hovered = false);
       },
-      onAccept: (task) {
-        controller.moveTaskToQuadrant(task.id, widget.quadrant);
+      onAcceptWithDetails: (details) {
+        controller.moveTaskToQuadrant(details.data.id, widget.quadrant);
         controller.clearDragging();
         setState(() => _hovered = false);
       },
@@ -65,4 +64,3 @@ class _EisenQuadrantDropAreaState
     );
   }
 }
-

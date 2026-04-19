@@ -1,12 +1,13 @@
 import 'dart:async';
 
-import 'package:eisen/core/analytics/analytics_service.dart';
-import 'package:eisen/core/analytics/user_event.dart';
 import 'package:eisen/core/haptics/haptics_service.dart';
+import 'package:eisen/core/performance/perf_logger.dart';
 import 'package:eisen/core/services/storage_prefs.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/sync/remote_tasks_service.dart';
 import 'package:eisen/core/sync/remote_tasks_service_noop.dart';
+import 'package:eisen/core/workers/task_sort_worker.dart';
+import 'package:eisen/core/workers/worker_models.dart';
 import 'package:eisen/features/eisen_matrix/data/local_repo.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
@@ -21,6 +22,7 @@ import 'package:eisen/features/eisen_matrix/domain/usecases/create_task_usecase.
 import 'package:eisen/features/eisen_matrix/domain/usecases/delete_task_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/suggest_top_spots_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/update_task_usecase.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -483,6 +485,9 @@ class MatrixController extends Notifier<MatrixState> {
       case MatrixViewMode.top50:
         k = 50;
         break;
+      case MatrixViewMode.top100:
+        k = 100;
+        break;
       case MatrixViewMode.all:
         // Use a high value to approximate "no limit"; layout providers will
         // clamp based on their own safety bounds.
@@ -531,20 +536,21 @@ class MatrixController extends Notifier<MatrixState> {
 
     _computeLayoutUseCase.markDirty({quadrant});
     unawaited(persist());
-    unawaited(_logEvent(
-      UserEvent(
-        type: UserEventType.taskCreated,
-        timestamp: DateTime.now(),
-        metadata: {
-          'taskId': task.id,
-          'quadrant': quadrant.name,
-          'projectId': task.projectId,
-          'due': task.due?.toIso8601String(),
-          'minutes': task.minutes,
-          'priority': task.priority,
-        },
-      ),
-    ));
+    // TODO: Re-enable analytics
+    // unawaited(_logEvent(
+    // UserEvent(
+    // type: UserEventType.taskCreated,
+    // timestamp: DateTime.now(),
+    // metadata: {
+    // 'taskId': task.id,
+    // 'quadrant': quadrant.name,
+    // 'projectId': task.projectId,
+    // 'due': task.due?.toIso8601String(),
+    // 'minutes': task.minutes,
+    // 'priority': task.priority,
+    // },
+    // ),
+    // ));
 
     return task.id;
   }
@@ -574,18 +580,19 @@ class MatrixController extends Notifier<MatrixState> {
     final dueChanged = prev.due != next.due;
     final replanChanged = prev.replanCount != next.replanCount;
     if (dueChanged || replanChanged) {
-      unawaited(_logEvent(
-        UserEvent(
-          type: UserEventType.taskRescheduled,
-          timestamp: DateTime.now(),
-          metadata: {
-            'taskId': next.id,
-            'oldDue': prev.due?.toIso8601String(),
-            'newDue': next.due?.toIso8601String(),
-            'replanCount': next.replanCount,
-          },
-        ),
-      ));
+      // TODO: Re-enable analytics
+      // unawaited(_logEvent(
+      // UserEvent(
+      // type: UserEventType.taskRescheduled,
+      // timestamp: DateTime.now(),
+      // metadata: {
+      // 'taskId': next.id,
+      // 'oldDue': prev.due?.toIso8601String(),
+      // 'newDue': next.due?.toIso8601String(),
+      // 'replanCount': next.replanCount,
+      // },
+      // ),
+      // ));
     }
   }
 
@@ -621,28 +628,30 @@ class MatrixController extends Notifier<MatrixState> {
     final haptics = ref.read(hapticsServiceProvider);
     haptics.light();
 
-    final completed = state.tasks.firstWhere(
-      (t) => t.id == id,
-      orElse: () => Task(
-        id: id,
-        title: '',
-        quadrant: Quadrant.q2,
-        priority: 5,
-        minutes: 60,
-      ),
-    );
-    unawaited(_logEvent(
-      UserEvent(
-        type: UserEventType.taskCompleted,
-        timestamp: DateTime.now(),
-        metadata: {
-          'taskId': completed.id,
-          'quadrant': completed.quadrant.name,
-          'projectId': completed.projectId,
-          'due': completed.due?.toIso8601String(),
-        },
-      ),
-    ));
+    // TODO: Remove or use completed task analytics
+    // final completed = state.tasks.firstWhere(
+    //   (t) => t.id == id,
+    //   orElse: () => Task(
+    //     id: id,
+    //     title: '',
+    //     quadrant: Quadrant.q2,
+    //     priority: 5,
+    //     minutes: 60,
+    //   ),
+    // );
+    // TODO: Re-enable analytics
+    // unawaited(_logEvent(
+    // UserEvent(
+    // type: UserEventType.taskCompleted,
+    // timestamp: DateTime.now(),
+    // metadata: {
+    // 'taskId': completed.id,
+    // 'quadrant': completed.quadrant.name,
+    // 'projectId': completed.projectId,
+    // 'due': completed.due?.toIso8601String(),
+    // },
+    // ),
+    // ));
   }
 
   /// Resets the matrix view to the initial "home" state.
@@ -704,12 +713,84 @@ class MatrixController extends Notifier<MatrixState> {
     return buffer.toString();
   }
 
-  /// Computes the treemap layout with filtering and delegates to use case.
-  List<TreemapRect> layout({Quadrant? only, Size? viewport}) {
-    // Filter out completed tasks first.
-    var filtered = state.tasks.where((t) => t.completedAt == null).toList();
+  /// Computes the treemap layout with filtering and delegates to isolate worker.
+  Future<List<TreemapRect>> layout({Quadrant? only, Size? viewport}) async {
+    final filtered = _filteredTasksForLayout();
+    final sorted = await _sortTasksForLayout(filtered);
+    final minTileSizePx = ref.read(uiPrefsProvider).minTileSizePx;
+    final layout = await _computeLayoutUseCase.executeAsync(
+      tasks: sorted,
+      zoom: state.zoom,
+      viewport: viewport,
+      only: only,
+      compactDensity: state.compact,
+      minTileSizePx: minTileSizePx,
+    );
 
-    // Apply advanced text search before layout/top‑K.
+    // Update suggestions and compute metrics
+    _suggested = _suggestTopSpotsUseCase.execute(layout);
+
+    final taskById = {for (final t in state.tasks) t.id: t};
+    _computeReorderDeltaUseCase.execute(layout, taskById);
+
+    return layout;
+  }
+
+  Set<String> get suggestedTopSpots => _suggested;
+
+  /// Synchronous layout computation for scenarios that need immediate results
+  /// (e.g., golden tests or first paint) without isolate hop.
+  List<TreemapRect> computeLayoutSync({
+    Quadrant? only,
+    Size? viewport,
+    bool resetCache = false,
+  }) {
+    _maybeUpdateDynamicLayoutConfig(viewport, mutateState: false);
+    if (resetCache) {
+      resetLayoutCache();
+    }
+    final filtered = _filteredTasksForLayout();
+    final layout = _computeLayoutUseCase.execute(
+      tasks: filtered,
+      zoom: state.zoom,
+      viewport: viewport,
+      only: only,
+      compactDensity: state.compact,
+    );
+    _suggested = _suggestTopSpotsUseCase.execute(layout);
+    final taskById = {for (final t in state.tasks) t.id: t};
+    _computeReorderDeltaUseCase.execute(layout, taskById);
+    return layout;
+  }
+
+  /// Clears layout cache to produce deterministic layouts (useful for goldens).
+  void resetLayoutCache() {
+    _cache.lastWeight.clear();
+    _cache.lastRect.clear();
+    _cache.lastRank.clear();
+    _computeLayoutUseCase.invalidate();
+  }
+
+  /// Public API: Computes layout for given viewport.
+  Future<List<TreemapRect>> computeLayout(
+      {Quadrant? only, Size? viewport}) async {
+    _maybeUpdateDynamicLayoutConfig(viewport);
+    return layout(only: only, viewport: viewport);
+  }
+
+  /// Manually invalidate layout cache for [q] (or all if null).
+  void invalidateLayout([Quadrant? q]) {
+    _computeLayoutUseCase.invalidate(q);
+  }
+
+  /// Public method to explicitly notify listeners that layout should recompute.
+  /// Increments [layoutVersion] to trigger dependent UI updates.
+  void notifyLayoutRecompute() {
+    state = state.copyWith(layoutVersion: state.layoutVersion + 1);
+  }
+
+  List<Task> _filteredTasksForLayout() {
+    var filtered = state.tasks.where((t) => t.completedAt == null).toList();
     final q = _normalizeSearchText(state.searchQuery.trim());
     if (q.isNotEmpty) {
       filtered = filtered.where((t) {
@@ -725,28 +806,11 @@ class MatrixController extends Notifier<MatrixState> {
             tags.contains(q);
       }).toList();
     }
-
-    final layout = _computeLayoutUseCase.execute(
-      tasks: filtered,
-      zoom: state.zoom,
-      viewport: viewport,
-      only: only,
-      compactDensity: state.compact,
-    );
-
-    // Update suggestions and compute metrics
-    _suggested = _suggestTopSpotsUseCase.execute(layout);
-
-    final taskById = {for (final t in state.tasks) t.id: t};
-    _computeReorderDeltaUseCase.execute(layout, taskById);
-
-    return layout;
+    return filtered;
   }
 
-  Set<String> get suggestedTopSpots => _suggested;
-
-  /// Public API: Computes layout for given viewport.
-  List<TreemapRect> computeLayout({Quadrant? only, Size? viewport}) {
+  void _maybeUpdateDynamicLayoutConfig(Size? viewport,
+      {bool mutateState = true}) {
     // Responsive topK override based on viewport size
     if (viewport != null && viewport.width > 0 && viewport.height > 0) {
       final dynCfg = ref.read(layoutConfigForSizeProvider(viewport));
@@ -763,26 +827,58 @@ class MatrixController extends Notifier<MatrixState> {
           bandit: _bandit,
           hybridConfig: dynCfg,
         );
-        // Ensure next execution uses new config
         _computeLayoutUseCase.invalidate();
+        if (mutateState) {
+          state = state.copyWith(layoutVersion: state.layoutVersion + 1);
+        }
       }
     }
-    return layout(only: only, viewport: viewport);
   }
 
-  /// Manually invalidate layout cache for [q] (or all if null).
-  void invalidateLayout([Quadrant? q]) {
-    _computeLayoutUseCase.invalidate(q);
-  }
+  Future<List<Task>> _sortTasksForLayout(List<Task> tasks) async {
+    // For small sets, sorting overhead is not worth spinning an isolate.
+    if (tasks.length < 200) return tasks;
 
-  /// Public method to explicitly notify listeners that layout should recompute.
-  /// Increments [layoutVersion] to trigger dependent UI updates.
-  void notifyLayoutRecompute() {
-    state = state.copyWith(layoutVersion: state.layoutVersion + 1);
+    final request = TaskSortRequest(
+      tasks: tasks.map(TaskIsolateSnapshot.fromTask).toList(growable: false),
+      mode: TaskSortMode.priorityThenDue,
+      includeCompleted: false,
+    );
+
+    try {
+      final response = await PerfLogger.instance.measureTaskSort(
+        () => compute(taskSortWorker, request.toJson()),
+        sampleSize: tasks.length,
+      );
+
+      final byId = {for (final t in tasks) t.id: t};
+      final ordered = <Task>[];
+      for (final id in response.orderedIds) {
+        final task = byId.remove(id);
+        if (task != null) ordered.add(task);
+      }
+      if (byId.isNotEmpty) {
+        ordered.addAll(byId.values);
+      }
+      return ordered;
+    } catch (err, st) {
+      if (kDebugMode) {
+        debugPrint(
+            'MatrixController sortTasks isolate failed, using original order: $err\n$st');
+      }
+      return tasks;
+    }
   }
 
   List<Task> _demoTasks() {
     final now = DateTime.now();
+    const officeLat = 19.4328;
+    const officeLng = -99.1332;
+    const homeLat = 19.4260;
+    const homeLng = -99.1677;
+    const errandsLat = 19.4385;
+    const errandsLng = -99.1401;
+
     return [
       // Q1: Urgente e Importante (Do First)
       Task(
@@ -793,6 +889,10 @@ class MatrixController extends Notifier<MatrixState> {
         minutes: 120,
         due: now.add(const Duration(hours: 4)),
         notes: 'Reunión con CEO a las 2pm',
+        locationTag: 'office',
+        latitude: officeLat,
+        longitude: officeLng,
+        radiusMeters: 500,
         createdAt: now.subtract(const Duration(days: 1)),
       ),
       Task(
@@ -803,6 +903,10 @@ class MatrixController extends Notifier<MatrixState> {
         minutes: 180,
         due: now.add(const Duration(hours: 2)),
         tags: ['urgente', 'backend'],
+        locationTag: 'office',
+        latitude: officeLat,
+        longitude: officeLng,
+        radiusMeters: 350,
         createdAt: now.subtract(const Duration(hours: 3)),
       ),
       Task(
@@ -813,6 +917,10 @@ class MatrixController extends Notifier<MatrixState> {
         minutes: 90,
         due: now.add(const Duration(days: 1)),
         category: 'Ventas',
+        locationTag: 'office',
+        latitude: officeLat + 0.0012,
+        longitude: officeLng - 0.0008,
+        radiusMeters: 700,
         createdAt: now.subtract(const Duration(days: 2)),
       ),
       Task(
@@ -822,6 +930,7 @@ class MatrixController extends Notifier<MatrixState> {
         priority: 8,
         minutes: 60,
         due: now.add(const Duration(hours: 6)),
+        locationTag: 'office',
         createdAt: now.subtract(const Duration(days: 1)),
       ),
 
@@ -835,6 +944,10 @@ class MatrixController extends Notifier<MatrixState> {
         due: now.add(const Duration(days: 7)),
         notes: 'Definir OKRs y roadmap',
         category: 'Estrategia',
+        locationTag: 'office',
+        latitude: officeLat,
+        longitude: officeLng,
+        radiusMeters: 650,
         createdAt: now.subtract(const Duration(days: 5)),
       ),
       Task(
@@ -846,6 +959,10 @@ class MatrixController extends Notifier<MatrixState> {
         due: now.add(const Duration(days: 14)),
         tags: ['tech-debt', 'backend'],
         notes: 'Implementar Clean Architecture',
+        locationTag: 'office',
+        latitude: officeLat + 0.0022,
+        longitude: officeLng + 0.0014,
+        radiusMeters: 900,
         createdAt: now.subtract(const Duration(days: 3)),
       ),
       Task(
@@ -856,6 +973,7 @@ class MatrixController extends Notifier<MatrixState> {
         minutes: 120,
         due: now.add(const Duration(days: 10)),
         category: 'Desarrollo personal',
+        locationTag: 'home',
         createdAt: now.subtract(const Duration(days: 7)),
       ),
       Task(
@@ -866,6 +984,7 @@ class MatrixController extends Notifier<MatrixState> {
         minutes: 180,
         due: now.add(const Duration(days: 5)),
         tags: ['docs', 'backend'],
+        locationTag: 'office',
         createdAt: now.subtract(const Duration(days: 4)),
       ),
       Task(
@@ -876,6 +995,10 @@ class MatrixController extends Notifier<MatrixState> {
         minutes: 60,
         category: 'Salud',
         notes: '30min cardio + 30min yoga',
+        locationTag: 'home',
+        latitude: homeLat,
+        longitude: homeLng,
+        radiusMeters: 450,
         createdAt: now.subtract(const Duration(days: 2)),
       ),
       Task(
@@ -886,6 +1009,7 @@ class MatrixController extends Notifier<MatrixState> {
         minutes: 90,
         category: 'Aprendizaje',
         tags: ['ai', 'research'],
+        locationTag: 'home',
         createdAt: now.subtract(const Duration(days: 6)),
       ),
 
@@ -898,6 +1022,7 @@ class MatrixController extends Notifier<MatrixState> {
         minutes: 45,
         due: now.add(const Duration(hours: 8)),
         notes: 'Delegar a asistente',
+        locationTag: 'office',
         createdAt: now.subtract(const Duration(hours: 5)),
       ),
       Task(
@@ -908,6 +1033,10 @@ class MatrixController extends Notifier<MatrixState> {
         minutes: 30,
         due: now.add(const Duration(hours: 3)),
         category: 'Comunicación',
+        locationTag: 'errands',
+        latitude: errandsLat,
+        longitude: errandsLng,
+        radiusMeters: 800,
         createdAt: now.subtract(const Duration(hours: 2)),
       ),
       Task(
@@ -917,6 +1046,10 @@ class MatrixController extends Notifier<MatrixState> {
         priority: 5,
         minutes: 60,
         due: now.add(const Duration(days: 1)),
+        locationTag: 'office',
+        latitude: officeLat + 0.0007,
+        longitude: officeLng + 0.0005,
+        radiusMeters: 500,
         createdAt: now.subtract(const Duration(days: 1)),
       ),
       Task(
@@ -926,6 +1059,7 @@ class MatrixController extends Notifier<MatrixState> {
         priority: 3,
         minutes: 40,
         due: now.add(const Duration(hours: 12)),
+        locationTag: 'home',
         createdAt: now.subtract(const Duration(days: 3)),
       ),
       Task(
@@ -936,6 +1070,7 @@ class MatrixController extends Notifier<MatrixState> {
         minutes: 45,
         due: now.add(const Duration(hours: 24)),
         category: 'Reuniones',
+        locationTag: 'office',
         createdAt: now.subtract(const Duration(days: 2)),
       ),
 
@@ -947,6 +1082,7 @@ class MatrixController extends Notifier<MatrixState> {
         priority: 2,
         minutes: 20,
         notes: 'Considerar eliminar o reducir',
+        locationTag: 'home',
         createdAt: now.subtract(const Duration(hours: 6)),
       ),
       Task(
@@ -955,6 +1091,7 @@ class MatrixController extends Notifier<MatrixState> {
         quadrant: Quadrant.q4,
         priority: 1,
         minutes: 45,
+        locationTag: 'home',
         createdAt: now.subtract(const Duration(hours: 8)),
       ),
       Task(
@@ -963,6 +1100,10 @@ class MatrixController extends Notifier<MatrixState> {
         quadrant: Quadrant.q4,
         priority: 2,
         minutes: 25,
+        locationTag: 'home',
+        latitude: homeLat + 0.0008,
+        longitude: homeLng - 0.0006,
+        radiusMeters: 300,
         createdAt: now.subtract(const Duration(days: 1)),
       ),
       Task(
@@ -972,6 +1113,7 @@ class MatrixController extends Notifier<MatrixState> {
         priority: 2,
         minutes: 30,
         category: 'Personalización',
+        locationTag: 'home',
         createdAt: now.subtract(const Duration(days: 4)),
       ),
       Task(
@@ -981,6 +1123,7 @@ class MatrixController extends Notifier<MatrixState> {
         priority: 1,
         minutes: 60,
         notes: 'Tiempo de ocio',
+        locationTag: 'home',
         createdAt: now.subtract(const Duration(days: 2)),
       ),
     ];
@@ -990,13 +1133,12 @@ class MatrixController extends Notifier<MatrixState> {
 final matrixControllerProvider =
     NotifierProvider<MatrixController, MatrixState>(MatrixController.new);
 
-extension _MatrixAnalytics on MatrixController {
-  AnalyticsService _analytics() => ref.read(analyticsServiceProvider);
-
-  Future<void> _logEvent(UserEvent event) {
-    return _analytics().logEvent(event);
-  }
-}
+// TODO: Re-implement analytics with proper architecture
+// extension _MatrixAnalytics on MatrixController {
+//   Future<void> _logEvent(UserEvent event) {
+//     return ref.read(analyticsServiceProvider).logEvent(event);
+//   }
+// }
 
 // Example of selective providers to minimize rebuilds where used
 final matrixVersionProvider = Provider<int>(

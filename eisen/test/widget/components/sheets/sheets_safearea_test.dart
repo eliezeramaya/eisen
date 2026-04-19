@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet.dart';
 import 'package:eisen/features/tasks/presentation/add_task_sheet.dart';
 import 'package:flutter/material.dart';
@@ -10,14 +12,14 @@ void main() {
     await tester.pumpWidget(const ProviderScope(
         child: MaterialApp(home: Scaffold(body: SizedBox.shrink()))));
 
-    showModalBottomSheet(
+    unawaited(showModalBottomSheet(
       // Use the Scaffold context to avoid ambiguous SizedBox lookups
       context: tester.element(find.byType(Scaffold)),
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const AddTaskSheet(),
-    );
+    ));
 
     await tester.pumpAndSettle();
 
@@ -34,7 +36,7 @@ void main() {
     await tester.pumpWidget(const ProviderScope(
         child: MaterialApp(home: Scaffold(body: SizedBox.shrink()))));
 
-    showModalBottomSheet(
+    unawaited(showModalBottomSheet(
       // Use the Scaffold context to avoid ambiguous SizedBox lookups
       context: tester.element(find.byType(Scaffold)),
       isScrollControlled: true,
@@ -47,7 +49,7 @@ void main() {
         showAxisLegends: true,
         onToggleAxisLegends: () {},
       ),
-    );
+    ));
 
     await tester.pumpAndSettle();
     expect(find.byType(SafeArea), findsWidgets);

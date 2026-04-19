@@ -201,7 +201,7 @@ class EisenLineChart extends StatelessWidget {
               enabled: true,
               touchTooltipData: LineTouchTooltipData(
                 getTooltipColor: (spot) => colorScheme.surfaceContainerHigh,
-                tooltipRoundedRadius: EisenRadius.sm,
+                tooltipBorderRadius: BorderRadius.circular(EisenRadius.sm),
                 tooltipPadding: const EdgeInsets.symmetric(
                   horizontal: EisenSpacing.sm,
                   vertical: EisenSpacing.xs,

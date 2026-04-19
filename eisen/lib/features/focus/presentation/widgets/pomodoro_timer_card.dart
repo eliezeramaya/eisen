@@ -89,7 +89,7 @@ class PomodoroTimerCard extends StatelessWidget {
                                   .labelLarge
                                   ?.copyWith(
                                     letterSpacing: 2,
-                                    color: cs.onSurface.withOpacity(0.72),
+                                    color: cs.onSurface.withValues(alpha: 0.72),
                                   ),
                             ),
                           ),
@@ -133,7 +133,7 @@ class PomodoroTimerCard extends StatelessWidget {
                 if (taskTitle != null) '• $taskTitle',
               ].join(' '),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurface.withOpacity(0.8),
+                    color: cs.onSurface.withValues(alpha: 0.8),
                   ),
             ),
           ],
@@ -165,7 +165,7 @@ class _TimerArcPainter extends CustomPainter {
     final radius = size.width / 2 - 14;
 
     final track = Paint()
-      ..color = colorScheme.surfaceContainerHighest.withOpacity(0.5)
+      ..color = colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 16
       ..strokeCap = StrokeCap.round;
@@ -229,15 +229,15 @@ class _Pill extends StatelessWidget {
         vertical: EisenSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: cs.onSurface.withOpacity(0.04)),
+        border: Border.all(color: cs.onSurface.withValues(alpha: 0.04)),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
               letterSpacing: 1.5,
-              color: cs.onSurface.withOpacity(0.8),
+              color: cs.onSurface.withValues(alpha: 0.8),
             ),
       ),
     );

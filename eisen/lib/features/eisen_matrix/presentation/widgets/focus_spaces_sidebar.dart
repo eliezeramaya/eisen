@@ -23,7 +23,7 @@ class FocusSpacesSidebar extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.08),
+            color: colorScheme.shadow.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -82,7 +82,7 @@ class _FocusSpaceTile extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final onSelectedColor = _parseColor(space.colorHex) ?? colorScheme.primary;
     final bgColor =
-        selected ? onSelectedColor.withOpacity(0.14) : Colors.transparent;
+        selected ? onSelectedColor.withValues(alpha: 0.14) : Colors.transparent;
 
     return InkWell(
       onTap: () =>
@@ -101,7 +101,7 @@ class _FocusSpaceTile extends ConsumerWidget {
               width: 22,
               height: 22,
               decoration: BoxDecoration(
-                color: onSelectedColor.withOpacity(0.18),
+                color: onSelectedColor.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -270,6 +270,7 @@ class _NewSpaceButton extends ConsumerWidget {
       ),
     );
     if (result == null || result.isEmpty) return;
+    if (!context.mounted) return;
 
     final now = DateTime.now();
     final id = now.millisecondsSinceEpoch.toString();
@@ -330,7 +331,6 @@ Color? _parseColor(String hex) {
 }
 
 String _colorToHex(Color color) {
-  final value = color.value & 0xFFFFFFFF;
+  final value = color.toARGB32();
   return '#${value.toRadixString(16).padLeft(8, '0').substring(2)}';
 }
-

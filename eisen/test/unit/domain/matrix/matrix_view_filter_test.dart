@@ -1,6 +1,5 @@
 import 'package:eisen/features/eisen_matrix/domain/focus_space.dart';
 import 'package:eisen/features/eisen_matrix/domain/matrix_view_filter.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

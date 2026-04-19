@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:eisen/core/design_system/eisen_tokens.dart';
 import 'package:eisen/features/focus/presentation/pages/pomodoro_session_page.dart';
 import 'package:eisen/features/focus/presentation/widgets/focus_rhythm_card.dart';
@@ -32,8 +34,8 @@ class _FocusDashboardPageState extends ConsumerState<FocusDashboardPage> {
         onPressed: () async {
           final config = await _showCustomSessionSheet(context);
           if (config != null) {
-            if (!mounted) return;
-            Navigator.of(context).push(
+            if (!context.mounted) return;
+            unawaited(Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => PomodoroSessionPage(
                   initialDuration: config.duration,
@@ -43,7 +45,7 @@ class _FocusDashboardPageState extends ConsumerState<FocusDashboardPage> {
                   autoStart: true,
                 ),
               ),
-            );
+            ));
           }
         },
         backgroundColor: cs.primary,
@@ -185,7 +187,7 @@ class _FocusDashboardPageState extends ConsumerState<FocusDashboardPage> {
           },
         );
       },
-    ).whenComplete(() => _taskController.clear());
+    ).whenComplete(_taskController.clear);
   }
 }
 

@@ -150,7 +150,8 @@ class _QuadrantPanel extends StatelessWidget {
               horizontal: 16 * zoomFactor,
             ),
             decoration: BoxDecoration(
-              color: _getQuadrantColor(quadrant, colorScheme).withOpacity(0.1),
+              color: _getQuadrantColor(quadrant, colorScheme)
+                  .withValues(alpha: 0.1),
               border: Border(
                 bottom: BorderSide(
                   color: _getQuadrantColor(quadrant, colorScheme),
@@ -228,32 +229,32 @@ class _QuadrantPanel extends StatelessWidget {
   }
 
   Color _getQuadrantColor(Quadrant q, ColorScheme cs) => switch (q) {
-    Quadrant.q1 => cs.error,
-    Quadrant.q2 => cs.primary,
-    Quadrant.q3 => cs.tertiary,
-    Quadrant.q4 => cs.outline,
-  };
+        Quadrant.q1 => cs.error,
+        Quadrant.q2 => cs.primary,
+        Quadrant.q3 => cs.tertiary,
+        Quadrant.q4 => cs.outline,
+      };
 
   Color _getQuadrantBgColor(Quadrant q, ColorScheme cs) => switch (q) {
-    Quadrant.q1 => cs.errorContainer.withOpacity(0.05),
-    Quadrant.q2 => cs.primaryContainer.withOpacity(0.05),
-    Quadrant.q3 => cs.tertiaryContainer.withOpacity(0.05),
-    Quadrant.q4 => cs.surfaceContainerLowest,
-  };
+        Quadrant.q1 => cs.errorContainer.withValues(alpha: 0.05),
+        Quadrant.q2 => cs.primaryContainer.withValues(alpha: 0.05),
+        Quadrant.q3 => cs.tertiaryContainer.withValues(alpha: 0.05),
+        Quadrant.q4 => cs.surfaceContainerLowest,
+      };
 
   IconData _getQuadrantIcon(Quadrant q) => switch (q) {
-    Quadrant.q1 => Icons.priority_high,
-    Quadrant.q2 => Icons.schedule,
-    Quadrant.q3 => Icons.forward_to_inbox,
-    Quadrant.q4 => Icons.delete_outline,
-  };
+        Quadrant.q1 => Icons.priority_high,
+        Quadrant.q2 => Icons.schedule,
+        Quadrant.q3 => Icons.forward_to_inbox,
+        Quadrant.q4 => Icons.delete_outline,
+      };
 
   String _getQuadrantTitle(Quadrant q) => switch (q) {
-    Quadrant.q1 => 'Q1: Hacer Primero',
-    Quadrant.q2 => 'Q2: Programar',
-    Quadrant.q3 => 'Q3: Delegar',
-    Quadrant.q4 => 'Q4: Eliminar',
-  };
+        Quadrant.q1 => 'Q1: Hacer Primero',
+        Quadrant.q2 => 'Q2: Programar',
+        Quadrant.q3 => 'Q3: Delegar',
+        Quadrant.q4 => 'Q4: Eliminar',
+      };
 }
 
 /// Empty state for quadrant with no completed tasks
@@ -277,7 +278,7 @@ class _EmptyQuadrant extends StatelessWidget {
             Icon(
               Icons.check_circle_outline,
               size: 48 * zoomFactor,
-              color: colorScheme.onSurfaceVariant.withOpacity(0.3),
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
             ),
             SizedBox(height: 12 * zoomFactor),
             Text(
@@ -293,7 +294,7 @@ class _EmptyQuadrant extends StatelessWidget {
               'en este cuadrante para el filtro actual',
               style: TextStyle(
                 fontSize: 12 * zoomFactor,
-                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),

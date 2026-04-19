@@ -6,7 +6,7 @@ enum MatrixViewMode {
   top10,
   top25,
   top50,
+  top100, // New: For power users on desktop with list mode
   all,
   custom,
 }
-

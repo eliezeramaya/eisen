@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/saved_matrix_views_repository.dart';
 import '../../data/focus_space_repository.dart';
-import '../../domain/matrix_view_filter.dart';
-import '../../domain/saved_matrix_view.dart';
+import '../../data/saved_matrix_views_repository.dart';
 import '../../domain/focus_space.dart';
+import '../../domain/matrix_view_filter.dart';
 import '../../domain/matrix_view_mode.dart';
-import '../controllers/matrix_view_filter_controller.dart';
+import '../../domain/saved_matrix_view.dart';
 import '../controllers/matrix_controller.dart';
+import '../controllers/matrix_view_filter_controller.dart';
 
 class MatrixFiltersBar extends ConsumerWidget {
   const MatrixFiltersBar({super.key});
@@ -29,7 +29,7 @@ class MatrixFiltersBar extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.06),
+            color: colorScheme.shadow.withValues(alpha: 0.06),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -226,6 +226,8 @@ class _ViewModeRow extends ConsumerWidget {
           return 'Top 25';
         case MatrixViewMode.top50:
           return 'Top 50';
+        case MatrixViewMode.top100:
+          return 'Top 100';
         case MatrixViewMode.all:
           return isEs ? 'Todas' : 'All';
         case MatrixViewMode.custom:

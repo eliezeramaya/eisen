@@ -1,5 +1,8 @@
 import 'package:eisen/core/constants/layout_constants.dart';
+import 'package:eisen/core/performance/perf_logger.dart';
 import 'package:eisen/core/services/telemetry.dart';
+import 'package:eisen/core/workers/matrix_layout_worker.dart';
+import 'package:eisen/core/workers/worker_models.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/eisen_treemap_hybrid.dart';
@@ -34,6 +37,85 @@ class ComputeLayoutUseCase {
   Quadrant? _lastZoom;
   Size? _lastViewport;
 
+  /// Compute layout in an isolate using [compute] and the worker DTOs.
+  ///
+  /// Falls back to the synchronous path if isolate execution fails.
+  Future<List<TreemapRect>> executeAsync({
+    required List<Task> tasks,
+    Quadrant? zoom,
+    Size? viewport,
+    Quadrant? only,
+    bool compactDensity = false,
+    double? minTileSizePx,
+  }) async {
+    if (tasks.length < 50) {
+      return execute(
+        tasks: tasks,
+        zoom: zoom,
+        viewport: viewport,
+        only: only,
+        compactDensity: compactDensity,
+        minTileSizePx: minTileSizePx,
+      );
+    }
+    try {
+      final request = MatrixLayoutRequest(
+        tasks: tasks.map(TaskIsolateSnapshot.fromTask).toList(growable: false),
+        zoom: zoom ?? only,
+        viewport: viewport == null
+            ? null
+            : MatrixViewportSnapshot(
+                width: viewport.width,
+                height: viewport.height,
+              ),
+        compactDensity: compactDensity,
+        minAreaNormalized: _hybridCfg?.minAreaNormalized,
+        cache: MatrixLayoutCachePayload.fromLayoutCache(_cache),
+        banditSeed: _bandit.seed,
+        hybridConfig: _hybridCfg,
+        minTileSizePx: minTileSizePx,
+      );
+
+      final response = await PerfLogger.instance.measureMatrixLayout(
+        () => compute(matrixLayoutWorker, request.toJson()),
+        taskCount: tasks.length,
+      );
+
+      _applyCachePayload(response.cache);
+
+      final byId = {for (final t in tasks) t.id: t};
+      final rects = <TreemapRect>[];
+      for (final tile in response.tiles) {
+        final task = byId[tile.id];
+        if (task == null) continue;
+        final stack = [
+          for (final id in tile.stackIds)
+            if (byId[id] != null) byId[id]!
+        ];
+        rects.add(
+          TreemapRect(
+            tile.rect01.toRect(),
+            task,
+            stackChildren: stack,
+          ),
+        );
+      }
+      return rects;
+    } catch (err, st) {
+      if (kDebugMode) {
+        debugPrint(
+            'ComputeLayoutUseCase.executeAsync failed, falling back to sync: $err\n$st');
+      }
+      return execute(
+        tasks: tasks,
+        zoom: zoom,
+        viewport: viewport,
+        only: only,
+        compactDensity: compactDensity,
+      );
+    }
+  }
+
   /// Computes the treemap layout for given [tasks].
   ///
   /// Parameters:
@@ -49,6 +131,7 @@ class ComputeLayoutUseCase {
     Size? viewport,
     Quadrant? only,
     bool compactDensity = false,
+    double? minTileSizePx,
   }) {
     // DEBUG: surface runtime info to logs to help diagnose empty-layout issues
     if (kDebugMode) {
@@ -66,7 +149,9 @@ class ComputeLayoutUseCase {
     double? minArea01;
     if (viewport != null && viewport.width > 0 && viewport.height > 0) {
       // Adjust minimum interactive tile area depending on density mode
-      final baseMinPx = LayoutConstants.minTileAreaPx; // centralized constant
+      final tileSizePx = minTileSizePx ?? LayoutConstants.defaultMinTileSize;
+      final baseMinPx =
+          LayoutConstants.minTileAreaPx(tileSizePx); // centralized constant
       final densityFactor =
           compactDensity ? 0.7 : 1.0; // smaller threshold in compact mode
       final minPx = baseMinPx * densityFactor;
@@ -296,5 +381,20 @@ class ComputeLayoutUseCase {
   /// Mark specific quadrants as dirty (called after task mutations).
   void markDirty(Set<Quadrant> quadrants) {
     _dirtyQuadrants.addAll(quadrants);
+  }
+
+  void _applyCachePayload(MatrixLayoutCachePayload payload) {
+    _cache.lastWeight
+      ..clear()
+      ..addAll(payload.lastWeight);
+    _cache.lastRank
+      ..clear()
+      ..addAll(payload.lastRank);
+    _cache.lastRect
+      ..clear()
+      ..addAll({
+        for (final entry in payload.lastRect.entries)
+          entry.key: entry.value.toRect(),
+      });
   }
 }

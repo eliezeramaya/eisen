@@ -1,6 +1,7 @@
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
+
 import 'package:eisen/features/calendar_gantt/domain/task_dependency.dart';
+import 'package:flutter/material.dart';
 
 /// Convert logical dependencies into arrow specs anchored to span rectangles.
 List<DependencyArrow> computeDependencyArrows({
@@ -338,8 +339,8 @@ class MultiArrowPainter extends CustomPainter {
         endPoint: arrow.endPoint,
         dependencyType: arrow.dependencyType,
         color: arrow.isHighlighted
-            ? arrow.color.withOpacity(1.0)
-            : arrow.color.withOpacity(0.6),
+            ? arrow.color.withValues(alpha: 1.0)
+            : arrow.color.withValues(alpha: 0.6),
         strokeWidth:
             arrow.isHighlighted ? arrow.strokeWidth + 1 : arrow.strokeWidth,
       );

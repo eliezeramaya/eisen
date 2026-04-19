@@ -102,6 +102,10 @@ lib/
 │   ├── completed_tasks/         # ✅ Historial completadas
 │   ├── focus/                   # ✅ Modo focus/pomodoro COMPLETO
 │   ├── insights/                # ✅ Nudges inteligentes FUNCIONAL
+│   ├── habits/                  # ✅ Racha de días activos
+│   ├── importance/              # ✅ Scoring Bayesiano de importancia
+│   ├── insights_ml/             # ✅ Scoring heurístico (Capa 1 ML)
+│   ├── insights_adaptive/       # ✅ Bandits adaptativos (Capa 2 ML)
 │   └── onboarding/              # ❌ Tutorial inicial
 └── ui/                          # Widgets compartidos UI
     ├── widgets/                 # ✅ Componentes reutilizables
@@ -276,6 +280,90 @@ feature_name/
 - ✅ Lógica Idioma mobile (LanguageController con persistencia en SharedPreferences)
 - ✅ Lógica Accesibilidad mobile (AccessibilityController con 4+ ajustes persistentes)
 - ✅ Páginas Data & Privacy y About con contenido completo
+
+---
+
+#### 🔥 Rachas de Hábitos (`habits/`)
+
+**Estado**: ✅ Implementado  
+**Integración**: `stats/`
+
+**Características implementadas:**
+- ✅ Cálculo de días consecutivos con al menos una tarea completada
+- ✅ `StreaksService.streakDays(tasks)` — función pura, sin persistencia propia
+- ✅ Alimenta badges motivacionales en pantalla de estadísticas
+
+**Archivos clave:**
+- `features/habits/streaks_service.dart`
+
+**Documentación técnica**: Ver `docs/HABITS_STREAKS.md`
+
+---
+
+#### 🎯 Importance Scoring (`importance/`)
+
+**Estado**: ✅ Implementado
+
+**Características implementadas:**
+- ✅ Motor híbrido Bayesiano + heurístico
+- ✅ Score = α·explícito + β·conductual + γ·contextual
+- ✅ Actualización online de pesos (gradient step)
+- ✅ Sincronización de pesos en Supabase (`importance_weights`)
+- ✅ Explicabilidad: etiquetas legibles ("Vence pronto", "Elegida en check-in"…)
+- ✅ Riverpod providers: `importanceServiceProvider`, `banditProvider`
+
+**Archivos clave:**
+- `features/importance/importance_service.dart`
+- `features/importance/providers.dart`
+
+**Documentación técnica**: Ver `docs/IMPORTANCE_SCORING.md`
+
+---
+
+#### 🤖 IA/ML – Scoring Heurístico (`insights_ml/`)
+
+**Estado**: ✅ Capa 1 implementada  
+**Integración**: `stats/` → `StatsMlSection`
+
+**Características implementadas:**
+- ✅ `DailyProductivityScore`: overload, Q2 ratio, procrastinación, foco por día
+- ✅ `FocusWindowSuggestion`: franjas horarias óptimas con nivel de confianza
+- ✅ `TaskCompletionPrediction`: probabilidad de completar a tiempo vs reprogramar
+- ✅ `OverloadRisk` y `ProcrastinationScore` por tarea individual
+- ✅ `HeuristicProductivityScoringService` (implementación actual, diseñada para ser sustituida)
+- ✅ `BackendMLApi` — placeholder para ML remoto (XGBoost/LightGBM futuro)
+- ✅ `StatsMlSection` — UI de riesgo de sobrecarga + franjas de foco en Stats
+
+**Archivos clave:**
+- `features/insights_ml/domain/productivity_scoring_service.dart`
+- `features/insights_ml/domain/productivity_scores.dart`
+- `features/insights_ml/data/backend_ml_api.dart`
+- `features/insights_ml/presentation/widgets/stats_ml_section.dart`
+
+**Documentación técnica**: Ver `docs/ML_STRATEGY_IMPLEMENTATION.md`
+
+---
+
+#### 🧠 IA Adaptativa – Bandits (`insights_adaptive/`)
+
+**Estado**: ✅ Capa 2 implementada  
+**Integración**: `stats/` → `StatsAdaptivePatternCard`
+
+**Características implementadas:**
+- ✅ Thompson Sampling sobre 4 nudge arms (focusBlock, reduceTodayLoad, splitBigTask, dailyShutdown)
+- ✅ Sesgo contextual por overload, procrastinación y Q2 ratio
+- ✅ Persistencia local del estado del bandit (SharedPreferences JSON)
+- ✅ Clustering heurístico: 4 arquetipos (nightSprinter, morningStrong, starterButNotFinisher, unknown)
+- ✅ `AdaptivePolicyEngineImpl`: combina clustering + scoring + bandit
+- ✅ `StatsAdaptivePatternCard` con descripción personalizada y CTA contextual
+- ✅ Riverpod providers: `adaptivePolicyEngineProvider`, `banditEngineProvider`, `productivityClusteringProvider`
+
+**Archivos clave:**
+- `features/insights_adaptive/domain/` — interfaces y modelos
+- `features/insights_adaptive/data/` — Thompson bandit, clustering, repo local
+- `features/insights_adaptive/presentation/widgets/stats_adaptive_pattern_card.dart`
+
+**Documentación técnica**: Ver `docs/ML_STRATEGY_IMPLEMENTATION.md`
 
 ---
 

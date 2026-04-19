@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:flutter/material.dart';
 
 /// Top-level user preferences model for the Settings feature.
 ///

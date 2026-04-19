@@ -1,9 +1,9 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:eisen/features/eisen_matrix/domain/entities.dart';
-import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/features/completed_tasks/data/completed_tasks_repository.dart';
 import 'package:eisen/features/completed_tasks/domain/filters.dart';
 import 'package:eisen/features/completed_tasks/domain/project_category.dart';
-import 'package:eisen/features/completed_tasks/data/completed_tasks_repository.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Immutable state for completed tasks matrix view.
 ///

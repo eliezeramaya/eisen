@@ -71,7 +71,9 @@ class LivePreviewPane extends ConsumerWidget {
           final size = Size(constraints.maxWidth, constraints.maxHeight);
           // Compute effective min area based on viewport and configured threshold
           final viewportPx = size.width * size.height;
-          final pxThreshold = LayoutConstants.minTileAreaPx;
+          final pxThreshold = LayoutConstants.minTileAreaPx(
+            LayoutConstants.defaultMinTileSize,
+          );
           final minArea01 = (pxThreshold / (viewportPx <= 0 ? 1.0 : viewportPx))
               .clamp(0.0, 1.0);
           final effMin = minArea01 > cfg.minAreaNormalized

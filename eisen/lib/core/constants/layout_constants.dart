@@ -5,12 +5,19 @@
 class LayoutConstants {
   LayoutConstants._();
 
-  /// Minimum tile area in pixels (width × height) for interactive tiles.
+  /// Default minimum tile dimension for hit-testing (both width and height).
+  /// This is the fallback when no user preference is set.
+  static const double defaultMinTileSize = 44.0;
+
+  /// Calculates minimum tile area in pixels based on tile size preference.
   /// Tiles smaller than this are stacked and represented by a "+N" badge.
-  static const double minTileAreaPx = 44.0 * 44.0; // 1936 px²
+  static double minTileAreaPx(double tileSizePx) => tileSizePx * tileSizePx;
 
   /// Minimum tile dimension for hit-testing (both width and height).
-  static const double minTileSize = 44.0;
+  /// Use the preference value if available, otherwise use default.
+  /// Desktop: can be 30-44px | Mobile: should be 40-44px for accessibility.
+  static double minTileSize(double? preferredSize) =>
+      preferredSize?.clamp(30.0, 44.0) ?? defaultMinTileSize;
 
   /// Gap between treemap tiles to prevent clipped rounded corners.
   static const double tileGap = 3.0;

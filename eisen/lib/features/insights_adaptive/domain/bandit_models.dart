@@ -30,13 +30,13 @@ class NudgeArmStats {
 class BanditState {
   const BanditState({required this.arms});
 
-  final Map<NudgeArm, NudgeArmStats> arms;
-
   BanditState.initial()
       : arms = {
           for (final arm in NudgeArm.values)
             arm: const NudgeArmStats(successes: 1, failures: 1),
         };
+
+  final Map<NudgeArm, NudgeArmStats> arms;
 
   BanditState copyWithArm(NudgeArm arm, NudgeArmStats stats) {
     final newArms = Map<NudgeArm, NudgeArmStats>.from(arms);

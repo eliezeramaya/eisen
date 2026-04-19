@@ -47,7 +47,7 @@ class PomodoroControlsRow extends StatelessWidget {
         _ControlButton(
           label: 'Reset',
           icon: Icons.stop_circle_outlined,
-          color: cs.onSurface.withOpacity(0.06),
+          color: cs.onSurface.withValues(alpha: 0.06),
           foreground: cs.onSurface,
           onTap: onReset,
         ),
@@ -55,7 +55,7 @@ class PomodoroControlsRow extends StatelessWidget {
           _ControlButton(
             label: 'Skip break',
             icon: Icons.skip_next,
-            color: cs.secondary.withOpacity(0.18),
+            color: cs.secondary.withValues(alpha: 0.18),
             foreground: cs.onSurface,
             onTap: onSkip!,
           ),
@@ -83,7 +83,7 @@ class _ControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColor = disabled ? color.withOpacity(0.4) : color;
+    final effectiveColor = disabled ? color.withValues(alpha: 0.4) : color;
 
     return Opacity(
       opacity: disabled ? 0.6 : 1.0,

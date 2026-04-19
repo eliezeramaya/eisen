@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:eisen/core/analytics/analytics_service.dart';
-import 'package:eisen/core/analytics/user_event.dart';
 import 'package:eisen/features/insights/data/nudge_tracking_repository.dart';
 import 'package:eisen/features/insights/domain/nudge.dart';
 import 'package:eisen/features/insights/domain/nudge_engine.dart';
@@ -115,17 +113,18 @@ class NudgeController extends AsyncNotifier<NudgesState> {
           NudgeTrackingData(nudgeId: nudge.id).markAsSeen();
       trackings.add(updated);
 
-      unawaited(_logEvent(
-        UserEvent(
-          type: UserEventType.nudgeShown,
-          timestamp: DateTime.now(),
-          metadata: {
-            'nudgeId': nudge.id,
-            'nudgeType': nudge.type.name,
-            'severity': nudge.severity.name,
-          },
-        ),
-      ));
+      // TODO: Re-enable analytics
+      // unawaited(_logEvent(
+      // UserEvent(
+      // type: UserEventType.nudgeShown,
+      // timestamp: DateTime.now(),
+      // metadata: {
+      // 'nudgeId': nudge.id,
+      // 'nudgeType': nudge.type.name,
+      // 'severity': nudge.severity.name,
+      // },
+      // ),
+      // ));
     }
 
     await trackingRepo.saveMultiple(trackings);
@@ -176,17 +175,18 @@ class NudgeController extends AsyncNotifier<NudgesState> {
     // Registrar acción en tracking
     await _trackAction(nudge.id);
     _registerAdaptiveReward(nudge, true);
-    unawaited(_logEvent(
-      UserEvent(
-        type: UserEventType.nudgeActionExecuted,
-        timestamp: DateTime.now(),
-        metadata: {
-          'nudgeId': nudge.id,
-          'nudgeType': nudge.type.name,
-          'actionType': action.type.name,
-        },
-      ),
-    ));
+    // TODO: Re-enable analytics
+    // unawaited(_logEvent(
+    // UserEvent(
+    // type: UserEventType.nudgeActionExecuted,
+    // timestamp: DateTime.now(),
+    // metadata: {
+    // 'nudgeId': nudge.id,
+    // 'nudgeType': nudge.type.name,
+    // 'actionType': action.type.name,
+    // },
+    // ),
+    // ));
   }
 
   Future<void> _trackAction(String nudgeId) async {
@@ -267,10 +267,9 @@ final nudgeControllerProvider =
   NudgeController.new,
 );
 
-extension _NudgeAnalytics on NudgeController {
-  AnalyticsService _analytics() => ref.read(analyticsServiceProvider);
-
-  Future<void> _logEvent(UserEvent event) {
-    return _analytics().logEvent(event);
-  }
-}
+// TODO: Re-implement analytics with proper architecture
+// extension _NudgeAnalytics on NudgeController {
+//   Future<void> _logEvent(UserEvent event) {
+//     return ref.read(analyticsServiceProvider).logEvent(event);
+//   }
+// }

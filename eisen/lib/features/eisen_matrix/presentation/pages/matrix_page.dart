@@ -9,7 +9,6 @@ import 'package:eisen/core/theme/colors.dart';
 import 'package:eisen/core/ui/app_text_scale.dart';
 import 'package:eisen/core/ui/ui_breakpoints.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
-import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/inspector_drawer.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/matrix_interactive_wrapper.dart';
@@ -68,9 +67,6 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
   final _scrollController = ScrollController();
   bool _fabVisible = true;
   Size? _lastSize;
-  Size? _layoutSize;
-  Future<List<TreemapRect>>? _layoutFuture;
-  int _lastLayoutVersion = -1;
   @override
   void initState() {
     super.initState();
@@ -118,8 +114,6 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         ref.watch(matrixControllerProvider.select((s) => s.selectedId));
     final isLoading =
         ref.watch(matrixControllerProvider.select((s) => s.isLoading));
-    final layoutVersion =
-        ref.watch(matrixControllerProvider.select((s) => s.layoutVersion));
     final advancedInsights =
         ref.watch(uiPrefsProvider.select((p) => p.advancedInsightsEnabled));
 
@@ -206,6 +200,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
               useSafeArea: true,
               builder: (_) => const ProfileSheet(),
             ),
+            onOpenContextTasks: () => context.push('/context-aware-tasks'),
             onExitZoom: ctrl.resetHomeView,
             canExitZoom: zoom != null,
             onOpenStats: () => context.push('/stats'),
@@ -1381,7 +1376,7 @@ class _TopAxisLegends extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.fade,
                 softWrap: false,
-                textScaleFactor: textScale,
+                textScaler: TextScaler.linear(textScale),
               ),
             ),
           ),
@@ -1393,7 +1388,7 @@ class _TopAxisLegends extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.fade,
                 softWrap: false,
-                textScaleFactor: textScale,
+                textScaler: TextScaler.linear(textScale),
               ),
             ),
           ),
@@ -1445,7 +1440,7 @@ class _LeftAxisLegends extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.fade,
                       softWrap: false,
-                      textScaleFactor: textScale,
+                      textScaler: TextScaler.linear(textScale),
                     ),
                   ),
                 ),
@@ -1463,7 +1458,7 @@ class _LeftAxisLegends extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.fade,
                       softWrap: false,
-                      textScaleFactor: textScale,
+                      textScaler: TextScaler.linear(textScale),
                     ),
                   ),
                 ),

@@ -1,7 +1,7 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eisen/features/calendar_gantt/application/dependencies_controller.dart';
 import 'package:eisen/features/calendar_gantt/domain/task_dependency.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('DependenciesController', () {

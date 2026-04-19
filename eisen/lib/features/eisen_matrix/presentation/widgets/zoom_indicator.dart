@@ -39,7 +39,8 @@ class ZoomIndicator extends ConsumerWidget {
       label = isEs ? 'Detalle' : 'Detail';
     }
 
-    final qLabel = zoomQuadrant != null ? ' · ${zoomQuadrant.name.toUpperCase()}' : '';
+    final qLabel =
+        zoomQuadrant != null ? ' · ${zoomQuadrant.name.toUpperCase()}' : '';
 
     return Align(
       alignment: Alignment.centerRight,
@@ -47,11 +48,11 @@ class ZoomIndicator extends ConsumerWidget {
         padding: const EdgeInsets.all(8),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: cs.surface.withOpacity(0.86),
+            color: cs.surface.withValues(alpha: 0.86),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: cs.shadow.withOpacity(0.12),
+                color: cs.shadow.withValues(alpha: 0.12),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -70,8 +71,8 @@ class ZoomIndicator extends ConsumerWidget {
                 const SizedBox(width: 8),
                 Text(
                   '$label$qLabel',
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: cs.onSurface),
+                  style:
+                      theme.textTheme.labelSmall?.copyWith(color: cs.onSurface),
                 ),
               ],
             ),
@@ -95,4 +96,3 @@ class ZoomIndicator extends ConsumerWidget {
     );
   }
 }
-

@@ -1,8 +1,12 @@
 import 'dart:convert';
 
+import 'package:eisen/core/performance/perf_logger.dart';
+import 'package:eisen/core/workers/stats_worker.dart';
+import 'package:eisen/core/workers/worker_models.dart';
 import 'package:eisen/features/completed_tasks/domain/project_category.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -47,6 +51,28 @@ class StatsRepo {
     return filtered.toList(growable: false);
   }
 
+  Future<StatsWorkerOutput?> _runStatsWorker(
+    List<Task> tasks,
+    DateTime now,
+  ) async {
+    if (tasks.length < 400) return null;
+    final input = StatsWorkerInput(
+      tasks: tasks.map(TaskIsolateSnapshot.fromTask).toList(growable: false),
+      now: now,
+    );
+    try {
+      return await PerfLogger.instance.measureStats(
+        () => compute(statsWorker, input.toJson()),
+        taskCount: tasks.length,
+      );
+    } catch (err, st) {
+      if (kDebugMode) {
+        debugPrint('StatsRepo statsWorker fallback to sync: $err\n$st');
+      }
+      return null;
+    }
+  }
+
   /// Computes stats for the given [range] and [project], ending at [now].
   Future<WeeklyStats> computeStats(
       StatsRange range, ProjectCategory project, DateTime now) async {
@@ -55,8 +81,17 @@ class StatsRepo {
     final rangeStart = window.start;
     final rangeEnd = window.end;
 
+    final workerSummary = await _runStatsWorker(tasks, now);
+    final balance = workerSummary != null
+        ? BalanceBreakdown(
+            workerSummary.byQuadrant[Quadrant.q1] ?? 0,
+            workerSummary.byQuadrant[Quadrant.q2] ?? 0,
+            workerSummary.byQuadrant[Quadrant.q3] ?? 0,
+            workerSummary.byQuadrant[Quadrant.q4] ?? 0,
+          )
+        : calc.weeklyBalance(tasks, rangeStart, rangeEnd);
+
     final daysActive = calc.streakDays(tasks, now).clamp(0, range.days);
-    final balance = calc.weeklyBalance(tasks, rangeStart, rangeEnd);
     final total =
         (balance.q1 + balance.q2 + balance.q3 + balance.q4).clamp(1, 1 << 30);
     final q2Share = total == 0 ? 0.0 : balance.q2 / total;
@@ -80,12 +115,13 @@ class StatsRepo {
           return updated.difference(created).inHours > 24;
         })
         .length;
-    final int done = tasks
-        .where((t) =>
-            t.completedAt != null &&
-            t.completedAt!.isAfter(rangeStart) &&
-            t.completedAt!.isBefore(rangeEnd))
-        .length;
+    final int done = workerSummary?.completed ??
+        tasks
+            .where((t) =>
+                t.completedAt != null &&
+                t.completedAt!.isAfter(rangeStart) &&
+                t.completedAt!.isBefore(rangeEnd))
+            .length;
     return WeeklyStats(
       daysActive: daysActive,
       tasksDone: done,
@@ -102,11 +138,17 @@ class StatsRepo {
   Future<BalanceBreakdown> rangeBalance(
       StatsRange range, ProjectCategory project, DateTime now) async {
     final window = _window(range, now);
-    return calc.weeklyBalance(
-      _filteredTasks(project, window),
-      window.start,
-      window.end,
-    );
+    final filtered = _filteredTasks(project, window);
+    final summary = await _runStatsWorker(filtered, now);
+    if (summary != null) {
+      return BalanceBreakdown(
+        summary.byQuadrant[Quadrant.q1] ?? 0,
+        summary.byQuadrant[Quadrant.q2] ?? 0,
+        summary.byQuadrant[Quadrant.q3] ?? 0,
+        summary.byQuadrant[Quadrant.q4] ?? 0,
+      );
+    }
+    return calc.weeklyBalance(filtered, window.start, window.end);
   }
 
   /// Focus trend for the selected [range] and [project].

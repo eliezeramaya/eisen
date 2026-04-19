@@ -74,7 +74,7 @@ class _GanttHeaderPainter extends CustomPainter {
     final tick = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1
-      ..color = Colors.white.withOpacity(.08);
+      ..color = Colors.white.withValues(alpha: 0.08);
 
     DateTime cursor = _alignToScale(start, scale);
     // Label density control to avoid overlaps when zoomed out

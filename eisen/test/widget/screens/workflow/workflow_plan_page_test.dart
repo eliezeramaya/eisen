@@ -12,19 +12,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final binding = TestWidgetsFlutterBinding.ensureInitialized();
-
-  setUp(() {
-    binding.window.physicalSizeTestValue = const Size(1400, 900);
-    binding.window.devicePixelRatioTestValue = 1.0;
-  });
-
-  tearDown(() {
-    binding.window.clearPhysicalSizeTestValue();
-    binding.window.clearDevicePixelRatioTestValue();
-  });
-
   testWidgets('renders dependency arrows on top of the Gantt', (tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
@@ -67,6 +59,10 @@ void main() {
   });
 
   testWidgets('tapping a span opens the dependencies sheet', (tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     final container = ProviderContainer();
     addTearDown(container.dispose);
 

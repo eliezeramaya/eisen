@@ -101,12 +101,11 @@ void main() {
     });
 
     testWidgets('accepts onTap callback', (tester) async {
-      var callbackInvoked = false;
       await tester.pumpWidget(
         buildTestWidget(
           tasks: testTasks,
           layout: testLayout,
-          onTap: (id) => callbackInvoked = true,
+          onTap: (_) {},
         ),
       );
 
@@ -115,12 +114,11 @@ void main() {
     });
 
     testWidgets('accepts onDropToQuadrant callback', (tester) async {
-      var dropCallbackExists = false;
       await tester.pumpWidget(
         buildTestWidget(
           tasks: testTasks,
           layout: testLayout,
-          onDropToQuadrant: (id, q) => dropCallbackExists = true,
+          onDropToQuadrant: (_, __) {},
         ),
       );
 

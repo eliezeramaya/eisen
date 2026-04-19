@@ -1,7 +1,9 @@
-import 'package:eisen/features/completed_tasks/domain/project_category.dart';
-import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/utils/debounce.dart';
+import 'package:eisen/features/completed_tasks/domain/project_category.dart';
+import 'package:eisen/features/insights_adaptive/presentation/widgets/stats_adaptive_pattern_card.dart';
+import 'package:eisen/features/insights_ml/presentation/widgets/stats_ml_section.dart';
+import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,12 +12,10 @@ import '../../data/stats_exporter.dart';
 import '../../domain/models.dart';
 import '../widgets/eisenhower_balance_section.dart';
 import '../widgets/nudges_section.dart';
-import '../widgets/stats_trends_section.dart';
 import '../widgets/stats_productivity_scores_section.dart';
+import '../widgets/stats_trends_section.dart';
 import '../widgets/weekly_focus_trend_section.dart';
 import '../widgets/weekly_summary_section.dart';
-import 'package:eisen/features/insights_ml/presentation/widgets/stats_ml_section.dart';
-import 'package:eisen/features/insights_adaptive/presentation/widgets/stats_adaptive_pattern_card.dart';
 
 /// StatsPage — UX/UI dashboard for motivation with calm visuals.
 class StatsPage extends ConsumerStatefulWidget {
