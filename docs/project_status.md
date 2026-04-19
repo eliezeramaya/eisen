@@ -2517,7 +2517,7 @@ P1: 73% (32-43h restantes, 18-21h completadas)
 P2: 70% (13-25h restantes, 29-32h completadas)
 P3: 100% (0h restantes, COMPLETADO)
 
-LOC: ~37034+
+LOC: ~40060+
 Archivos: 223+
 Features completos: 17/17
 Features parciales: 0/17
