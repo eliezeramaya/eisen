@@ -1,5 +1,6 @@
 import 'package:device_preview/device_preview.dart';
 import 'package:eisen/core/intents/open_settings_intent.dart';
+import 'package:eisen/core/notifications/notifications_service.dart';
 import 'package:eisen/core/platform/platform_utils.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/ui/text_scaling.dart';
@@ -9,7 +10,6 @@ import 'package:eisen/features/settings/domain/language_controller.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/theme/density.dart';
 import 'package:eisen/utils/breakpoints.dart';
-import 'package:eisen/core/notifications/notifications_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,8 +57,7 @@ class EisenApp extends ConsumerWidget {
 
     // Density selection (auto by breakpoint, user override via UiPrefs)
     final densityPref = ref.watch(uiPrefsProvider).densityPreset;
-    final view = View.of(context);
-    final logicalWidth = view.physicalSize.width / view.devicePixelRatio;
+    final logicalWidth = _logicalWidthForDensity(context);
     final DensityPreset preset = () {
       if (densityPref != 'auto') {
         switch (densityPref) {
@@ -92,8 +91,15 @@ class EisenApp extends ConsumerWidget {
           data: (v) => v.locale,
           orElse: () => null,
         );
+    final previewLocale = DevicePreview.locale(context);
+    final prefsLocale = _resolveLocale(ref.watch(uiPrefsProvider));
+    final resolvedLocale = _resolveSupportedLocale(
+      languageLocale ?? previewLocale ?? prefsLocale,
+      AppLocalizations.supportedLocales,
+    );
 
     return MaterialApp.router(
+      useInheritedMediaQuery: true,
       builder: (ctx, child) {
         // Apply user text scaling on top of device scale with responsive clamps
         final prefs = ref.watch(uiPrefsProvider);
@@ -144,19 +150,76 @@ class EisenApp extends ConsumerWidget {
           : darkThemed,
       themeMode: themeMode,
       routerConfig: router,
-      locale: languageLocale ?? _resolveLocale(ref.watch(uiPrefsProvider)),
+      locale: resolvedLocale,
       localeResolutionCallback: (device, supported) {
-        final forcedLocale = ref
+        final preferredLocale = ref
                 .read(languageControllerProvider)
                 .maybeWhen(data: (v) => v.locale, orElse: () => null) ??
+            DevicePreview.locale(context) ??
             _resolveLocale(ref.read(uiPrefsProvider));
-        final forced = forcedLocale;
-        return forced ?? device;
+        if (preferredLocale != null) {
+          return _resolveSupportedLocale(preferredLocale, supported);
+        }
+        return _resolveSupportedLocale(device, supported);
       },
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     );
   }
+}
+
+Locale _resolveSupportedLocale(
+  Locale? locale,
+  Iterable<Locale> supportedLocales,
+) {
+  final supported = supportedLocales.toList(growable: false);
+  if (locale == null) {
+    return supported.first;
+  }
+
+  for (final candidate in supported) {
+    if (candidate.languageCode == locale.languageCode &&
+        (candidate.countryCode == null ||
+            candidate.countryCode == locale.countryCode)) {
+      return candidate;
+    }
+  }
+
+  if (locale.languageCode.toLowerCase() == 'c') {
+    return supported.first;
+  }
+
+  final exactLanguage = supported.where(
+    (supported) => supported.languageCode == locale.languageCode,
+  );
+  if (exactLanguage.isNotEmpty) {
+    return exactLanguage.first;
+  }
+
+  return supported.first;
+}
+
+double _logicalWidthForDensity(BuildContext context) {
+  final mediaQuery = MediaQuery.maybeOf(context);
+  if (mediaQuery != null) {
+    return mediaQuery.size.width;
+  }
+
+  final view = View.maybeOf(context);
+  if (view != null && view.devicePixelRatio > 0) {
+    return view.physicalSize.width / view.devicePixelRatio;
+  }
+
+  final platformDispatcher = WidgetsBinding.instance.platformDispatcher;
+  final implicitView = platformDispatcher.implicitView ??
+      (platformDispatcher.views.isNotEmpty
+          ? platformDispatcher.views.first
+          : null);
+  if (implicitView != null && implicitView.devicePixelRatio > 0) {
+    return implicitView.physicalSize.width / implicitView.devicePixelRatio;
+  }
+
+  return bpDesktop;
 }
 
 Locale? _resolveLocale(UiPrefsData prefs) {
