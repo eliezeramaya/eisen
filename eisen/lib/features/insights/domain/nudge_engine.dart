@@ -53,15 +53,28 @@ class DefaultNudgeEngine implements NudgeEngine {
     // Aplicar política adaptativa para priorizar un nudge concreto
     final adaptive = ref.read(adaptivePolicyEngineProvider);
     final selectedArm = await adaptive.selectBestNudgeArm(now);
-    final prioritized = _mapArmToNudge(
+    final prioritizedTemplate = _mapArmToNudge(
       selectedArm,
       tasks: tasks,
       now: now,
     );
-    if (prioritized != null) {
-      // Deduplicar por id y poner al frente
-      nudges.removeWhere((n) => n.id == prioritized.id);
-      nudges.insert(0, prioritized);
+    if (prioritizedTemplate != null) {
+      final matchingIndex = nudges.indexWhere(
+        (nudge) => nudge.type == prioritizedTemplate.type,
+      );
+      if (matchingIndex != -1) {
+        final enriched = nudges.removeAt(matchingIndex);
+        nudges.insert(
+          0,
+          enriched.copyWith(
+            id: prioritizedTemplate.id,
+            createdAt: now,
+            actions: prioritizedTemplate.actions.isNotEmpty
+                ? prioritizedTemplate.actions
+                : enriched.actions,
+          ),
+        );
+      }
     }
 
     return nudges;

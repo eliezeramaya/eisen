@@ -54,7 +54,7 @@ All P3 (Priority 3) features are now confirmed as **100% implemented and functio
 
 #### Integration
 - ✅ Integrated in `StatsPage` as first section
-- ✅ Complete documentation in `ADVANCED_STATS_IMPLEMENTATION.md` (250 lines)
+- ✅ Complete documentation in `advanced_stats_implementation.md` (250 lines)
 
 ### What Makes It Production-Ready
 - Clean architecture separation (domain/data/presentation)
@@ -141,7 +141,7 @@ All P3 (Priority 3) features are now confirmed as **100% implemented and functio
 ## 3. Haptic Feedback ✅ (Previously Completed)
 
 **Status**: 100% complete (5 hours work)  
-**Documentation**: See `HAPTIC_FEEDBACK_IMPLEMENTATION.md`
+**Documentation**: See `haptic_feedback_implementation.md`
 
 Brief summary:
 - HapticsService with 4 intensities (light/medium/heavy/error)

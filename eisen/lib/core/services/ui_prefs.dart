@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:eisen/features/eisen_matrix/domain/category_colors.dart';
+import 'package:eisen/features/eisen_matrix/domain/layout/treemap_density_resolver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -33,6 +34,7 @@ class UiPrefsData {
     this.ganttWorkweekOnly = false,
     this.ganttShowTodayLine = true,
     this.densityPreset = 'auto', // 'auto' | 'comfy' | 'compact' | 'ultra'
+    this.treemapDensityProfile = TreemapDensityProfiles.balanced,
     this.viewMode = 'treemap', // 'treemap' | 'list'
     this.minTileSizePx =
         44.0, // 30-44px, responsive (desktop: 30-44, mobile: 40-44)
@@ -75,6 +77,9 @@ class UiPrefsData {
   final bool ganttShowTodayLine;
   // Density preset override for desktop layouts
   final String densityPreset; // 'auto' | 'comfy' | 'compact' | 'ultra'
+  // Friendly density profile for the matrix treemap.
+  final String
+      treemapDensityProfile; // airy | balanced | compact | detailed | custom
   // Matrix view mode (desktop): treemap (default) or list (2x2)
   final String viewMode; // 'treemap' | 'list'
   // Minimum tile size in pixels (affects treemap density)
@@ -110,6 +115,7 @@ class UiPrefsData {
     bool? ganttWorkweekOnly,
     bool? ganttShowTodayLine,
     String? densityPreset,
+    String? treemapDensityProfile,
     String? viewMode,
     double? minTileSizePx,
     Map<String, int>? categoryColors,
@@ -142,6 +148,8 @@ class UiPrefsData {
         ganttWorkweekOnly: ganttWorkweekOnly ?? this.ganttWorkweekOnly,
         ganttShowTodayLine: ganttShowTodayLine ?? this.ganttShowTodayLine,
         densityPreset: densityPreset ?? this.densityPreset,
+        treemapDensityProfile:
+            treemapDensityProfile ?? this.treemapDensityProfile,
         viewMode: viewMode ?? this.viewMode,
         minTileSizePx: minTileSizePx ?? this.minTileSizePx,
         categoryColors: categoryColors ?? this.categoryColors,
@@ -174,6 +182,7 @@ class UiPrefsData {
         'ganttWorkweekOnly': ganttWorkweekOnly,
         'ganttShowTodayLine': ganttShowTodayLine,
         'densityPreset': densityPreset,
+        'treemapDensityProfile': treemapDensityProfile,
         'viewMode': viewMode,
         'minTileSizePx': minTileSizePx,
         'categoryColors': categoryColors,
@@ -234,9 +243,30 @@ class UiPrefsData {
       ganttWorkweekOnly: (json['ganttWorkweekOnly'] as bool?) ?? false,
       ganttShowTodayLine: (json['ganttShowTodayLine'] as bool?) ?? true,
       densityPreset: (json['densityPreset'] as String?) ?? 'auto',
+      treemapDensityProfile: (() {
+        final raw = json['treemapDensityProfile'] as String?;
+        if (TreemapDensityProfiles.allowed.contains(raw)) {
+          return raw!;
+        }
+        return TreemapDensityResolver.inferLegacyProfile(
+          topKPerQuadrant: (json['topKPerQuadrant'] as int?) ?? 20,
+          minAreaNormalized: (json['minAreaNormalized'] is num)
+              ? (json['minAreaNormalized'] as num).toDouble()
+              : 0.00004,
+          quadrantPadding: (json['quadrantPadding'] is num)
+              ? (json['quadrantPadding'] as num).toDouble()
+              : 0.012,
+          minTileSizePx: (json['minTileSizePx'] is num)
+              ? ((json['minTileSizePx'] as num).toDouble().clamp(30.0, 44.0)
+                      as num)
+                  .toDouble()
+              : 44.0,
+        );
+      })(),
       viewMode: (json['viewMode'] as String?) ?? 'treemap',
       minTileSizePx: (json['minTileSizePx'] is num)
-          ? (json['minTileSizePx'] as num).toDouble().clamp(30.0, 44.0)
+          ? ((json['minTileSizePx'] as num).toDouble().clamp(30.0, 44.0) as num)
+              .toDouble()
           : 44.0,
       categoryColors: (json['categoryColors'] is Map)
           ? Map<String, int>.from(json['categoryColors'] as Map)
@@ -313,25 +343,25 @@ class UiPrefsController extends Notifier<UiPrefsData> {
   }
 
   Future<void> setTopK(int value) async {
-    final v = value.clamp(5, 100);
+    final v = (value.clamp(5, 100) as num).toInt();
     state = state.copyWith(topKPerQuadrant: v);
     await _save();
   }
 
   Future<void> setGamma(double value) async {
-    final v = value.clamp(0.70, 1.0);
+    final v = (value.clamp(0.70, 1.0) as num).toDouble();
     state = state.copyWith(gamma: v);
     await _save();
   }
 
   Future<void> setMinArea(double value) async {
-    final v = value.clamp(0.00002, 0.0002);
+    final v = (value.clamp(0.00002, 0.0002) as num).toDouble();
     state = state.copyWith(minAreaNormalized: v);
     await _save();
   }
 
   Future<void> setPadding(double value) async {
-    final v = value.clamp(0.0, 0.02);
+    final v = (value.clamp(0.0, 0.02) as num).toDouble();
     state = state.copyWith(quadrantPadding: v);
     await _save();
   }
@@ -342,16 +372,24 @@ class UiPrefsController extends Notifier<UiPrefsData> {
     required double gamma,
     required double minAreaNormalized,
     required double quadrantPadding,
+    required double minTileSizePx,
+    required String treemapDensityProfile,
+    required bool isDesktop,
   }) async {
-    final k = topKPerQuadrant.clamp(5, 100);
-    final g = gamma.clamp(0.70, 1.0);
-    final minA = minAreaNormalized.clamp(0.00002, 0.0002);
-    final pad = quadrantPadding.clamp(0.0, 0.02);
+    final minAllowed = isDesktop ? 30.0 : 40.0;
+    final k = (topKPerQuadrant.clamp(5, 100) as num).toInt();
+    final g = (gamma.clamp(0.70, 1.0) as num).toDouble();
+    final minA = (minAreaNormalized.clamp(0.00002, 0.0002) as num).toDouble();
+    final pad = (quadrantPadding.clamp(0.0, 0.02) as num).toDouble();
+    final minTile = (minTileSizePx.clamp(minAllowed, 44.0) as num).toDouble();
+    final profile = TreemapDensityProfiles.sanitize(treemapDensityProfile);
     state = state.copyWith(
       topKPerQuadrant: k,
       gamma: g,
       minAreaNormalized: minA,
       quadrantPadding: pad,
+      minTileSizePx: minTile,
+      treemapDensityProfile: profile,
     );
     await _save();
   }
@@ -415,7 +453,7 @@ class UiPrefsController extends Notifier<UiPrefsData> {
 
   // Text scale
   Future<void> setTextScaleLevel(int level) async {
-    final v = level.clamp(1, 5);
+    final v = (level.clamp(1, 5) as num).toInt();
     state = state.copyWith(textScaleLevel: v);
     await _save();
   }
@@ -425,6 +463,37 @@ class UiPrefsController extends Notifier<UiPrefsData> {
     const allowed = {'auto', 'comfy', 'compact', 'ultra'};
     final p = allowed.contains(preset) ? preset : 'auto';
     state = state.copyWith(densityPreset: p);
+    await _save();
+  }
+
+  Future<void> setTreemapDensityProfile(String profile) async {
+    state = state.copyWith(
+      treemapDensityProfile: TreemapDensityProfiles.sanitize(profile),
+    );
+    await _save();
+  }
+
+  Future<void> applyTreemapDensityProfile({
+    required String profile,
+    required Size screenSize,
+  }) async {
+    final sanitizedProfile = TreemapDensityProfiles.sanitize(profile);
+    if (sanitizedProfile == TreemapDensityProfiles.custom) {
+      await setTreemapDensityProfile(TreemapDensityProfiles.custom);
+      return;
+    }
+
+    final resolved = TreemapDensityResolver.resolve(
+      prefs: state.copyWith(treemapDensityProfile: sanitizedProfile),
+      screenSize: screenSize,
+    );
+    state = state.copyWith(
+      treemapDensityProfile: sanitizedProfile,
+      topKPerQuadrant: resolved.topKPerQuadrant,
+      minAreaNormalized: resolved.minAreaNormalized,
+      quadrantPadding: resolved.quadrantPadding,
+      minTileSizePx: resolved.minTileSizePx,
+    );
     await _save();
   }
 
@@ -449,7 +518,7 @@ class UiPrefsController extends Notifier<UiPrefsData> {
   Future<void> setMinTileSize(double sizePx, {required bool isDesktop}) async {
     final minAllowed = isDesktop ? 30.0 : 40.0;
     final maxAllowed = 44.0;
-    final clamped = sizePx.clamp(minAllowed, maxAllowed);
+    final clamped = (sizePx.clamp(minAllowed, maxAllowed) as num).toDouble();
     state = state.copyWith(minTileSizePx: clamped);
     await _save();
   }

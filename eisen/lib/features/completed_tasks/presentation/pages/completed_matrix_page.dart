@@ -47,8 +47,7 @@ class _CompletedMatrixPageState extends ConsumerState<CompletedMatrixPage> {
           padding: const EdgeInsets.only(left: 12),
           child: Row(
             children: [
-              if (context.canPop())
-                BackButton(onPressed: () => context.pop()),
+              if (context.canPop()) BackButton(onPressed: () => context.pop()),
               const AppLogoHomeButton(),
               const SizedBox(width: 8),
               const Text('Tareas Completadas'),

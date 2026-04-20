@@ -8,12 +8,14 @@ import 'package:eisen/core/sync/remote_tasks_service.dart';
 import 'package:eisen/core/sync/remote_tasks_service_noop.dart';
 import 'package:eisen/core/workers/task_sort_worker.dart';
 import 'package:eisen/core/workers/worker_models.dart';
+import 'package:eisen/features/demo/demo_tasks.dart';
 import 'package:eisen/features/eisen_matrix/data/local_repo.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/layout_config.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/layout_config_provider.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/layout_providers.dart';
+import 'package:eisen/features/eisen_matrix/domain/layout/treemap_density_resolver.dart';
 import 'package:eisen/features/eisen_matrix/domain/matrix_view_mode.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/compute_layout_usecase.dart';
@@ -88,14 +90,16 @@ class MatrixState {
   final String? lastMovedTaskId;
   final bool isLoading;
 
+  static const Object _unset = Object();
+
   MatrixState copyWith({
     List<Task>? tasks,
-    String? selectedId,
-    Quadrant? zoom,
+    Object? selectedId = _unset,
+    Object? zoom = _unset,
     double? zoomScale,
     Offset? zoomOffset,
-    Quadrant? zoomQuadrant,
-    Quadrant? presentQuadrant,
+    Object? zoomQuadrant = _unset,
+    Object? presentQuadrant = _unset,
     ThemeMode? themeMode,
     String? query,
     String? searchQuery,
@@ -107,17 +111,23 @@ class MatrixState {
     int? layoutVersion,
     MatrixViewMode? viewMode,
     int? customTaskLimit,
-    String? lastMovedTaskId,
+    Object? lastMovedTaskId = _unset,
     bool? isLoading,
   }) =>
       MatrixState(
         tasks: tasks ?? this.tasks,
-        selectedId: selectedId ?? this.selectedId,
-        zoom: zoom ?? this.zoom,
+        selectedId: identical(selectedId, _unset)
+            ? this.selectedId
+            : selectedId as String?,
+        zoom: identical(zoom, _unset) ? this.zoom : zoom as Quadrant?,
         zoomScale: zoomScale ?? this.zoomScale,
         zoomOffset: zoomOffset ?? this.zoomOffset,
-        zoomQuadrant: zoomQuadrant ?? this.zoomQuadrant,
-        presentQuadrant: presentQuadrant ?? this.presentQuadrant,
+        zoomQuadrant: identical(zoomQuadrant, _unset)
+            ? this.zoomQuadrant
+            : zoomQuadrant as Quadrant?,
+        presentQuadrant: identical(presentQuadrant, _unset)
+            ? this.presentQuadrant
+            : presentQuadrant as Quadrant?,
         themeMode: themeMode ?? this.themeMode,
         query: query ?? this.query,
         searchQuery: searchQuery ?? this.searchQuery,
@@ -129,7 +139,9 @@ class MatrixState {
         layoutVersion: layoutVersion ?? this.layoutVersion,
         viewMode: viewMode ?? this.viewMode,
         customTaskLimit: customTaskLimit ?? this.customTaskLimit,
-        lastMovedTaskId: lastMovedTaskId ?? this.lastMovedTaskId,
+        lastMovedTaskId: identical(lastMovedTaskId, _unset)
+            ? this.lastMovedTaskId
+            : lastMovedTaskId as String?,
         isLoading: isLoading ?? this.isLoading,
       );
 }
@@ -185,7 +197,9 @@ class MatrixController extends Notifier<MatrixState> {
       final changed = prev.topKPerQuadrant != next.topKPerQuadrant ||
           prev.gamma != next.gamma ||
           prev.minAreaNormalized != next.minAreaNormalized ||
-          prev.quadrantPadding != next.quadrantPadding;
+          prev.quadrantPadding != next.quadrantPadding ||
+          prev.minTileSizePx != next.minTileSizePx ||
+          prev.treemapDensityProfile != next.treemapDensityProfile;
       if (changed) {
         final newCfg = ref.read(layoutConfigProvider);
         _computeLayoutUseCase = ComputeLayoutUseCase(
@@ -717,14 +731,14 @@ class MatrixController extends Notifier<MatrixState> {
   Future<List<TreemapRect>> layout({Quadrant? only, Size? viewport}) async {
     final filtered = _filteredTasksForLayout();
     final sorted = await _sortTasksForLayout(filtered);
-    final minTileSizePx = ref.read(uiPrefsProvider).minTileSizePx;
+    final resolvedDensity = _resolvedTreemapDensityFor(viewport);
     final layout = await _computeLayoutUseCase.executeAsync(
       tasks: sorted,
       zoom: state.zoom,
       viewport: viewport,
       only: only,
-      compactDensity: state.compact,
-      minTileSizePx: minTileSizePx,
+      compactDensity: resolvedDensity.compactDensity,
+      minTileSizePx: resolvedDensity.minTileSizePx,
     );
 
     // Update suggestions and compute metrics
@@ -750,12 +764,14 @@ class MatrixController extends Notifier<MatrixState> {
       resetLayoutCache();
     }
     final filtered = _filteredTasksForLayout();
+    final resolvedDensity = _resolvedTreemapDensityFor(viewport);
     final layout = _computeLayoutUseCase.execute(
       tasks: filtered,
       zoom: state.zoom,
       viewport: viewport,
       only: only,
-      compactDensity: state.compact,
+      compactDensity: resolvedDensity.compactDensity,
+      minTileSizePx: resolvedDensity.minTileSizePx,
     );
     _suggested = _suggestTopSpotsUseCase.execute(layout);
     final taskById = {for (final t in state.tasks) t.id: t};
@@ -835,6 +851,13 @@ class MatrixController extends Notifier<MatrixState> {
     }
   }
 
+  ResolvedTreemapDensity _resolvedTreemapDensityFor(Size? viewport) {
+    final size = (viewport != null && viewport.width > 0 && viewport.height > 0)
+        ? viewport
+        : TreemapDensityResolver.fallbackScreenSize;
+    return ref.read(treemapDensityForSizeProvider(size));
+  }
+
   Future<List<Task>> _sortTasksForLayout(List<Task> tasks) async {
     // For small sets, sorting overhead is not worth spinning an isolate.
     if (tasks.length < 200) return tasks;
@@ -870,264 +893,7 @@ class MatrixController extends Notifier<MatrixState> {
     }
   }
 
-  List<Task> _demoTasks() {
-    final now = DateTime.now();
-    const officeLat = 19.4328;
-    const officeLng = -99.1332;
-    const homeLat = 19.4260;
-    const homeLng = -99.1677;
-    const errandsLat = 19.4385;
-    const errandsLng = -99.1401;
-
-    return [
-      // Q1: Urgente e Importante (Do First)
-      Task(
-        id: 't1',
-        title: 'Presentación ejecutiva',
-        quadrant: Quadrant.q1,
-        priority: 10,
-        minutes: 120,
-        due: now.add(const Duration(hours: 4)),
-        notes: 'Reunión con CEO a las 2pm',
-        locationTag: 'office',
-        latitude: officeLat,
-        longitude: officeLng,
-        radiusMeters: 500,
-        createdAt: now.subtract(const Duration(days: 1)),
-      ),
-      Task(
-        id: 't2',
-        title: 'Bug crítico en producción',
-        quadrant: Quadrant.q1,
-        priority: 10,
-        minutes: 180,
-        due: now.add(const Duration(hours: 2)),
-        tags: ['urgente', 'backend'],
-        locationTag: 'office',
-        latitude: officeLat,
-        longitude: officeLng,
-        radiusMeters: 350,
-        createdAt: now.subtract(const Duration(hours: 3)),
-      ),
-      Task(
-        id: 't3',
-        title: 'Entregar propuesta cliente',
-        quadrant: Quadrant.q1,
-        priority: 9,
-        minutes: 90,
-        due: now.add(const Duration(days: 1)),
-        category: 'Ventas',
-        locationTag: 'office',
-        latitude: officeLat + 0.0012,
-        longitude: officeLng - 0.0008,
-        radiusMeters: 700,
-        createdAt: now.subtract(const Duration(days: 2)),
-      ),
-      Task(
-        id: 't4',
-        title: 'Revisar contratos legales',
-        quadrant: Quadrant.q1,
-        priority: 8,
-        minutes: 60,
-        due: now.add(const Duration(hours: 6)),
-        locationTag: 'office',
-        createdAt: now.subtract(const Duration(days: 1)),
-      ),
-
-      // Q2: No urgente e Importante (Schedule)
-      Task(
-        id: 't5',
-        title: 'Planificación estratégica Q4',
-        quadrant: Quadrant.q2,
-        priority: 9,
-        minutes: 240,
-        due: now.add(const Duration(days: 7)),
-        notes: 'Definir OKRs y roadmap',
-        category: 'Estrategia',
-        locationTag: 'office',
-        latitude: officeLat,
-        longitude: officeLng,
-        radiusMeters: 650,
-        createdAt: now.subtract(const Duration(days: 5)),
-      ),
-      Task(
-        id: 't6',
-        title: 'Refactorizar arquitectura',
-        quadrant: Quadrant.q2,
-        priority: 8,
-        minutes: 360,
-        due: now.add(const Duration(days: 14)),
-        tags: ['tech-debt', 'backend'],
-        notes: 'Implementar Clean Architecture',
-        locationTag: 'office',
-        latitude: officeLat + 0.0022,
-        longitude: officeLng + 0.0014,
-        radiusMeters: 900,
-        createdAt: now.subtract(const Duration(days: 3)),
-      ),
-      Task(
-        id: 't7',
-        title: 'Curso de liderazgo',
-        quadrant: Quadrant.q2,
-        priority: 7,
-        minutes: 120,
-        due: now.add(const Duration(days: 10)),
-        category: 'Desarrollo personal',
-        locationTag: 'home',
-        createdAt: now.subtract(const Duration(days: 7)),
-      ),
-      Task(
-        id: 't8',
-        title: 'Documentar API v2',
-        quadrant: Quadrant.q2,
-        priority: 7,
-        minutes: 180,
-        due: now.add(const Duration(days: 5)),
-        tags: ['docs', 'backend'],
-        locationTag: 'office',
-        createdAt: now.subtract(const Duration(days: 4)),
-      ),
-      Task(
-        id: 't9',
-        title: 'Ejercicio y meditación',
-        quadrant: Quadrant.q2,
-        priority: 8,
-        minutes: 60,
-        category: 'Salud',
-        notes: '30min cardio + 30min yoga',
-        locationTag: 'home',
-        latitude: homeLat,
-        longitude: homeLng,
-        radiusMeters: 450,
-        createdAt: now.subtract(const Duration(days: 2)),
-      ),
-      Task(
-        id: 't10',
-        title: 'Leer sobre ML/AI',
-        quadrant: Quadrant.q2,
-        priority: 6,
-        minutes: 90,
-        category: 'Aprendizaje',
-        tags: ['ai', 'research'],
-        locationTag: 'home',
-        createdAt: now.subtract(const Duration(days: 6)),
-      ),
-
-      // Q3: Urgente pero No importante (Delegate)
-      Task(
-        id: 't11',
-        title: 'Responder emails rutinarios',
-        quadrant: Quadrant.q3,
-        priority: 5,
-        minutes: 45,
-        due: now.add(const Duration(hours: 8)),
-        notes: 'Delegar a asistente',
-        locationTag: 'office',
-        createdAt: now.subtract(const Duration(hours: 5)),
-      ),
-      Task(
-        id: 't12',
-        title: 'Llamada de seguimiento',
-        quadrant: Quadrant.q3,
-        priority: 4,
-        minutes: 30,
-        due: now.add(const Duration(hours: 3)),
-        category: 'Comunicación',
-        locationTag: 'errands',
-        latitude: errandsLat,
-        longitude: errandsLng,
-        radiusMeters: 800,
-        createdAt: now.subtract(const Duration(hours: 2)),
-      ),
-      Task(
-        id: 't13',
-        title: 'Actualizar presentación',
-        quadrant: Quadrant.q3,
-        priority: 5,
-        minutes: 60,
-        due: now.add(const Duration(days: 1)),
-        locationTag: 'office',
-        latitude: officeLat + 0.0007,
-        longitude: officeLng + 0.0005,
-        radiusMeters: 500,
-        createdAt: now.subtract(const Duration(days: 1)),
-      ),
-      Task(
-        id: 't14',
-        title: 'Organizar archivo digital',
-        quadrant: Quadrant.q3,
-        priority: 3,
-        minutes: 40,
-        due: now.add(const Duration(hours: 12)),
-        locationTag: 'home',
-        createdAt: now.subtract(const Duration(days: 3)),
-      ),
-      Task(
-        id: 't15',
-        title: 'Reunión status semanal',
-        quadrant: Quadrant.q3,
-        priority: 4,
-        minutes: 45,
-        due: now.add(const Duration(hours: 24)),
-        category: 'Reuniones',
-        locationTag: 'office',
-        createdAt: now.subtract(const Duration(days: 2)),
-      ),
-
-      // Q4: No urgente y No importante (Eliminate)
-      Task(
-        id: 't16',
-        title: 'Revisar redes sociales',
-        quadrant: Quadrant.q4,
-        priority: 2,
-        minutes: 20,
-        notes: 'Considerar eliminar o reducir',
-        locationTag: 'home',
-        createdAt: now.subtract(const Duration(hours: 6)),
-      ),
-      Task(
-        id: 't17',
-        title: 'Ver videos de YouTube',
-        quadrant: Quadrant.q4,
-        priority: 1,
-        minutes: 45,
-        locationTag: 'home',
-        createdAt: now.subtract(const Duration(hours: 8)),
-      ),
-      Task(
-        id: 't18',
-        title: 'Reorganizar escritorio',
-        quadrant: Quadrant.q4,
-        priority: 2,
-        minutes: 25,
-        locationTag: 'home',
-        latitude: homeLat + 0.0008,
-        longitude: homeLng - 0.0006,
-        radiusMeters: 300,
-        createdAt: now.subtract(const Duration(days: 1)),
-      ),
-      Task(
-        id: 't19',
-        title: 'Configurar widgets',
-        quadrant: Quadrant.q4,
-        priority: 2,
-        minutes: 30,
-        category: 'Personalización',
-        locationTag: 'home',
-        createdAt: now.subtract(const Duration(days: 4)),
-      ),
-      Task(
-        id: 't20',
-        title: 'Jugar videojuegos',
-        quadrant: Quadrant.q4,
-        priority: 1,
-        minutes: 60,
-        notes: 'Tiempo de ocio',
-        locationTag: 'home',
-        createdAt: now.subtract(const Duration(days: 2)),
-      ),
-    ];
-  }
+  List<Task> _demoTasks() => demoTasks();
 }
 
 final matrixControllerProvider =

@@ -24,7 +24,7 @@ Scripts de utilidad para el proyecto Eisen.
 - Schedule diario a las 00:00 UTC
 - También se ejecuta en cada push a `main`
 
-Ver documentación completa en: [`docs/AUTO_UPDATE_STATUS.md`](../docs/AUTO_UPDATE_STATUS.md)
+Ver documentación completa en: [`docs/auto_update_status.md`](../docs/auto_update_status.md)
 
 ---
 

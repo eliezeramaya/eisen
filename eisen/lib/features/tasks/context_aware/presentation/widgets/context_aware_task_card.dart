@@ -1,6 +1,8 @@
 import 'package:eisen/core/design_system/widgets/eisen_card.dart';
+import 'package:eisen/features/tasks/context_aware/application/contextual_treemap_layout.dart';
 import 'package:eisen/features/tasks/context_aware/domain/context_aware_task_scoring.dart';
 import 'package:eisen/features/tasks/context_aware/domain/context_state.dart';
+import 'package:eisen/features/tasks/context_aware/presentation/contextual_treemap_palette.dart';
 import 'package:flutter/material.dart';
 
 class ContextAwareTaskCard extends StatelessWidget {
@@ -14,14 +16,22 @@ class ContextAwareTaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final accent = _accentForScore(cs, rankedTask.score);
+    final colorScheme = theme.colorScheme;
+    final group = inferContextTreemapGroup(rankedTask.task);
+    final accent = ContextualTreemapPalette.tileColor(
+      rankedTask: rankedTask,
+      group: group,
+      colorScheme: colorScheme,
+      isActiveSection: rankedTask.isHighRelevance,
+      isSelected: true,
+    );
+    final titleColor = ContextualTreemapPalette.textColorFor(accent);
+    final bodyColor = ContextualTreemapPalette.mutedTextColorFor(accent);
     final locationLabel = rankedTask.task.locationTag == null
         ? null
         : localizedContextTag(context, rankedTask.task.locationTag);
 
     return EisenCard(
-      interactive: true,
       outlined: true,
       padding: EdgeInsets.zero,
       child: AnimatedContainer(
@@ -30,8 +40,12 @@ class ContextAwareTaskCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
             colors: [
-              accent.withValues(alpha: 0.18),
-              cs.surface,
+              accent,
+              Color.lerp(
+                accent,
+                ContextualTreemapPalette.surfaceElevated,
+                0.7,
+              )!,
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -42,6 +56,7 @@ class ContextAwareTaskCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Wrap(
@@ -51,14 +66,19 @@ class ContextAwareTaskCard extends StatelessWidget {
                       _MetaPill(
                         label: '${(rankedTask.score * 100).round()}%',
                         icon: Icons.auto_awesome_rounded,
-                        color: accent,
+                        foregroundColor: titleColor,
                       ),
                       if (locationLabel != null)
                         _MetaPill(
                           label: locationLabel,
                           icon: Icons.place_outlined,
-                          color: cs.primary,
+                          foregroundColor: titleColor,
                         ),
+                      _MetaPill(
+                        label: _groupLabel(context, group),
+                        icon: Icons.grid_view_rounded,
+                        foregroundColor: titleColor,
+                      ),
                     ],
                   ),
                 ),
@@ -67,10 +87,15 @@ class ContextAwareTaskCard extends StatelessWidget {
                   height: 44,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.14),
+                      color: titleColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Icon(Icons.task_alt_rounded, color: accent),
+                    child: Icon(
+                      rankedTask.task.isBlocked
+                          ? Icons.lock_clock_outlined
+                          : Icons.task_alt_rounded,
+                      color: titleColor,
+                    ),
                   ),
                 ),
               ],
@@ -78,9 +103,9 @@ class ContextAwareTaskCard extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               rankedTask.task.title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: cs.onSurface,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: titleColor,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -90,7 +115,7 @@ class ContextAwareTaskCard extends StatelessWidget {
               Text(
                 rankedTask.task.description,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: cs.onSurfaceVariant,
+                  color: bodyColor,
                   height: 1.35,
                 ),
                 maxLines: 3,
@@ -103,8 +128,8 @@ class ContextAwareTaskCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: rankedTask.score.clamp(0.02, 1.0),
                 minHeight: 7,
-                backgroundColor: accent.withValues(alpha: 0.12),
-                valueColor: AlwaysStoppedAnimation<Color>(accent),
+                backgroundColor: titleColor.withValues(alpha: 0.12),
+                valueColor: AlwaysStoppedAnimation<Color>(titleColor),
               ),
             ),
             const SizedBox(height: 14),
@@ -115,15 +140,18 @@ class ContextAwareTaskCard extends StatelessWidget {
                 _InfoLabel(
                   icon: Icons.flag_outlined,
                   text: 'P${rankedTask.task.priority}',
+                  color: bodyColor,
                 ),
                 _InfoLabel(
                   icon: Icons.schedule_rounded,
                   text: '${rankedTask.task.minutes} min',
+                  color: bodyColor,
                 ),
                 if (rankedTask.distanceMeters != null)
                   _InfoLabel(
                     icon: Icons.near_me_outlined,
                     text: _formatDistance(rankedTask.distanceMeters!),
+                    color: bodyColor,
                   ),
               ],
             ),
@@ -131,7 +159,7 @@ class ContextAwareTaskCard extends StatelessWidget {
             Text(
               rankedTask.explanation,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: cs.onSurfaceVariant,
+                color: bodyColor,
                 height: 1.3,
               ),
             ),
@@ -141,10 +169,8 @@ class ContextAwareTaskCard extends StatelessWidget {
     );
   }
 
-  Color _accentForScore(ColorScheme cs, double score) {
-    if (score >= 0.72) return cs.primary;
-    if (score >= 0.48) return cs.tertiary;
-    return cs.secondary;
+  String _groupLabel(BuildContext context, ContextTreemapGroup group) {
+    return localizedTreemapGroupLabel(context, group);
   }
 
   String _formatDistance(double distanceMeters) {
@@ -159,31 +185,38 @@ class _MetaPill extends StatelessWidget {
   const _MetaPill({
     required this.label,
     required this.icon,
-    required this.color,
+    required this.foregroundColor,
   });
 
   final String label;
   final IconData icon;
-  final Color color;
+  final Color foregroundColor;
 
   @override
   Widget build(BuildContext context) {
+    final background = Color.lerp(
+      foregroundColor,
+      ContextualTreemapPalette.surfaceElevated,
+      0.78,
+    )!;
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: background,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: foregroundColor.withValues(alpha: 0.16)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: color),
+            Icon(icon, size: 14, color: foregroundColor),
             const SizedBox(width: 6),
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: color,
+                    color: foregroundColor,
                     fontWeight: FontWeight.w700,
                   ),
             ),
@@ -198,23 +231,24 @@ class _InfoLabel extends StatelessWidget {
   const _InfoLabel({
     required this.icon,
     required this.text,
+    required this.color,
   });
 
   final IconData icon;
   final String text;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: cs.onSurfaceVariant),
+        Icon(icon, size: 16, color: color),
         const SizedBox(width: 6),
         Text(
           text,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: cs.onSurfaceVariant,
+                color: color,
               ),
         ),
       ],

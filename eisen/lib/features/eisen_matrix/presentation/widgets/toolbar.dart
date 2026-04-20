@@ -117,6 +117,7 @@ class _AppToolbarState extends State<AppToolbar> {
     final profileLabel = isEs ? 'Perfil' : 'Profile';
     final completedLabel = isEs ? 'Completed' : 'Completed';
     final themeLabel = isEs ? 'Tema' : 'Theme';
+    final backLabel = isEs ? 'Volver' : 'Back';
     final viewLabel = widget.viewMode == 'list'
         ? (isEs ? 'Lista' : 'List')
         : (isEs ? 'Matriz' : 'Matrix');
@@ -125,36 +126,117 @@ class _AppToolbarState extends State<AppToolbar> {
         : Icons.grid_view_rounded;
 
     Widget actionButton({
+      Key? key,
+      bool expand = false,
       required VoidCallback? onPressed,
       required IconData icon,
       required String label,
     }) {
       final colorScheme = Theme.of(context).colorScheme;
-      return InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 24, color: colorScheme.onSurfaceVariant),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
+      final content = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 24, color: colorScheme.onSurfaceVariant),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
               ),
-            ],
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+
+      return Tooltip(
+        message: label,
+        child: Semantics(
+          button: true,
+          label: label,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: key,
+              onTap: onPressed,
+              borderRadius: BorderRadius.circular(12),
+              child: expand
+                  ? SizedBox.expand(child: Center(child: content))
+                  : content,
+            ),
           ),
         ),
+      );
+    }
+
+    Widget mobileSlot({
+      required Widget child,
+    }) {
+      return SizedBox(
+        width: MediaQuery.of(context).size.width / 5,
+        child: child,
+      );
+    }
+
+    Widget mobileCenteredAction({
+      Key? key,
+      required VoidCallback? onPressed,
+      required IconData icon,
+      required String label,
+    }) {
+      return mobileSlot(
+        child: actionButton(
+          key: key,
+          expand: true,
+          onPressed: onPressed,
+          icon: icon,
+          label: label,
+        ),
+      );
+    }
+
+    Widget mobileSettingsOrBackSlot() {
+      if (widget.canExitZoom && widget.onExitZoom != null) {
+        return mobileCenteredAction(
+          key: const Key('toolbar-back-button'),
+          onPressed: widget.onExitZoom,
+          icon: Icons.arrow_back_rounded,
+          label: backLabel,
+        );
+      }
+
+      if (widget.onOpenSettings != null) {
+        return mobileCenteredAction(
+          onPressed: widget.onOpenSettings,
+          icon: Icons.settings,
+          label: settingsLabel,
+        );
+      }
+
+      return mobileCenteredAction(
+        onPressed: widget.onToggleSearch,
+        icon: Icons.search,
+        label: searchLabel,
+      );
+    }
+
+    Widget desktopBackAction() {
+      if (!widget.canExitZoom || widget.onExitZoom == null) {
+        return const SizedBox.shrink();
+      }
+
+      return actionButton(
+        key: const Key('toolbar-back-button'),
+        onPressed: widget.onExitZoom,
+        icon: Icons.arrow_back_rounded,
+        label: backLabel,
       );
     }
 
@@ -181,32 +263,8 @@ class _AppToolbarState extends State<AppToolbar> {
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        // Col 0: Settings (antes Search; alineado con Stats inferior)
-                        if (widget.onOpenSettings != null)
-                          SizedBox(
-                            width: MediaQuery.of(context).size.width / 5,
-                            child: Center(
-                              child: actionButton(
-                                onPressed: widget.onOpenSettings,
-                                icon: Icons.settings,
-                                label: settingsLabel,
-                              ),
-                            ),
-                          )
-                        else
-                          SizedBox(
-                            width: MediaQuery.of(context).size.width / 5,
-                            child: Center(
-                              child: actionButton(
-                                onPressed: widget.onToggleSearch,
-                                icon: Icons.search,
-                                label: searchLabel,
-                              ),
-                            ),
-                          ),
-                        // Col 1: Tema (alineado con Completed inferior)
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width / 5,
+                        mobileSettingsOrBackSlot(),
+                        mobileSlot(
                           child: Center(
                             child: _ThemeMenuButton(
                               label: themeLabel,
@@ -215,40 +273,26 @@ class _AppToolbarState extends State<AppToolbar> {
                             ),
                           ),
                         ),
-                        // Col 2: logo de la app (alineado con FAB central inferior)
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width / 5,
-                          child: const Center(
-                            child: AppLogoHomeButton(),
+                        mobileSlot(
+                          child: const AppLogoHomeButton(
+                            key: Key('toolbar-home-button'),
                           ),
                         ),
-                        // Col 3: Search (antes Settings; alineado con Workflow inferior)
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width / 5,
-                          child: Center(
-                            child: actionButton(
-                              onPressed: widget.onOpenContextTasks ??
-                                  widget.onToggleSearch,
-                              icon: widget.onOpenContextTasks != null
-                                  ? Icons.place_rounded
-                                  : Icons.search,
-                              label: widget.onOpenContextTasks != null
-                                  ? contextLabel
-                                  : searchLabel,
-                            ),
-                          ),
+                        mobileCenteredAction(
+                          onPressed: widget.onOpenContextTasks ??
+                              widget.onToggleSearch,
+                          icon: widget.onOpenContextTasks != null
+                              ? Icons.place_rounded
+                              : Icons.search,
+                          label: widget.onOpenContextTasks != null
+                              ? contextLabel
+                              : searchLabel,
                         ),
-                        // Col 4: Profile (alineado con Settings inferior)
                         if (widget.onOpenProfile != null)
-                          SizedBox(
-                            width: MediaQuery.of(context).size.width / 5,
-                            child: Center(
-                              child: actionButton(
-                                onPressed: widget.onOpenProfile,
-                                icon: Icons.account_circle,
-                                label: profileLabel,
-                              ),
-                            ),
+                          mobileCenteredAction(
+                            onPressed: widget.onOpenProfile,
+                            icon: Icons.account_circle,
+                            label: profileLabel,
                           ),
                       ],
                     ),
@@ -258,7 +302,8 @@ class _AppToolbarState extends State<AppToolbar> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        // Settings button (antes Search; advanced settings)
+                        if (widget.canExitZoom && widget.onExitZoom != null)
+                          desktopBackAction(),
                         if (widget.onOpenSettings != null)
                           actionButton(
                             onPressed: widget.onOpenSettings,

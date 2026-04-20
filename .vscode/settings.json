@@ -1,3 +1,15 @@
 {
-    "remote.autoForwardPortsFallback": 0
+    "remote.autoForwardPortsFallback": 0,
+    "dart.flutterSdkPath": "eisen/.fvm/flutter_sdk",
+    "dart.analysisExcludedFolders": [
+        "${workspaceFolder}/eisen/build",
+        "${workspaceFolder}/eisen/tools"
+    ],
+    "search.exclude": {
+        "**/.fvm": true
+    },
+    "files.watcherExclude": {
+        "**/.fvm": true
+    },
+    "dart.lineLength": 120
 }

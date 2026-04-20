@@ -66,14 +66,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsResetDemo => 'Restore demo tasks';
 
   @override
-  String get settingsResetDemoSubtitle => 'Replace all tasks with examples';
+  String get settingsResetDemoSubtitle =>
+      'Replace all tasks with a rich sample dataset';
 
   @override
   String get settingsResetDemoDialogTitle => 'Restore demo tasks?';
 
   @override
   String get settingsResetDemoDialogContent =>
-      'This will delete all your current tasks and replace them with 20 example tasks.';
+      'This will delete all your current tasks and replace them with 100 example tasks with richer metadata.';
 
   @override
   String get settingsCancel => 'Cancel';

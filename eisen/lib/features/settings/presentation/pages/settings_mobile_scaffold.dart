@@ -1,6 +1,7 @@
 import 'package:eisen/features/settings/application/settings_controller.dart';
 import 'package:eisen/features/settings/presentation/sections/appearance_mobile_panel.dart';
 import 'package:eisen/features/settings/presentation/sections/general_panel.dart';
+import 'package:eisen/features/settings/presentation/sections/layout_mobile_panel.dart';
 import 'package:eisen/features/settings/presentation/settings_content.dart';
 import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter/material.dart';
@@ -202,6 +203,9 @@ class SettingsCategoryPage extends ConsumerWidget {
         break;
       case 'appearance':
         body = const AppearanceMobilePanel();
+        break;
+      case 'layout':
+        body = const LayoutMobilePanel();
         break;
       case 'notifications':
         body = const NotificationsPanel();

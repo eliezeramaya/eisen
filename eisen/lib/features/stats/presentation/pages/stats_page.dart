@@ -27,7 +27,8 @@ class StatsPage extends ConsumerStatefulWidget {
 }
 
 class _StatsPageState extends ConsumerState<StatsPage> {
-  final Debouncer _debounce = Debouncer(delay: const Duration(milliseconds: 200));
+  final Debouncer _debounce =
+      Debouncer(delay: const Duration(milliseconds: 200));
 
   @override
   void dispose() {
@@ -118,8 +119,8 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                         selected: range == r,
                         onSelected: (value) {
                           if (!value) return;
-                          _debounce.run(
-                              () => ref.read(statsRangeProvider.notifier).set(r));
+                          _debounce.run(() =>
+                              ref.read(statsRangeProvider.notifier).set(r));
                         },
                       );
                     }).toList(),
@@ -141,8 +142,8 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                         .toList(),
                     onChanged: (value) {
                       if (value == null) return;
-                      _debounce.run(
-                          () => ref.read(statsProjectProvider.notifier).set(value));
+                      _debounce.run(() =>
+                          ref.read(statsProjectProvider.notifier).set(value));
                     },
                   ),
                 ),

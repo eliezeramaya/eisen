@@ -1,7 +1,12 @@
+import 'package:eisen/core/design_system/eisen_tokens.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/tasks/context_aware/application/context_aware_tasks_controller.dart';
+import 'package:eisen/features/tasks/context_aware/application/contextual_treemap_layout.dart';
+import 'package:eisen/features/tasks/context_aware/domain/context_aware_task_scoring.dart';
 import 'package:eisen/features/tasks/context_aware/domain/context_state.dart';
+import 'package:eisen/features/tasks/context_aware/presentation/contextual_treemap_palette.dart';
 import 'package:eisen/features/tasks/context_aware/presentation/widgets/context_aware_task_card.dart';
+import 'package:eisen/features/tasks/context_aware/presentation/widgets/contextual_treemap_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,6 +20,8 @@ class ContextAwareTasksPage extends ConsumerStatefulWidget {
 
 class _ContextAwareTasksPageState extends ConsumerState<ContextAwareTasksPage> {
   bool _showAll = false;
+  String? _selectedTaskId;
+  ContextTreemapGroup? _mobileGroupOverride;
 
   @override
   void initState() {
@@ -29,24 +36,41 @@ class _ContextAwareTasksPageState extends ConsumerState<ContextAwareTasksPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final locale = Localizations.localeOf(context);
     final isEs = locale.languageCode == 'es';
     final controller = ref.read(contextAwareTasksControllerProvider.notifier);
     final contextState = ref.watch(contextAwareTasksControllerProvider);
     final rankedTasks = ref.watch(rankedContextAwareTasksProvider);
-    final activePreset = contextPresetForTag(contextState.currentLocationTag);
     final filteredTasks = _showAll
         ? rankedTasks
-        : rankedTasks.where((task) => task.score >= 0.34).take(8).toList();
+        : rankedTasks.where((task) => task.score >= 0.28).take(12).toList();
     final hasNoTasks = rankedTasks.isEmpty;
     final width = MediaQuery.sizeOf(context).width;
-    final useGrid = width >= 880;
+    final isCompact = width < 760;
+    final sections = buildContextTreemapSections(
+      rankedTasks: filteredTasks,
+      context: contextState,
+    );
+    final focusedGroup =
+        isCompact ? _resolveMobileGroup(sections, contextState) : null;
+    final layout = buildContextTreemapLayout(
+      sections: sections,
+      focusedGroup: focusedGroup,
+    );
+    final visibleTasks = layout.sections
+        .expand((section) => section.tiles.map((tile) => tile.seed.rankedTask))
+        .toList(growable: false);
+    final selectedTask = _resolveSelectedTask(visibleTasks);
+    final treemapHeight = isCompact ? 470.0 : 620.0;
 
     return Scaffold(
+      backgroundColor: ContextualTreemapPalette.background,
       appBar: AppBar(
         title: Text(
           isEs ? 'Tareas por contexto' : 'Context-aware tasks',
         ),
+        backgroundColor: ContextualTreemapPalette.background,
         actions: [
           TextButton(
             onPressed: () => setState(() => _showAll = !_showAll),
@@ -84,9 +108,11 @@ class _ContextAwareTasksPageState extends ConsumerState<ContextAwareTasksPage> {
               child: _HeroHeader(
                 contextState: contextState,
                 title: isEs
-                    ? 'Lo mas relevante para donde estas'
-                    : 'What matters most where you are',
-                subtitle: activePreset.subtitleFor(locale),
+                    ? 'Mapa contextual de energia y foco'
+                    : 'A calm map of focus and energy',
+                subtitle: isEs
+                    ? 'El treemap agrupa tus tareas por contexto y resalta lo que mejor encaja con este momento.'
+                    : 'The treemap groups your tasks by context and highlights what best fits right now.',
               ),
             ),
           ),
@@ -150,7 +176,13 @@ class _ContextAwareTasksPageState extends ConsumerState<ContextAwareTasksPage> {
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                       child: _ManualContextSelector(
                         selectedTag: contextState.currentLocationTag,
-                        onSelected: controller.selectManualContext,
+                        onSelected: (tag) {
+                          setState(() {
+                            _mobileGroupOverride =
+                                contextTagToTreemapGroup(tag);
+                          });
+                          controller.selectManualContext(tag);
+                        },
                       ),
                     ),
             ),
@@ -183,43 +215,105 @@ class _ContextAwareTasksPageState extends ConsumerState<ContextAwareTasksPage> {
               ),
             )
           else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-              sliver: useGrid
-                  ? SliverGrid.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        mainAxisExtent: 250,
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1280),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _ContextSummaryBar(
+                        contextState: contextState,
+                        totalTaskCount: rankedTasks.length,
+                        visibleTaskCount: visibleTasks.length,
+                        topRankedTask: selectedTask ?? layout.topRankedTask,
+                        showAll: _showAll,
+                        isCompact: isCompact,
                       ),
-                      itemCount: filteredTasks.length,
-                      itemBuilder: (context, index) {
-                        final rankedTask = filteredTasks[index];
-                        return _AnimatedTaskCard(
-                          index: index,
-                          child: ContextAwareTaskCard(rankedTask: rankedTask),
-                        );
-                      },
-                    )
-                  : SliverList.builder(
-                      itemCount: filteredTasks.length,
-                      itemBuilder: (context, index) {
-                        final rankedTask = filteredTasks[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: _AnimatedTaskCard(
-                            index: index,
-                            child: ContextAwareTaskCard(rankedTask: rankedTask),
+                      if (isCompact && sections.isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        _MobileContextGroupChips(
+                          sections: sections,
+                          selectedGroup: focusedGroup ?? sections.first.group,
+                          onSelected: (group) {
+                            setState(() {
+                              _mobileGroupOverride = group;
+                              _selectedTaskId = null;
+                            });
+                          },
+                        ),
+                      ],
+                      const SizedBox(height: 18),
+                      SizedBox(
+                        height: treemapHeight,
+                        child: ContextualTreemapView(
+                          layout: layout,
+                          compact: isCompact,
+                          selectedTaskId: selectedTask?.task.id,
+                          onTaskSelected: (task) {
+                            setState(() => _selectedTaskId = task.task.id);
+                          },
+                        ),
+                      ),
+                      if (selectedTask != null) ...[
+                        const SizedBox(height: 18),
+                        Text(
+                          isEs ? 'Tarea destacada' : 'Highlighted task',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: ContextualTreemapPalette.textPrimary,
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                        const SizedBox(height: 12),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 220),
+                          child: KeyedSubtree(
+                            key: ValueKey(selectedTask.task.id),
+                            child:
+                                ContextAwareTaskCard(rankedTask: selectedTask),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
             ),
         ],
       ),
     );
+  }
+
+  ContextTreemapGroup? _resolveMobileGroup(
+    List<ContextTreemapSection> sections,
+    ContextState contextState,
+  ) {
+    if (sections.isEmpty) return null;
+    if (_mobileGroupOverride != null &&
+        sections.any((section) => section.group == _mobileGroupOverride)) {
+      return _mobileGroupOverride;
+    }
+
+    final activeGroup =
+        contextTagToTreemapGroup(contextState.currentLocationTag);
+    if (sections.any((section) => section.group == activeGroup)) {
+      return activeGroup;
+    }
+
+    return sections.first.group;
+  }
+
+  RankedContextTask? _resolveSelectedTask(
+      List<RankedContextTask> visibleTasks) {
+    if (visibleTasks.isEmpty) return null;
+    final selectedId = _selectedTaskId;
+    if (selectedId != null) {
+      for (final task in visibleTasks) {
+        if (task.task.id == selectedId) return task;
+      }
+    }
+    return visibleTasks.first;
   }
 }
 
@@ -237,7 +331,6 @@ class _HeroHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
     final modeLabel = contextState.isAutoMode ? 'AUTO' : 'MANUAL';
     final permissionLabel = switch (contextState.permissionState) {
       ContextPermissionState.granted => 'GPS OK',
@@ -255,14 +348,14 @@ class _HeroHeader extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
           colors: [
-            cs.primary.withValues(alpha: 0.18),
-            cs.secondary.withValues(alpha: 0.14),
-            cs.surface,
+            ContextualTreemapPalette.mistGreen,
+            ContextualTreemapPalette.surfaceElevated,
+            ContextualTreemapPalette.background,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(color: cs.outlineVariant),
+        border: Border.all(color: ContextualTreemapPalette.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,9 +365,14 @@ class _HeroHeader extends StatelessWidget {
             runSpacing: 8,
             children: [
               _HeaderChip(
-                  label: modeLabel, icon: Icons.motion_photos_auto_rounded),
+                label: modeLabel,
+                icon: Icons.motion_photos_auto_rounded,
+              ),
               _HeaderChip(label: contextLabel, icon: Icons.place_rounded),
-              _HeaderChip(label: permissionLabel, icon: Icons.shield_outlined),
+              _HeaderChip(
+                label: permissionLabel,
+                icon: Icons.shield_outlined,
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -282,19 +380,186 @@ class _HeroHeader extends StatelessWidget {
             title,
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
+              color: ContextualTreemapPalette.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             subtitle,
             style: theme.textTheme.bodyLarge?.copyWith(
-              color: cs.onSurfaceVariant,
+              color: ContextualTreemapPalette.textSecondary,
               height: 1.35,
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+class _ContextSummaryBar extends StatelessWidget {
+  const _ContextSummaryBar({
+    required this.contextState,
+    required this.totalTaskCount,
+    required this.visibleTaskCount,
+    required this.topRankedTask,
+    required this.showAll,
+    required this.isCompact,
+  });
+
+  final ContextState contextState;
+  final int totalTaskCount;
+  final int visibleTaskCount;
+  final RankedContextTask? topRankedTask;
+  final bool showAll;
+  final bool isCompact;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final topLabel = topRankedTask?.task.title ??
+        (isEs ? 'Sin tarea destacada' : 'No highlighted task');
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ContextualTreemapPalette.surfaceElevated,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: ContextualTreemapPalette.border),
+      ),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          _SummaryPill(
+            icon: Icons.place_outlined,
+            label:
+                localizedContextTag(context, contextState.currentLocationTag),
+            value: contextState.isAutoMode
+                ? (isEs ? 'Automatico' : 'Automatic')
+                : (isEs ? 'Manual' : 'Manual'),
+          ),
+          _SummaryPill(
+            icon: Icons.grid_view_rounded,
+            label: isEs ? 'Visible' : 'Visible',
+            value: '$visibleTaskCount/$totalTaskCount',
+          ),
+          _SummaryPill(
+            icon: Icons.tips_and_updates_outlined,
+            label:
+                showAll ? (isEs ? 'Vista' : 'View') : (isEs ? 'Modo' : 'Mode'),
+            value: showAll
+                ? (isEs ? 'Todas' : 'All tasks')
+                : (isEs ? 'Sugeridas' : 'Suggested'),
+          ),
+          if (!isCompact)
+            _SummaryPill(
+              icon: Icons.auto_awesome_rounded,
+              label: isEs ? 'Top match' : 'Top match',
+              value: topLabel,
+              expanded: true,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryPill extends StatelessWidget {
+  const _SummaryPill({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.expanded = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool expanded;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = Container(
+      constraints:
+          expanded ? const BoxConstraints(minWidth: 240, maxWidth: 420) : null,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: ContextualTreemapPalette.background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: ContextualTreemapPalette.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: ContextualTreemapPalette.primary,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$label: ',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: ContextualTreemapPalette.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: ContextualTreemapPalette.textPrimary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!expanded) return child;
+    return IntrinsicWidth(child: child);
+  }
+}
+
+class _MobileContextGroupChips extends StatelessWidget {
+  const _MobileContextGroupChips({
+    required this.sections,
+    required this.selectedGroup,
+    required this.onSelected,
+  });
+
+  final List<ContextTreemapSection> sections;
+  final ContextTreemapGroup selectedGroup;
+  final ValueChanged<ContextTreemapGroup> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: EisenSpacing.sm,
+      runSpacing: EisenSpacing.sm,
+      children: [
+        for (final section in sections)
+          ChoiceChip(
+            label: Text(_groupLabel(context, section.group)),
+            selected: selectedGroup == section.group,
+            onSelected: (_) => onSelected(section.group),
+          ),
+      ],
+    );
+  }
+
+  String _groupLabel(BuildContext context, ContextTreemapGroup group) {
+    return localizedTreemapGroupLabel(context, group);
   }
 }
 
@@ -309,24 +574,28 @@ class _HeaderChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: 0.92),
+        color: ContextualTreemapPalette.surfaceElevated,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: cs.outlineVariant),
+        border: Border.all(color: ContextualTreemapPalette.border),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: cs.onSurfaceVariant),
+            Icon(
+              icon,
+              size: 16,
+              color: ContextualTreemapPalette.textSecondary,
+            ),
             const SizedBox(width: 6),
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w700,
+                    color: ContextualTreemapPalette.textPrimary,
                   ),
             ),
           ],
@@ -347,15 +616,16 @@ class _PermissionBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final isEs = Localizations.localeOf(context).languageCode == 'es';
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cs.errorContainer.withValues(alpha: 0.38),
+        color: ContextualTreemapPalette.alertSoft.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: cs.error.withValues(alpha: 0.35)),
+        border: Border.all(
+          color: ContextualTreemapPalette.alertStrong.withValues(alpha: 0.36),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,6 +634,7 @@ class _PermissionBanner extends StatelessWidget {
             isEs ? 'Ubicacion no disponible' : 'Location unavailable',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
+                  color: ContextualTreemapPalette.textPrimary,
                 ),
           ),
           const SizedBox(height: 6),
@@ -371,7 +642,9 @@ class _PermissionBanner extends StatelessWidget {
             isEs
                 ? 'El ranking baja a prioridad general. Puedes conceder permiso o pasar a modo manual para fijar el contexto.'
                 : 'Ranking falls back to general priority. Grant permission or switch to manual mode to force a context.',
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: ContextualTreemapPalette.textSecondary,
+                ),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -415,6 +688,7 @@ class _ManualContextSelector extends StatelessWidget {
           isEs ? 'Contexto manual' : 'Manual context',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
+                color: ContextualTreemapPalette.textPrimary,
               ),
         ),
         const SizedBox(height: 10),
@@ -450,7 +724,6 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -461,15 +734,15 @@ class _EmptyState extends StatelessWidget {
             children: [
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: cs.primary.withValues(alpha: 0.12),
+                  color: ContextualTreemapPalette.mistGreen,
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
+                child: const Padding(
+                  padding: EdgeInsets.all(18),
                   child: Icon(
                     Icons.layers_clear_rounded,
                     size: 34,
-                    color: cs.primary,
+                    color: ContextualTreemapPalette.primary,
                   ),
                 ),
               ),
@@ -478,6 +751,7 @@ class _EmptyState extends StatelessWidget {
                 title,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800,
+                      color: ContextualTreemapPalette.textPrimary,
                     ),
                 textAlign: TextAlign.center,
               ),
@@ -485,7 +759,7 @@ class _EmptyState extends StatelessWidget {
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: cs.onSurfaceVariant,
+                      color: ContextualTreemapPalette.textSecondary,
                       height: 1.4,
                     ),
                 textAlign: TextAlign.center,
@@ -499,35 +773,6 @@ class _EmptyState extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _AnimatedTaskCard extends StatelessWidget {
-  const _AnimatedTaskCard({
-    required this.index,
-    required this.child,
-  });
-
-  final int index;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      duration: Duration(milliseconds: 180 + (index * 45).clamp(0, 260)),
-      tween: Tween(begin: 0.96, end: 1.0),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value.clamp(0.0, 1.0),
-          child: Transform.translate(
-            offset: Offset(0, (1 - value) * 18),
-            child: child,
-          ),
-        );
-      },
-      child: child,
     );
   }
 }

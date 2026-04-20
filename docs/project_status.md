@@ -303,7 +303,7 @@ feature_name/
 **Archivos clave:**
 - `features/habits/streaks_service.dart`
 
-**Documentación técnica**: Ver `docs/HABITS_STREAKS.md`
+**Documentación técnica**: Ver `docs/habits_streaks.md`
 
 ---
 
@@ -323,7 +323,7 @@ feature_name/
 - `features/importance/importance_service.dart`
 - `features/importance/providers.dart`
 
-**Documentación técnica**: Ver `docs/IMPORTANCE_SCORING.md`
+**Documentación técnica**: Ver `docs/importance_scoring.md`
 
 ---
 
@@ -347,7 +347,7 @@ feature_name/
 - `features/insights_ml/data/backend_ml_api.dart`
 - `features/insights_ml/presentation/widgets/stats_ml_section.dart`
 
-**Documentación técnica**: Ver `docs/ML_STRATEGY_IMPLEMENTATION.md`
+**Documentación técnica**: Ver `docs/ml_strategy_implementation.md`
 
 ---
 
@@ -370,7 +370,7 @@ feature_name/
 - `features/insights_adaptive/data/` — Thompson bandit, clustering, repo local
 - `features/insights_adaptive/presentation/widgets/stats_adaptive_pattern_card.dart`
 
-**Documentación técnica**: Ver `docs/ML_STRATEGY_IMPLEMENTATION.md`
+**Documentación técnica**: Ver `docs/ml_strategy_implementation.md`
 
 ---
 
@@ -442,10 +442,10 @@ feature_name/
 - `../../../test/features/workflow/presentation/manage_dependencies_sheet_test.dart` (350 líneas) - 18 widget tests
 - `../../../test/features/workflow/domain/dependency_arrows_test.dart` - Tests unitarios arrows
 - `../../../test/features/workflow/presentation/workflow_plan_page_test.dart` - Tests integración
-- `../../../docs/GANTT_INTEGRATION_SUMMARY.md` - Documentación integración
-- `../../../docs/GANTT_DEPENDENCIES_SUMMARY.md` - Documentación dependencias
+- `../../../docs/gantt_integration_summary.md` - Documentación integración
+- `../../../docs/gantt_dependencies_summary.md` - Documentación dependencias
 
-**Documentación técnica**: Ver `docs/GANTT_INTEGRATION_SUMMARY.md` para detalles de implementación
+**Documentación técnica**: Ver `docs/gantt_integration_summary.md` para detalles de implementación
 
 ---
 
@@ -504,7 +504,7 @@ feature_name/
   - Integración en Focus (start/complete), Tasks (completion), Gantt (dependency errors)
   - Respeta AccessibilityPrefs.hapticsEnabled
   - 13 unit tests pasando
-  - Documentación en HAPTIC_FEEDBACK_IMPLEMENTATION.md
+  - Documentación en haptic_feedback_implementation.md
 - ✅ **Estadísticas avanzadas** - Gráficas de tendencias 100% implementadas
   - StatsTrendsService con agregación diaria (productividad + foco)
   - DailyProductivityPoint y DailyFocusPoint models
@@ -512,7 +512,7 @@ feature_name/
   - EisenLineChart widget con fl_chart
   - StatsTrendsSection UI con selector de rango (week/month/quarter)
   - Integrado en StatsPage como primera sección
-  - Documentación completa en ADVANCED_STATS_IMPLEMENTATION.md
+  - Documentación completa en advanced_stats_implementation.md
   - ~1,300 líneas de código funcional
 - ✅ **Sonidos personalizados** - Selector de tonos 100% implementado
   - NotificationTone enum con 5 opciones (default/chime/bell/wood/mute)
@@ -2662,13 +2662,13 @@ Este documento representa el estado completo del proyecto **Eisen** con las últ
   - AccessibilityPrefs con toggle hapticsEnabled
   - 13 unit tests pasando
   - Respeta preferencias de accesibilidad
-  - Documentación completa en HAPTIC_FEEDBACK_IMPLEMENTATION.md
+  - Documentación completa en haptic_feedback_implementation.md
 - ✅ **P3 Features verification y completado** (1h de trabajo)
   - Advanced Stats: Verificado 100% implementado (~1,300 LOC)
     - StatsTrendsService, DailyProductivityPoint, DailyFocusPoint
     - EisenLineChart widget multi-series
     - StatsTrendsSection con range selector
-    - Documentación completa (ADVANCED_STATS_IMPLEMENTATION.md)
+    - Documentación completa (advanced_stats_implementation.md)
   - Notification Tones: Verificado 100% implementado (~486 LOC)
     - NotificationTone enum + NotificationSoundService
     - ToneSelectorSheet UI con preview

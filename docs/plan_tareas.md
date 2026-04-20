@@ -491,6 +491,6 @@
 - **Estrategia ML**: `docs/project_status.md` sección 3.3.1 (líneas 517-1725)
 - **Arquitectura**: `docs/ARCHITECTURE.md`
 - **Privacy**: `docs/PRIVACY_IMPLEMENTATION.md`
-- **Gantt**: `docs/GANTT_INTEGRATION_SUMMARY.md`, `docs/GANTT_DEPENDENCIES_SUMMARY.md`
+- **Gantt**: `docs/gantt_integration_summary.md`, `docs/gantt_dependencies_summary.md`
 
 **Última actualización**: 23 de Noviembre 2025 (PM)

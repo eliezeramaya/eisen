@@ -1,4 +1,4 @@
-import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/features/eisen_matrix/domain/layout/treemap_density_resolver.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/category_manager_page.dart';
 import 'package:eisen/features/settings/application/appearance_preview_controller.dart';
 import 'package:eisen/features/settings/domain/accessibility_controller.dart';
@@ -17,6 +17,7 @@ class SettingsContent extends StatelessWidget {
     required this.minimal,
     required this.showAxisLegends,
     required this.densityPreset,
+    required this.treemapDensityProfile,
     required this.onThemeChanged,
     required this.onCompactChanged,
     required this.onMinimalChanged,
@@ -26,10 +27,13 @@ class SettingsContent extends StatelessWidget {
     required this.gamma,
     required this.minAreaNormalized,
     required this.quadrantPadding,
+    required this.minTileSizePx,
     required this.onTopKChanged,
     required this.onGammaChanged,
     required this.onMinAreaChanged,
     required this.onPaddingChanged,
+    required this.onTreemapDensityProfileChanged,
+    required this.onMinTileSizeChanged,
     required this.previewEnabled,
     required this.onPreviewChanged,
     required this.ganttTimeScale,
@@ -51,6 +55,7 @@ class SettingsContent extends StatelessWidget {
   final bool minimal;
   final bool showAxisLegends;
   final String densityPreset; // 'auto' | 'comfy' | 'compact' | 'ultra'
+  final String treemapDensityProfile;
   final ValueChanged<ThemeMode> onThemeChanged;
   final ValueChanged<bool> onCompactChanged;
   final ValueChanged<bool> onMinimalChanged;
@@ -61,10 +66,13 @@ class SettingsContent extends StatelessWidget {
   final double gamma;
   final double minAreaNormalized;
   final double quadrantPadding;
+  final double minTileSizePx;
   final ValueChanged<int> onTopKChanged;
   final ValueChanged<double> onGammaChanged;
   final ValueChanged<double> onMinAreaChanged;
   final ValueChanged<double> onPaddingChanged;
+  final ValueChanged<String> onTreemapDensityProfileChanged;
+  final ValueChanged<double> onMinTileSizeChanged;
   final bool previewEnabled;
   final ValueChanged<bool> onPreviewChanged;
   // Gantt staged values & callbacks
@@ -111,11 +119,17 @@ class SettingsContent extends StatelessWidget {
           },
         );
       case 'Layout':
-        return _LayoutPanel(
+        return TreemapLayoutPanel(
+          treemapDensityProfile: treemapDensityProfile,
           topK: topK,
           gamma: gamma,
           minArea: minAreaNormalized,
           padding: quadrantPadding,
+          minTileSizePx: minTileSizePx,
+          onTreemapDensityProfileChanged: (v) {
+            onTreemapDensityProfileChanged(v);
+            onDirty(true);
+          },
           onTopK: (v) {
             onTopKChanged(v);
             onDirty(true);
@@ -132,8 +146,14 @@ class SettingsContent extends StatelessWidget {
             onPaddingChanged(v);
             onDirty(true);
           },
+          onMinTileSize: (v) {
+            onMinTileSizeChanged(v);
+            onDirty(true);
+          },
           preview: previewEnabled,
           onPreview: onPreviewChanged,
+          advancedInitiallyExpanded:
+              treemapDensityProfile == TreemapDensityProfiles.custom,
         );
       case 'Notifications':
         return const NotificationsPanel();
@@ -313,109 +333,247 @@ class _AppearancePanel extends ConsumerWidget {
   }
 }
 
-class _LayoutPanel extends ConsumerWidget {
-  const _LayoutPanel({
+class TreemapLayoutPanel extends StatelessWidget {
+  const TreemapLayoutPanel({
+    super.key,
+    required this.treemapDensityProfile,
     required this.topK,
     required this.gamma,
     required this.minArea,
     required this.padding,
+    required this.minTileSizePx,
+    required this.onTreemapDensityProfileChanged,
     required this.onTopK,
     required this.onGamma,
     required this.onMinArea,
     required this.onPadding,
+    required this.onMinTileSize,
     required this.preview,
     required this.onPreview,
+    this.inlinePreview,
+    this.advancedInitiallyExpanded = false,
   });
+
+  final String treemapDensityProfile;
   final int topK;
   final double gamma;
   final double minArea;
   final double padding;
+  final double minTileSizePx;
+  final ValueChanged<String> onTreemapDensityProfileChanged;
   final ValueChanged<int> onTopK;
   final ValueChanged<double> onGamma;
   final ValueChanged<double> onMinArea;
   final ValueChanged<double> onPadding;
+  final ValueChanged<double> onMinTileSize;
   final bool preview;
   final ValueChanged<bool> onPreview;
+  final Widget? inlinePreview;
+  final bool advancedInitiallyExpanded;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final screenSize = MediaQuery.of(context).size;
+    final isDesktopDensityContext =
+        TreemapDensityResolver.usesDesktopProfile(screenSize);
+    final minTileFloor = isDesktopDensityContext ? 30.0 : 40.0;
+    final minTileDivisions = ((44.0 - minTileFloor) * 2).round();
+    final isCustom = treemapDensityProfile == TreemapDensityProfiles.custom;
+
+    void markCustom() {
+      if (!isCustom) {
+        onTreemapDensityProfileChanged(TreemapDensityProfiles.custom);
+      }
+    }
+
     return ListView(
       children: [
+        const ListTile(
+          leading: Icon(Icons.grid_view_rounded),
+          title: Text('Treemap density'),
+          subtitle: Text(
+            'Adjust how many tasks are visible and how much space each tile gets.',
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _profileOrder.map((profile) {
+              final label = _profileLabel(profile);
+              return ChoiceChip(
+                key: Key('treemap-density-profile-$profile'),
+                label: Text(label),
+                selected: treemapDensityProfile == profile,
+                onSelected: (_) => onTreemapDensityProfileChanged(profile),
+              );
+            }).toList(growable: false),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: cs.outlineVariant.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    _profileIcon(treemapDensityProfile),
+                    color: cs.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _profileLabel(treemapDensityProfile),
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          TreemapDensityResolver.descriptionForProfile(
+                            treemapDensityProfile,
+                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: cs.onSurfaceVariant,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
         SwitchListTile(
           value: preview,
           onChanged: onPreview,
           secondary: const Icon(Icons.visibility),
           title: const Text('Preview changes'),
         ),
-        const ListTile(
-          leading: Icon(Icons.grid_view_rounded),
-          title: Text('Treemap · Layout'),
-          subtitle: Text('Adjust visible tiles and smoothing'),
-        ),
-        _sliderTile<int>(
-          context: context,
-          label: 'Top-K per quadrant',
-          helper: 'Higher = more visible tasks, less "+N" (desktop: up to 100)',
-          value: topK,
-          min: 5,
-          max: 100, // Extended from 60 to support power users
-          divisions: 95, // 100 - 5 = 95 steps
-          toDouble: (v) => v.toDouble(),
-          fromDouble: (d) => d.round(),
-          onChanged: onTopK,
-        ),
-        _sliderTile<double>(
-          context: context,
-          label: 'Min tile size (density)',
-          helper: 'Desktop: 30-44px | Mobile: 40-44px for touch targets',
-          value: ref.watch(uiPrefsProvider).minTileSizePx,
-          min: MediaQuery.of(context).size.width >= 1240 ? 30.0 : 40.0,
-          max: 44.0,
-          divisions: MediaQuery.of(context).size.width >= 1240 ? 14 : 4,
-          toDouble: (v) => v,
-          fromDouble: (d) => double.parse(d.toStringAsFixed(1)),
-          onChanged: (v) {
-            final isDesktop = MediaQuery.of(context).size.width >= 1240;
-            ref
-                .read(uiPrefsControllerProvider.notifier)
-                .setMinTileSize(v, isDesktop: isDesktop);
-          },
-        ),
-        _sliderTile<double>(
-          context: context,
-          label: 'Gamma (weight smoothing)',
-          helper: '0.70 reduces dominance; 1.00 = linear',
-          value: gamma,
-          min: 0.70,
-          max: 1.00,
-          divisions: 30,
-          toDouble: (v) => v,
-          fromDouble: (d) => double.parse(d.toStringAsFixed(2)),
-          onChanged: onGamma,
-        ),
-        _sliderTile<double>(
-          context: context,
-          label: 'Min area (normalized)',
-          helper: 'Tiny tiles are stacked below this threshold',
-          value: minArea,
-          min: 0.00002,
-          max: 0.0002,
-          divisions: 18,
-          toDouble: (v) => v,
-          fromDouble: (d) => double.parse(d.toStringAsFixed(5)),
-          onChanged: onMinArea,
-        ),
-        _sliderTile<double>(
-          context: context,
-          label: 'Quadrant padding',
-          helper: 'Spacing inside each quadrant',
-          value: padding,
-          min: 0.0,
-          max: 0.02,
-          divisions: 20,
-          toDouble: (v) => v,
-          fromDouble: (d) => double.parse(d.toStringAsFixed(3)),
-          onChanged: onPadding,
+        if (inlinePreview != null && preview) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: SizedBox(
+              height: 260,
+              child: inlinePreview,
+            ),
+          ),
+        ],
+        ExpansionTile(
+          key: const Key('treemap-density-advanced-tuning'),
+          initiallyExpanded: advancedInitiallyExpanded || isCustom,
+          leading: const Icon(Icons.tune),
+          title: const Text('Advanced tuning'),
+          subtitle: Text(
+            isCustom
+                ? 'Fine-tune the exact treemap behavior.'
+                : 'Manual changes will switch this profile to Custom.',
+          ),
+          children: [
+            _sliderTile<int>(
+              context: context,
+              label: 'Top-K per quadrant',
+              helper: 'Higher = more visible tasks and fewer stacked groups.',
+              value: topK,
+              min: 5,
+              max: 100,
+              divisions: 95,
+              valueText: topK.toString(),
+              sliderKey: const Key('treemap-density-topk-slider'),
+              toDouble: (v) => v.toDouble(),
+              fromDouble: (d) => d.round(),
+              onChanged: (v) {
+                markCustom();
+                onTopK(v);
+              },
+            ),
+            _sliderTile<double>(
+              context: context,
+              label: 'Min tile size',
+              helper:
+                  'Keeps tiles readable and touch-safe as density increases.',
+              value: minTileSizePx,
+              min: minTileFloor,
+              max: 44.0,
+              divisions: minTileDivisions,
+              valueText: '${minTileSizePx.toStringAsFixed(0)}px',
+              sliderKey: const Key('treemap-density-min-tile-slider'),
+              toDouble: (v) => v,
+              fromDouble: (d) => double.parse(d.toStringAsFixed(1)),
+              onChanged: (v) {
+                markCustom();
+                onMinTileSize(v);
+              },
+            ),
+            _sliderTile<double>(
+              context: context,
+              label: 'Gamma (weight smoothing)',
+              helper: '0.70 reduces dominance; 1.00 = linear.',
+              value: gamma,
+              min: 0.70,
+              max: 1.00,
+              divisions: 30,
+              valueText: gamma.toStringAsFixed(2),
+              sliderKey: const Key('treemap-density-gamma-slider'),
+              toDouble: (v) => v,
+              fromDouble: (d) => double.parse(d.toStringAsFixed(2)),
+              onChanged: (v) {
+                markCustom();
+                onGamma(v);
+              },
+            ),
+            _sliderTile<double>(
+              context: context,
+              label: 'Min area',
+              helper: 'Tiles smaller than this threshold are stacked.',
+              value: minArea,
+              min: 0.00002,
+              max: 0.0002,
+              divisions: 18,
+              valueText: minArea.toStringAsFixed(5),
+              sliderKey: const Key('treemap-density-min-area-slider'),
+              toDouble: (v) => v,
+              fromDouble: (d) => double.parse(d.toStringAsFixed(5)),
+              onChanged: (v) {
+                markCustom();
+                onMinArea(v);
+              },
+            ),
+            _sliderTile<double>(
+              context: context,
+              label: 'Quadrant padding',
+              helper: 'Adds breathing room inside each quadrant.',
+              value: padding,
+              min: 0.0,
+              max: 0.02,
+              divisions: 20,
+              valueText: padding.toStringAsFixed(3),
+              sliderKey: const Key('treemap-density-padding-slider'),
+              toDouble: (v) => v,
+              fromDouble: (d) => double.parse(d.toStringAsFixed(3)),
+              onChanged: (v) {
+                markCustom();
+                onPadding(v);
+              },
+            ),
+          ],
         ),
       ],
     );
@@ -429,6 +587,8 @@ class _LayoutPanel extends ConsumerWidget {
     required double min,
     required double max,
     required int divisions,
+    required String valueText,
+    required Key sliderKey,
     required double Function(T) toDouble,
     required T Function(double) fromDouble,
     required ValueChanged<T> onChanged,
@@ -437,23 +597,28 @@ class _LayoutPanel extends ConsumerWidget {
     return ListTile(
       title: Row(
         children: [
-          Text(label),
-          const SizedBox(width: 6),
+          Expanded(child: Text(label)),
           Tooltip(
-              message: helper,
-              child: Icon(Icons.help_outline,
-                  size: 16, color: cs.onSurfaceVariant)),
+            message: helper,
+            child: Icon(
+              Icons.help_outline,
+              size: 16,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(helper,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelSmall
-                  ?.copyWith(color: cs.onSurfaceVariant)),
+          Text(
+            helper,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
+          ),
           Slider(
+            key: sliderKey,
             value: toDouble(value),
             min: min,
             max: max,
@@ -464,14 +629,45 @@ class _LayoutPanel extends ConsumerWidget {
       ),
       trailing: ConstrainedBox(
         constraints: const BoxConstraints(minWidth: 64),
-        child: Text(toDouble(value).toString(),
-            textAlign: TextAlign.end,
-            style: Theme.of(context)
-                .textTheme
-                .labelSmall
-                ?.copyWith(color: cs.onSurfaceVariant)),
+        child: Text(
+          valueText,
+          textAlign: TextAlign.end,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+        ),
       ),
     );
+  }
+
+  static const List<String> _profileOrder = <String>[
+    TreemapDensityProfiles.airy,
+    TreemapDensityProfiles.balanced,
+    TreemapDensityProfiles.compact,
+    TreemapDensityProfiles.detailed,
+    TreemapDensityProfiles.custom,
+  ];
+
+  String _profileLabel(String profile) {
+    return switch (profile) {
+      TreemapDensityProfiles.airy => 'Airy',
+      TreemapDensityProfiles.balanced => 'Balanced',
+      TreemapDensityProfiles.compact => 'Compact',
+      TreemapDensityProfiles.detailed => 'Detailed',
+      TreemapDensityProfiles.custom => 'Custom',
+      _ => 'Balanced',
+    };
+  }
+
+  IconData _profileIcon(String profile) {
+    return switch (profile) {
+      TreemapDensityProfiles.airy => Icons.air_rounded,
+      TreemapDensityProfiles.balanced => Icons.tune_rounded,
+      TreemapDensityProfiles.compact => Icons.view_comfy_alt_outlined,
+      TreemapDensityProfiles.detailed => Icons.dashboard_customize_outlined,
+      TreemapDensityProfiles.custom => Icons.handyman_outlined,
+      _ => Icons.tune_rounded,
+    };
   }
 }
 
