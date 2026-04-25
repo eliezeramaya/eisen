@@ -9,6 +9,7 @@ import 'package:eisen/features/settings/presentation/settings_content.dart';
 import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsPageDesktop extends ConsumerStatefulWidget {
   const SettingsPageDesktop({super.key, this.initialSection = 'General'});
@@ -235,6 +236,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       'Appearance',
       'Layout',
       'Calendar/Gantt',
+      'Smart Classification',
       'Notifications',
       'Language',
       'Accessibility',
@@ -452,6 +454,7 @@ class _SettingsSidebar extends StatelessWidget {
       ('Language', Icons.language),
       ('Layout', Icons.grid_view_rounded),
       ('Calendar/Gantt', Icons.view_timeline),
+      ('Smart Classification', Icons.auto_awesome_outlined),
       ('Accessibility', Icons.accessibility_new),
       ('Keyboard', Icons.keyboard_alt_outlined),
       ('Data & Privacy', Icons.privacy_tip_outlined),
@@ -468,7 +471,13 @@ class _SettingsSidebar extends StatelessWidget {
           selected: sel,
           selectedTileColor:
               Theme.of(context).colorScheme.surfaceContainerHighest,
-          onTap: () => onSelect(label),
+          onTap: () {
+            if (label == 'Smart Classification') {
+              GoRouter.of(context).push('/classification-settings');
+              return;
+            }
+            onSelect(label);
+          },
         );
       },
       separatorBuilder: (_, __) => const SizedBox(height: 4),

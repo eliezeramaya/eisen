@@ -1,3 +1,4 @@
+import 'package:eisen/features/classification/domain/classification_constants.dart';
 import 'package:eisen/features/classification/domain/entities/category_config.dart';
 import 'package:eisen/features/classification/domain/entities/classification_metadata.dart';
 import 'package:eisen/features/classification/domain/entities/classification_rule.dart';
@@ -116,7 +117,9 @@ class DefaultClassificationEngine implements ClassificationEngine {
       priorityLevel: resolvedPriority,
       confidenceScore: score,
       confidenceLevel: level,
-      classifierVersion: settings.classifierVersion,
+      classifierVersion: settings.classifierVersion.isEmpty
+          ? kCurrentClassifierVersion
+          : settings.classifierVersion,
       source: source,
       matchedRuleId: resolution.matchedRuleId,
       matchedAliasId: resolution.matchedAliasId,
@@ -129,11 +132,13 @@ class DefaultClassificationEngine implements ClassificationEngine {
           ? const <String>[]
           : <String>[resolution.matchedRuleId!],
       suggestedCategoryId: heuristics.categoryId,
-      confidenceReason: _confidenceScorer.reasonFor(
-        source: source,
-        level: level,
-        heuristicSignalCount: heuristics.signalCount,
-      ),
+      confidenceReason: source == ClassificationSource.heuristic
+          ? heuristics.confidenceReason
+          : _confidenceScorer.reasonFor(
+              source: source,
+              level: level,
+              heuristicSignalCount: heuristics.signalCount,
+            ),
       reasons: reasons,
       isAutoClassified: true,
       classifiedAt: timestamp,

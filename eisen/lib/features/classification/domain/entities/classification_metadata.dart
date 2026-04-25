@@ -1,5 +1,5 @@
-import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
 import 'package:eisen/features/classification/domain/enums/classification_source.dart';
+import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
 import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/enums/priority_level.dart';

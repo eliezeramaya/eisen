@@ -1,1 +1,1 @@
-const String kCurrentClassifierVersion = 'local-heuristic-v2';
+const String kCurrentClassifierVersion = 'local-heuristic-v3';

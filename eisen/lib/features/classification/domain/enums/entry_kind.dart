@@ -1,5 +1,6 @@
 enum EntryKind {
   task,
+  shoppingItem,
   project,
   idea,
   habit,
@@ -7,6 +8,7 @@ enum EntryKind {
 
   String get label => switch (this) {
         EntryKind.task => 'Tarea',
+        EntryKind.shoppingItem => 'Compra',
         EntryKind.project => 'Proyecto',
         EntryKind.idea => 'Idea',
         EntryKind.habit => 'Hábito',

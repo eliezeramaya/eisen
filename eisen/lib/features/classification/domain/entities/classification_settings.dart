@@ -24,7 +24,7 @@ class ClassificationSettings {
     this.autoApplyHighConfidence = true,
     this.showEnergyIndicator = true,
     this.showTimeHorizonChip = true,
-    this.classifierVersion = 'local-heuristic-v2',
+    this.classifierVersion = 'local-heuristic-v3',
     this.updatedAt,
   });
 

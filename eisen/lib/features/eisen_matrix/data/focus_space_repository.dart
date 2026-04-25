@@ -24,8 +24,9 @@ abstract class FocusSpaceRepository {
 ///   - Cannot be deleted or renamed
 class LocalFocusSpaceRepository implements FocusSpaceRepository {
   LocalFocusSpaceRepository({SharedPreferences? prefs})
-      : _prefsFuture =
-            prefs != null ? Future.value(prefs) : SharedPreferences.getInstance();
+      : _prefsFuture = prefs != null
+            ? Future.value(prefs)
+            : SharedPreferences.getInstance();
 
   static const _storageKey = 'eisen.focus_spaces.v1';
 
@@ -52,10 +53,8 @@ class LocalFocusSpaceRepository implements FocusSpaceRepository {
       try {
         final decoded = jsonDecode(raw);
         if (decoded is List) {
-          _current = decoded
-              .whereType<Map<String, dynamic>>()
-              .map(_fromJson)
-              .toList();
+          _current =
+              decoded.whereType<Map<String, dynamic>>().map(_fromJson).toList();
         }
       } catch (_) {
         // If anything goes wrong, fall back to default state.
@@ -173,4 +172,3 @@ final focusSpaceRepositoryProvider = Provider<FocusSpaceRepository>(
 final focusSpacesStreamProvider = StreamProvider<List<FocusSpace>>(
   (ref) => ref.watch(focusSpaceRepositoryProvider).watchFocusSpaces(),
 );
-

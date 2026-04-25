@@ -82,4 +82,3 @@ class FocusSpace extends Equatable {
         isDefault,
       ];
 }
-

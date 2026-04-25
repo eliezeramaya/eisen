@@ -13,9 +13,8 @@ class UpdateTaskUseCase {
     // Normalize critical fields to keep invariants and avoid invalid data.
     final prio = updated.priority.clamp(1, 10);
     final mins = updated.minutes.clamp(1, 24 * 60);
-    final title = updated.title.trim().isEmpty
-        ? current.title
-        : updated.title.trim();
+    final title =
+        updated.title.trim().isEmpty ? current.title : updated.title.trim();
 
     updated = updated.copyWith(
       title: title,

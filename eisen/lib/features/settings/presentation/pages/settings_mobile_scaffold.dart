@@ -48,6 +48,11 @@ class _SettingsMobileScaffoldState
       (label: 'Layout', icon: Icons.grid_view_rounded, id: 'layout'),
       (label: 'Calendar/Gantt', icon: Icons.view_timeline, id: 'calendar'),
       (
+        label: 'Smart Classification',
+        icon: Icons.auto_awesome_outlined,
+        id: 'classification'
+      ),
+      (
         label: 'Notifications',
         icon: Icons.notifications_none,
         id: 'notifications'
@@ -134,6 +139,8 @@ String _pathFor(String id, String label) {
       return '/settings/language';
     case 'accessibility':
       return '/settings/accessibility';
+    case 'classification':
+      return '/classification-settings';
     default:
       final encoded = Uri.encodeComponent(_sectionLabel(id, label));
       return '/settings?section=$encoded';
@@ -146,6 +153,8 @@ String _sectionLabel(String id, String label) {
       return 'Layout';
     case 'calendar':
       return 'Calendar/Gantt';
+    case 'classification':
+      return 'Smart Classification';
     case 'privacy':
       return 'Data & Privacy';
     case 'about':
@@ -164,6 +173,8 @@ String _sectionToId(String section) {
       return 'layout';
     case 'calendar/gantt':
       return 'calendar';
+    case 'smart classification':
+      return 'classification';
     case 'notifications':
       return 'notifications';
     case 'language':

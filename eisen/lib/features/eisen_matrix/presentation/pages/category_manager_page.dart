@@ -107,7 +107,8 @@ class CategoryManagerPage extends ConsumerWidget {
           : ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.md),
               itemCount: categories.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: AppSpacing.sm),
               itemBuilder: (context, index) {
                 final category = categories[index];
                 final hasOverride = colorService.hasOverride(category);
@@ -116,9 +117,8 @@ class CategoryManagerPage extends ConsumerWidget {
                 final darkVariant = colorService.getDarkVariant(category);
 
                 // Count tasks with this category
-                final taskCount = tasks
-                    .where((t) => t.category == category)
-                    .length;
+                final taskCount =
+                    tasks.where((t) => t.category == category).length;
 
                 return Card(
                   elevation: 0,
@@ -187,7 +187,8 @@ class CategoryManagerPage extends ConsumerWidget {
                                           color: Theme.of(context)
                                               .colorScheme
                                               .primaryContainer,
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
                                         ),
                                         child: Text(
                                           'Custom',

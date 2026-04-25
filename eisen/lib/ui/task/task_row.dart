@@ -1,10 +1,16 @@
+import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
+import 'package:eisen/features/classification/domain/services/task_classification_mapper.dart';
+import 'package:eisen/features/classification/presentation/category_color_service_factory.dart';
+import 'package:eisen/features/classification/presentation/controllers/category_config_controller.dart';
+import 'package:eisen/features/classification/presentation/controllers/classification_settings_controller.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/theme/density.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Compact single-line task item suitable for dense desktop lists.
-class TaskRow extends StatelessWidget {
+class TaskRow extends ConsumerWidget {
   const TaskRow({
     super.key,
     required this.task,
@@ -18,11 +24,22 @@ class TaskRow extends StatelessWidget {
   final bool selected;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context);
     final s = t.extension<SpacingTokens>();
     final borderColor = t.dividerColor;
     final done = task.completedAt != null;
+    final settings = ref.watch(classificationSettingsControllerProvider);
+    final categories = ref.watch(categoryConfigControllerProvider);
+    final category = categoryForTask(categories, task);
+    final categoryColors = buildClassificationCategoryColorService(
+      categories: categories,
+    );
+    final categoryAccent = settings.colorByCategory && category != null
+        ? categoryColors.getColorForCategory(category.name)
+        : null;
+    final lowConfidence = settings.showConfidenceIndicators &&
+        task.classificationConfidence == ConfidenceLevel.low;
 
     final row = SizedBox(
       height: 32,
@@ -38,6 +55,17 @@ class TaskRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
+          if (categoryAccent != null) ...[
+            Container(
+              width: 3,
+              height: 20,
+              decoration: BoxDecoration(
+                color: categoryAccent,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
           Expanded(
             child: Tooltip(
               message: task.title,
@@ -60,6 +88,39 @@ class TaskRow extends StatelessWidget {
           _metaChip('P${task.priority}', t),
           if (task.due != null) SizedBox(width: s?.insetXs ?? 4),
           if (task.due != null) _metaChip(_dueLabel(task.due!), t),
+          if (category != null) SizedBox(width: s?.insetXs ?? 4),
+          if (category != null && settings.colorByCategory)
+            _metaChip(
+              category.name,
+              t,
+              background:
+                  categoryColors.getLightVariant(category.name, opacity: 0.18),
+              border:
+                  categoryColors.getDarkVariant(category.name, opacity: 0.55),
+            ),
+          if (lowConfidence) ...[
+            SizedBox(width: s?.insetXs ?? 4),
+            Tooltip(
+              message: 'Clasificación de baja confianza',
+              child: Container(
+                width: 7,
+                height: 7,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFFFB020),
+                ),
+              ),
+            ),
+          ],
+          if (settings.showAutoTags && task.autoTags.isNotEmpty) ...[
+            SizedBox(width: s?.insetXs ?? 4),
+            _metaChip(
+              task.autoTags.first,
+              t,
+              background: const Color(0x332563EB),
+              border: const Color(0x882563EB),
+            ),
+          ],
           SizedBox(width: s?.insetSm ?? 8),
           IconButton(
             onPressed: onOpen,
@@ -95,7 +156,7 @@ class TaskRow extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? t.colorScheme.primary.withValues(alpha: 0.06)
-              : Colors.transparent,
+              : categoryAccent?.withValues(alpha: 0.035) ?? Colors.transparent,
           border: Border(bottom: BorderSide(color: borderColor, width: 0.8)),
         ),
         padding: EdgeInsets.symmetric(horizontal: s?.insetSm ?? 8),
@@ -113,12 +174,18 @@ class _ToggleIntent extends Intent {
   const _ToggleIntent();
 }
 
-Widget _metaChip(String label, ThemeData t) {
+Widget _metaChip(
+  String label,
+  ThemeData t, {
+  Color? background,
+  Color? border,
+}) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
     decoration: BoxDecoration(
+      color: background,
       borderRadius: BorderRadius.circular(4),
-      border: Border.all(width: 0.8, color: t.dividerColor),
+      border: Border.all(width: 0.8, color: border ?? t.dividerColor),
     ),
     child: Text(label, style: t.textTheme.labelMedium),
   );

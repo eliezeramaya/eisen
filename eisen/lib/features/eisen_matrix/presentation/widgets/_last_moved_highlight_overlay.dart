@@ -20,8 +20,8 @@ class LastMovedHighlightOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     Rect? rect01 = rectMap[id];
     if (rect01 == null && layout.isNotEmpty) {
-      final tr = layout
-          .firstWhere((e) => e.task.id == id, orElse: () => layout.first);
+      final tr =
+          layout.firstWhere((e) => e.task.id == id, orElse: () => layout.first);
       rect01 = tr.rect01;
     }
     if (rect01 == null) {
@@ -56,8 +56,7 @@ class LastMovedHighlightOverlay extends StatelessWidget {
           },
           child: DecoratedBox(
             decoration: BoxDecoration(
-              borderRadius:
-                  BorderRadius.circular(UiTokens.tileRadius + 1),
+              borderRadius: BorderRadius.circular(UiTokens.tileRadius + 1),
               border: Border.all(
                 color: Theme.of(context)
                     .colorScheme
@@ -72,4 +71,3 @@ class LastMovedHighlightOverlay extends StatelessWidget {
     );
   }
 }
-

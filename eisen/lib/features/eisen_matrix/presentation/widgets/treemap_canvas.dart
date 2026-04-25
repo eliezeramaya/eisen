@@ -7,6 +7,7 @@ import 'package:eisen/core/theme/animation_tokens.dart';
 import 'package:eisen/core/theme/app_theme.dart';
 import 'package:eisen/core/ui/ui_tokens.dart';
 import 'package:eisen/core/ui/ui_typography.dart' as typography;
+import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
 import 'package:eisen/features/eisen_matrix/domain/category_colors.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart';
@@ -41,6 +42,9 @@ class TreemapCanvas extends StatefulWidget {
     this.warningTaskIds = const <String>{},
     this.minTileSizePx = 44.0, // Default fallback
     this.categoryColorService, // Optional, falls back to default palette
+    this.colorByCategory = false,
+    this.showConfidenceIndicators = true,
+    this.showAutoTags = true,
   });
   final List<Task> tasks;
   final List<TreemapRect> layout;
@@ -67,6 +71,9 @@ class TreemapCanvas extends StatefulWidget {
   final double minTileSizePx;
   // Category color service for consistent category colors (optional)
   final CategoryColorService? categoryColorService;
+  final bool colorByCategory;
+  final bool showConfidenceIndicators;
+  final bool showAutoTags;
 
   @override
   State<TreemapCanvas> createState() => _TreemapCanvasState();
@@ -580,6 +587,10 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                               textScale: widget.textScale,
                               warningTaskIds: widget.warningTaskIds,
                               categoryColorService: widget.categoryColorService,
+                              colorByCategory: widget.colorByCategory,
+                              showConfidenceIndicators:
+                                  widget.showConfidenceIndicators,
+                              showAutoTags: widget.showAutoTags,
                             ),
                             isComplex: true,
                             willChange: true,
@@ -628,6 +639,8 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                     position: _hoverPosition!,
                     screenSize: size,
                     categoryColorService: widget.categoryColorService,
+                    showConfidenceIndicators: widget.showConfidenceIndicators,
+                    showAutoTags: widget.showAutoTags,
                   );
                 },
               ),
@@ -1025,12 +1038,16 @@ class _TaskHoverTooltip extends StatelessWidget {
     required this.position,
     required this.screenSize,
     this.categoryColorService,
+    this.showConfidenceIndicators = true,
+    this.showAutoTags = true,
   });
 
   final Task task;
   final Offset position;
   final Size screenSize;
   final CategoryColorService? categoryColorService;
+  final bool showConfidenceIndicators;
+  final bool showAutoTags;
 
   @override
   Widget build(BuildContext context) {
@@ -1131,9 +1148,9 @@ class _TaskHoverTooltip extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                   ],
-
                   // Category
-                  if (task.category != null && task.category!.isNotEmpty) ...[
+                  if (_categoryNameForTask(task) != null &&
+                      _categoryNameForTask(task)!.isNotEmpty) ...[
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -1151,17 +1168,17 @@ class _TaskHoverTooltip extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: (categoryColorService ??
                                     const CategoryColorService())
-                                .getLightVariant(task.category!),
+                                .getLightVariant(_categoryNameForTask(task)!),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: (categoryColorService ??
                                       const CategoryColorService())
-                                  .getDarkVariant(task.category!),
+                                  .getDarkVariant(_categoryNameForTask(task)!),
                               width: 1,
                             ),
                           ),
                           child: Text(
-                            task.category!,
+                            _categoryNameForTask(task)!,
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -1175,8 +1192,22 @@ class _TaskHoverTooltip extends StatelessWidget {
                     const SizedBox(height: 8),
                   ],
 
+                  if (showConfidenceIndicators &&
+                      task.classificationConfidence == ConfidenceLevel.low) ...[
+                    _TooltipRow(
+                      icon: Icons.warning_amber_rounded,
+                      label: 'Clasificación',
+                      value: 'Baja confianza',
+                      isUrgent: true,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
                   // Tags
-                  if (task.tags.isNotEmpty) ...[
+                  if (_displayTagsForTask(
+                    task,
+                    showAutoTags: showAutoTags,
+                  ).isNotEmpty) ...[
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1190,7 +1221,10 @@ class _TaskHoverTooltip extends StatelessWidget {
                           child: Wrap(
                             spacing: 6,
                             runSpacing: 6,
-                            children: task.tags
+                            children: _displayTagsForTask(
+                              task,
+                              showAutoTags: showAutoTags,
+                            )
                                 .map(
                                   (tag) => Container(
                                     padding: const EdgeInsets.symmetric(
@@ -1279,6 +1313,23 @@ class _TaskHoverTooltip extends StatelessWidget {
   }
 }
 
+String? _categoryNameForTask(Task task) {
+  final category = task.category ?? task.categoryId;
+  if (category == null) return null;
+  final trimmed = category.trim();
+  return trimmed.isEmpty ? null : trimmed;
+}
+
+List<String> _displayTagsForTask(
+  Task task, {
+  bool showAutoTags = true,
+}) {
+  return <String>[
+    ...task.tags,
+    if (showAutoTags) ...task.autoTags,
+  ];
+}
+
 /// Helper widget for tooltip rows
 class _TooltipRow extends StatelessWidget {
   const _TooltipRow({
@@ -1348,6 +1399,9 @@ class _TreemapPainter extends CustomPainter {
     this.textScale = 1.0,
     this.warningTaskIds = const <String>{},
     this.categoryColorService, // Optional category color service
+    this.colorByCategory = false,
+    this.showConfidenceIndicators = true,
+    this.showAutoTags = true,
   });
   final List<TreemapRect> layout;
   final String? draggingId;
@@ -1376,6 +1430,9 @@ class _TreemapPainter extends CustomPainter {
   final double textScale;
   final Set<String> warningTaskIds;
   final CategoryColorService? categoryColorService;
+  final bool colorByCategory;
+  final bool showConfidenceIndicators;
+  final bool showAutoTags;
 
   /// Tile path cache for performance optimization.
   ///
@@ -1655,16 +1712,42 @@ class _TreemapPainter extends CustomPainter {
         drawRect,
         Radius.circular(UiTokens.tileRadius),
       );
-      final fillColor = tileFillColor;
+      final categoryName = _categoryNameForTask(tr.task);
+      final fillColor = colorByCategory && categoryName != null
+          ? (categoryColorService ?? const CategoryColorService())
+              .getLightVariant(categoryName, opacity: minimal ? 0.18 : 0.28)
+          : tileFillColor;
+      final strokeColor = colorByCategory && categoryName != null
+          ? (categoryColorService ?? const CategoryColorService())
+              .getDarkVariant(categoryName, opacity: 0.48)
+          : tileBorderColor;
       paint
         ..style = PaintingStyle.fill
         ..color = fillColor;
       canvas.drawRRect(rr, paint);
       paint
         ..style = PaintingStyle.stroke
-        ..color = tileBorderColor
+        ..color = strokeColor
         ..strokeWidth = UiTokens.tileStroke;
       canvas.drawRRect(rr, paint);
+
+      final isLowConfidence =
+          tr.task.classificationConfidence == ConfidenceLevel.low;
+      if (showConfidenceIndicators && isLowConfidence) {
+        final markerPaint = Paint()
+          ..style = PaintingStyle.fill
+          ..color = Colors.orangeAccent.withValues(alpha: minimal ? 0.55 : 0.7);
+        canvas.drawCircle(
+          Offset(drawRect.left + 9, drawRect.top + 9),
+          math.max(2.2, 3.2 * textScale),
+          markerPaint,
+        );
+        final confidenceStroke = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = Colors.orangeAccent.withValues(alpha: 0.34);
+        canvas.drawRRect(rr.deflate(0.5), confidenceStroke);
+      }
 
       final bool warn = warningTaskIds.contains(tr.task.id);
       if (warn) {
@@ -1800,11 +1883,9 @@ class _TreemapPainter extends CustomPainter {
       // PROGRESSIVE CONTENT: Category pill (area > 20,000 px²)
       if (showLabel &&
           _showCategory(area) &&
-          tr.task.category != null &&
-          tr.task.category!.isNotEmpty &&
+          categoryName != null &&
           currentY + 18 < drawRect.bottom - bottomReserved - 6 &&
           !debugTreemap) {
-        final categoryName = tr.task.category!;
         final service = categoryColorService ?? const CategoryColorService();
         final categoryBgColor = service.getLightVariant(categoryName);
         final categoryBorderColor = service.getDarkVariant(categoryName);
@@ -1860,15 +1941,20 @@ class _TreemapPainter extends CustomPainter {
       // PROGRESSIVE CONTENT: Tags (area > 35,000 px²)
       if (showLabel &&
           _showTags(area) &&
-          tr.task.tags.isNotEmpty &&
+          (tr.task.tags.isNotEmpty ||
+              (showAutoTags && tr.task.autoTags.isNotEmpty)) &&
           currentY + 14 < drawRect.bottom - bottomReserved - 6 &&
           !debugTreemap) {
+        final mergedTags = [
+          ...tr.task.tags,
+          if (showAutoTags) ...tr.task.autoTags,
+        ];
         final maxTags = 3; // Limit to first 3 tags
-        final displayTags = tr.task.tags.take(maxTags).toList();
-        final hasMoreTags = tr.task.tags.length > maxTags;
+        final displayTags = mergedTags.take(maxTags).toList();
+        final hasMoreTags = mergedTags.length > maxTags;
 
         final tagsText = displayTags.join(' · ') +
-            (hasMoreTags ? ' · +${tr.task.tags.length - maxTags}' : '');
+            (hasMoreTags ? ' · +${mergedTags.length - maxTags}' : '');
 
         final responsiveTagSize =
             typography.metaFontSize(size).toDouble() * textScale * 0.85;
@@ -2025,7 +2111,11 @@ class _TreemapPainter extends CustomPainter {
         oldDelegate.outlineColor != outlineColor ||
         oldDelegate.tileBorderColor != tileBorderColor ||
         oldDelegate.tileFillColor != tileFillColor ||
-        oldDelegate.warningTaskIds.length != warningTaskIds.length;
+        oldDelegate.warningTaskIds.length != warningTaskIds.length ||
+        oldDelegate.categoryColorService != categoryColorService ||
+        oldDelegate.colorByCategory != colorByCategory ||
+        oldDelegate.showConfidenceIndicators != showConfidenceIndicators ||
+        oldDelegate.showAutoTags != showAutoTags;
 
     // Invalidate path cache on layout version or key visual changes.
     if (oldDelegate.layoutVersion != layoutVersion ||

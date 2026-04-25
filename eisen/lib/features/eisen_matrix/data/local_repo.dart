@@ -105,7 +105,7 @@ class LocalPrefsMatrixRepository implements MatrixRepository {
           priorityLevel: parsedPriority,
           confidenceScore: _confidenceScoreFor(parsedConfidence),
           confidenceLevel: parsedConfidence,
-          classifierVersion: 'local-heuristic-v2',
+          classifierVersion: 'local-heuristic-v3',
           source: parsedCategoryId == 'inbox'
               ? ClassificationSource.fallback
               : ClassificationSource.heuristic,

@@ -91,7 +91,7 @@ class VocabularyAliasDefaults {
       type: AliasType.category,
       aliases: <String>['comprar', 'super', 'leche', 'mercado'],
       mappedCategoryId: 'errands',
-      mappedKind: EntryKind.task,
+      mappedKind: EntryKind.shoppingItem,
       timeHorizon: TimeHorizon.today,
       energyLevel: EnergyLevel.low,
       priorityLevel: PriorityLevel.medium,

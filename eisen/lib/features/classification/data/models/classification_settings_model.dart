@@ -90,7 +90,7 @@ class ClassificationSettingsModel extends ClassificationSettings {
       showEnergyIndicator: json['showEnergyIndicator'] as bool? ?? true,
       showTimeHorizonChip: json['showTimeHorizonChip'] as bool? ?? true,
       classifierVersion:
-          json['classifierVersion'] as String? ?? 'local-heuristic-v2',
+          json['classifierVersion'] as String? ?? 'local-heuristic-v3',
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'] as String)
           : null,

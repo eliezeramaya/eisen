@@ -24,6 +24,7 @@ import 'package:eisen/features/eisen_matrix/domain/usecases/create_task_usecase.
 import 'package:eisen/features/eisen_matrix/domain/usecases/delete_task_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/suggest_top_spots_usecase.dart';
 import 'package:eisen/features/eisen_matrix/domain/usecases/update_task_usecase.dart';
+import 'package:eisen/features/filters/filters_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -806,22 +807,25 @@ class MatrixController extends Notifier<MatrixState> {
   }
 
   List<Task> _filteredTasksForLayout() {
-    var filtered = state.tasks.where((t) => t.completedAt == null).toList();
+    final categoryFilters = ref.read(activeCategoryFiltersProvider);
+    final kindFilters = ref.read(activeKindFiltersProvider);
+    final horizonFilters = ref.read(activeHorizonFiltersProvider);
+    final energyFilters = ref.read(activeEnergyFiltersProvider);
+    final confidenceFilters = ref.read(activeConfidenceFiltersProvider);
     final q = _normalizeSearchText(state.searchQuery.trim());
-    if (q.isNotEmpty) {
-      filtered = filtered.where((t) {
-        final title = _normalizeSearchText(t.title);
-        final notes = _normalizeSearchText(t.notes ?? '');
-        final category = _normalizeSearchText(t.category ?? '');
-        final categories = _normalizeSearchText(t.categories.join(' '));
-        final tags = _normalizeSearchText(t.tags.join(' '));
-        return title.contains(q) ||
-            notes.contains(q) ||
-            category.contains(q) ||
-            categories.contains(q) ||
-            tags.contains(q);
-      }).toList();
-    }
+
+    final filtered = state.tasks.where((t) => t.completedAt == null).where((t) {
+      final matchesSearch = q.isEmpty || taskMatchesSearchQuery(t, q);
+      final matchesFilters = matchesTaskClassificationFilters(
+        task: t,
+        categoryIds: categoryFilters,
+        kinds: kindFilters,
+        horizons: horizonFilters,
+        energies: energyFilters,
+        confidences: confidenceFilters,
+      );
+      return matchesSearch && matchesFilters;
+    }).toList();
     return filtered;
   }
 
@@ -913,3 +917,90 @@ final matrixZoomProvider = Provider<Quadrant?>(
     (ref) => ref.watch(matrixControllerProvider.select((s) => s.zoom)));
 final matrixTasksProvider = Provider<List<Task>>(
     (ref) => ref.watch(matrixControllerProvider.select((s) => s.tasks)));
+
+final visibleMatrixTasksProvider = Provider<List<Task>>((ref) {
+  final tasks = ref.watch(matrixTasksProvider);
+  final searchQuery = ref.watch(
+    matrixControllerProvider.select((state) => state.searchQuery),
+  );
+  final categoryFilters = ref.watch(activeCategoryFiltersProvider);
+  final kindFilters = ref.watch(activeKindFiltersProvider);
+  final horizonFilters = ref.watch(activeHorizonFiltersProvider);
+  final energyFilters = ref.watch(activeEnergyFiltersProvider);
+  final confidenceFilters = ref.watch(activeConfidenceFiltersProvider);
+  final normalizedQuery = normalizeMatrixSearchText(searchQuery.trim());
+
+  return tasks.where((task) {
+    if (task.completedAt != null) return false;
+    final matchesSearch = normalizedQuery.isEmpty ||
+        taskMatchesSearchQuery(task, normalizedQuery);
+    final matchesFilters = matchesTaskClassificationFilters(
+      task: task,
+      categoryIds: categoryFilters,
+      kinds: kindFilters,
+      horizons: horizonFilters,
+      energies: energyFilters,
+      confidences: confidenceFilters,
+    );
+    return matchesSearch && matchesFilters;
+  }).toList(growable: false);
+});
+
+String normalizeMatrixSearchText(String value) {
+  final lower = value.trim().toLowerCase();
+  const mapping = {
+    'á': 'a',
+    'à': 'a',
+    'ä': 'a',
+    'â': 'a',
+    'ã': 'a',
+    'é': 'e',
+    'è': 'e',
+    'ë': 'e',
+    'ê': 'e',
+    'í': 'i',
+    'ì': 'i',
+    'ï': 'i',
+    'î': 'i',
+    'ó': 'o',
+    'ò': 'o',
+    'ö': 'o',
+    'ô': 'o',
+    'õ': 'o',
+    'ú': 'u',
+    'ù': 'u',
+    'ü': 'u',
+    'û': 'u',
+    'ñ': 'n',
+    'ç': 'c',
+  };
+  final buffer = StringBuffer();
+  for (final codeUnit in lower.runes) {
+    final ch = String.fromCharCode(codeUnit);
+    buffer.write(mapping[ch] ?? ch);
+  }
+  return buffer.toString();
+}
+
+bool taskMatchesSearchQuery(Task task, String normalizedQuery) {
+  final title = normalizeMatrixSearchText(task.title);
+  final notes = normalizeMatrixSearchText(task.notes ?? '');
+  final category = normalizeMatrixSearchText(task.category ?? '');
+  final categoryId = normalizeMatrixSearchText(task.categoryId ?? '');
+  final categories = normalizeMatrixSearchText(task.categories.join(' '));
+  final tags = normalizeMatrixSearchText(task.tags.join(' '));
+  final autoTags = normalizeMatrixSearchText(task.autoTags.join(' '));
+  final kind = normalizeMatrixSearchText(task.kind.label);
+  final horizon = normalizeMatrixSearchText(task.horizon?.label ?? '');
+  final energy = normalizeMatrixSearchText(task.energy?.label ?? '');
+  return title.contains(normalizedQuery) ||
+      notes.contains(normalizedQuery) ||
+      category.contains(normalizedQuery) ||
+      categoryId.contains(normalizedQuery) ||
+      categories.contains(normalizedQuery) ||
+      tags.contains(normalizedQuery) ||
+      autoTags.contains(normalizedQuery) ||
+      kind.contains(normalizedQuery) ||
+      horizon.contains(normalizedQuery) ||
+      energy.contains(normalizedQuery);
+}

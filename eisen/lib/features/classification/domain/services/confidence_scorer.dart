@@ -43,6 +43,17 @@ class ConfidenceScorer {
           input.hasEnergy,
           input.hasPriority,
         ].where((item) => item).length;
+        if (input.hasCategory &&
+            input.matchedKeywordCount >= 2 &&
+            input.heuristicSignalCount >= 4) {
+          return 0.78;
+        }
+        if (input.hasCategory &&
+            input.matchedKeywordCount >= 1 &&
+            input.heuristicSignalCount >= 3 &&
+            filledFields >= 3) {
+          return 0.68;
+        }
         if (input.heuristicSignalCount >= 3 && filledFields >= 3) {
           return 0.62;
         }

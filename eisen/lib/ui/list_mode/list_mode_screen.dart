@@ -1,5 +1,15 @@
+import 'package:eisen/features/classification/domain/entities/category_config.dart';
+import 'package:eisen/features/classification/domain/entities/classification_settings.dart';
+import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
+import 'package:eisen/features/classification/domain/services/task_classification_mapper.dart';
+import 'package:eisen/features/classification/presentation/category_color_service_factory.dart';
+import 'package:eisen/features/classification/presentation/controllers/category_config_controller.dart';
+import 'package:eisen/features/classification/presentation/controllers/classification_settings_controller.dart';
+import 'package:eisen/features/classification/presentation/widgets/classification_grouping_bar.dart';
+import 'package:eisen/features/eisen_matrix/domain/category_colors.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/features/filters/presentation/widgets/category_filters_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,7 +19,12 @@ class ListModeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tasks = ref.watch(matrixTasksProvider);
+    final tasks = ref.watch(visibleMatrixTasksProvider);
+    final settings = ref.watch(classificationSettingsControllerProvider);
+    final categories = ref.watch(categoryConfigControllerProvider);
+    final categoryColorService = buildClassificationCategoryColorService(
+      categories: categories,
+    );
 
     // Group tasks by quadrant
     final quadrants = <Quadrant, List<Task>>{};
@@ -47,26 +62,45 @@ class ListModeScreen extends ConsumerWidget {
           ),
         ),
         actions: [
-          // Filter or sort options
           IconButton(
             icon: const Icon(Icons.tune, color: Color(0xFF7C7C7C)),
-            onPressed: () {
-              // TODO: Show filter/sort options
+            onPressed: () async {
+              await showDialog<void>(
+                context: context,
+                builder: (_) => const Dialog(
+                  child: SizedBox(
+                    width: 640,
+                    child: CategoryFiltersBar(
+                      padding: EdgeInsets.all(16),
+                    ),
+                  ),
+                ),
+              );
             },
           ),
         ],
       ),
       body: tasks.isEmpty
           ? _buildEmptyState()
-          : _buildResponsiveLayout(context, quadrants, ref),
+          : _buildResponsiveLayout(
+              context,
+              quadrants,
+              ref,
+              categoryColorService: categoryColorService,
+              settings: settings,
+              categories: categories,
+            ),
     );
   }
 
   Widget _buildResponsiveLayout(
     BuildContext context,
     Map<Quadrant, List<Task>> quadrants,
-    WidgetRef ref,
-  ) {
+    WidgetRef ref, {
+    required CategoryColorService categoryColorService,
+    required ClassificationSettings settings,
+    required List<CategoryConfig> categories,
+  }) {
     // Unificar todas las tareas en una sola lista
     final allTasks = <Task>[];
 
@@ -95,6 +129,15 @@ class ListModeScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const CategoryFiltersBar(
+            padding: EdgeInsets.only(bottom: 20),
+          ),
+          ClassificationGroupingBar(
+            tasks: allTasks,
+            categories: categories,
+            settings: settings,
+            padding: const EdgeInsets.only(bottom: 16),
+          ),
           // Header con contador de tareas
           Padding(
             padding: const EdgeInsets.only(bottom: 24),
@@ -144,34 +187,14 @@ class ListModeScreen extends ConsumerWidget {
             ),
           ),
 
-          // Lista unificada de tareas con animación escalonada
-          ...List.generate(allTasks.length, (index) {
-            final task = allTasks[index];
-            final weight = _calculateWeight(task);
-            final color = _getQuadrantColor(task.quadrant);
-
-            return TweenAnimationBuilder<double>(
-              duration: Duration(milliseconds: 300 + (index * 30)),
-              curve: Curves.easeOutCubic,
-              tween: Tween(begin: 0.0, end: 1.0),
-              builder: (context, value, child) {
-                return Opacity(
-                  opacity: value,
-                  child: Transform.translate(
-                    offset: Offset(-20 * (1 - value), 0),
-                    child: child,
-                  ),
-                );
-              },
-              child: _buildTaskBar(
-                task: task,
-                color: color,
-                weight: weight,
-                maxWeight: maxWeight,
-                onTap: () => _handleTaskTap(ref, task),
-              ),
-            );
-          }),
+          ..._buildGroupedTaskBars(
+            allTasks: allTasks,
+            maxWeight: maxWeight,
+            ref: ref,
+            settings: settings,
+            categories: categories,
+            categoryColorService: categoryColorService,
+          ),
 
           const SizedBox(height: 40),
         ],
@@ -192,14 +215,124 @@ class ListModeScreen extends ConsumerWidget {
     }
   }
 
+  List<Widget> _buildGroupedTaskBars({
+    required List<Task> allTasks,
+    required double maxWeight,
+    required WidgetRef ref,
+    required ClassificationSettings settings,
+    required List<CategoryConfig> categories,
+    required CategoryColorService categoryColorService,
+  }) {
+    final grouped = _groupTasksForList(
+      allTasks,
+      settings: settings,
+      categories: categories,
+    );
+    var animationIndex = 0;
+    final widgets = <Widget>[];
+    for (final entry in grouped.entries) {
+      if (grouped.length > 1) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 10),
+            child: Text(
+              '${entry.key} · ${entry.value.length}',
+              style: const TextStyle(
+                color: Color(0xFFA3A3A3),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ),
+        );
+      }
+
+      for (final task in entry.value) {
+        final weight = _calculateWeight(task);
+        final fallbackColor = _getQuadrantColor(task.quadrant);
+        final category = categoryForTask(categories, task);
+        final color = settings.colorByCategory && category != null
+            ? categoryColorService.getColorForCategory(category.name)
+            : fallbackColor;
+        final index = animationIndex++;
+
+        widgets.add(
+          TweenAnimationBuilder<double>(
+            duration: Duration(milliseconds: 300 + (index * 30)),
+            curve: Curves.easeOutCubic,
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(-20 * (1 - value), 0),
+                  child: child,
+                ),
+              );
+            },
+            child: _buildTaskBar(
+              task: task,
+              color: color,
+              weight: weight,
+              maxWeight: maxWeight,
+              onTap: () => _handleTaskTap(ref, task),
+              settings: settings,
+              categories: categories,
+              categoryColorService: categoryColorService,
+            ),
+          ),
+        );
+      }
+    }
+    return widgets;
+  }
+
+  Map<String, List<Task>> _groupTasksForList(
+    List<Task> tasks, {
+    required ClassificationSettings settings,
+    required List<CategoryConfig> categories,
+  }) {
+    String Function(Task task)? labelFor;
+    if (settings.allowGroupingByCategory) {
+      labelFor = (task) =>
+          categoryForTask(categories, task)?.name ??
+          task.category ??
+          'Sin categoría';
+    } else if (settings.allowGroupingByKind) {
+      labelFor = (task) => task.kind.label;
+    } else if (settings.allowGroupingByHorizon) {
+      labelFor = (task) => task.horizon?.label ?? 'Sin horizonte';
+    } else if (settings.allowGroupingByEnergy) {
+      labelFor = (task) => task.energy?.label ?? 'Sin energía';
+    }
+
+    if (labelFor == null) return {'Todas': tasks};
+    final grouped = <String, List<Task>>{};
+    for (final task in tasks) {
+      grouped.putIfAbsent(labelFor(task), () => <Task>[]).add(task);
+    }
+    return Map.fromEntries(
+      grouped.entries.toList()
+        ..sort((a, b) => b.value.length.compareTo(a.value.length)),
+    );
+  }
+
   Widget _buildTaskBar({
     required Task task,
     required Color color,
     required double weight,
     required double maxWeight,
     required VoidCallback onTap,
+    required ClassificationSettings settings,
+    required List<CategoryConfig> categories,
+    required CategoryColorService categoryColorService,
   }) {
     final widthFactor = (weight / maxWeight).clamp(0.15, 1.0);
+    final category = categoryForTask(categories, task);
+    final showReviewMarker = settings.showConfidenceIndicators &&
+        task.classificationConfidence == ConfidenceLevel.low;
+    final showAutoTag = settings.showAutoTags && task.autoTags.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -262,13 +395,48 @@ class ListModeScreen extends ConsumerWidget {
                               maxLines: 1,
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              _getQuadrantLabel(task.quadrant),
-                              style: TextStyle(
-                                color: color.withValues(alpha: 0.8),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w400,
-                              ),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  _getQuadrantLabel(task.quadrant),
+                                  style: TextStyle(
+                                    color: color.withValues(alpha: 0.8),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                                if (category != null)
+                                  _buildInfoChip(
+                                    category.name,
+                                    background: categoryColorService
+                                        .getLightVariant(category.name,
+                                            opacity: 0.22),
+                                    border: categoryColorService.getDarkVariant(
+                                        category.name,
+                                        opacity: 0.55),
+                                  ),
+                                if (showReviewMarker)
+                                  Tooltip(
+                                    message: 'Clasificación de baja confianza',
+                                    child: Container(
+                                      width: 7,
+                                      height: 7,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Color(0xFFFFB020),
+                                      ),
+                                    ),
+                                  ),
+                                if (showAutoTag)
+                                  _buildInfoChip(
+                                    task.autoTags.first,
+                                    background: const Color(0x332563EB),
+                                    border: const Color(0x882563EB),
+                                  ),
+                              ],
                             ),
                           ],
                         ),
@@ -326,6 +494,29 @@ class ListModeScreen extends ConsumerWidget {
     if (diff < 0) return '${diff.abs()}d atrás';
     if (diff < 7) return '${diff}d';
     return '${(diff / 7).ceil()}sem';
+  }
+
+  Widget _buildInfoChip(
+    String label, {
+    required Color background,
+    required Color border,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: border),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFFE6E6E6),
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 
   Widget _buildEmptyState() {
