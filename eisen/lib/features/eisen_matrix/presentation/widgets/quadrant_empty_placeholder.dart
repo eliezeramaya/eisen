@@ -21,17 +21,24 @@ class QuadrantEmptyPlaceholder extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: c.outlineVariant.withValues(alpha: .18)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            title,
-            style: t.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Text(hint, style: t.bodySmall?.copyWith(color: c.onSurfaceVariant)),
-        ],
+      child: OverflowBox(
+        alignment: Alignment.topLeft,
+        maxHeight: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              style: t.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              hint,
+              style: t.bodySmall?.copyWith(color: c.onSurfaceVariant),
+            ),
+          ],
+        ),
       ),
     );
   }
