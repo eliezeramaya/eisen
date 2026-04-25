@@ -99,8 +99,7 @@ void main() {
   test('task without classificationMetadata loads without crash', () async {
     // Simulate old-format task that never had metadata
     SharedPreferences.setMockInitialValues({
-      'eisen.tasks.v1':
-          '{"tasks":[{"id":"old-1","title":"Tarea vieja","quadrant":2,"priority":5,"minutes":30}]}',
+      'eisen.tasks.v1': '{"tasks":[{"id":"old-1","title":"Tarea vieja","quadrant":2,"priority":5,"minutes":30}]}',
     });
 
     final repo = LocalPrefsMatrixRepository(StoragePrefs());

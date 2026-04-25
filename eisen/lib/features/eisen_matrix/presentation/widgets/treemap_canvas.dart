@@ -75,6 +75,7 @@ class TreemapCanvas extends StatefulWidget {
   final bool colorByCategory;
   final bool showConfidenceIndicators;
   final bool showAutoTags;
+
   /// Called when a low-confidence task is long-pressed. Opens QuickReclassifySheet.
   final void Function(Task task)? onLowConfidenceLongPress;
 
@@ -82,8 +83,7 @@ class TreemapCanvas extends StatefulWidget {
   State<TreemapCanvas> createState() => _TreemapCanvasState();
 }
 
-class _TreemapCanvasState extends State<TreemapCanvas>
-    with TickerProviderStateMixin {
+class _TreemapCanvasState extends State<TreemapCanvas> with TickerProviderStateMixin {
   String? _draggingId;
   Offset? _lastPos;
   Quadrant? _hoverQuadrant;
@@ -294,8 +294,7 @@ class _TreemapCanvasState extends State<TreemapCanvas>
         );
         // Compute tiny tiles per quadrant only if no integrated stacks present
         // Adjust minimum area threshold based on density mode to make the change noticeable
-        final double minAreaPx = (widget.minTileSizePx * widget.minTileSizePx) *
-            (widget.compact ? 0.7 : 1.0);
+        final double minAreaPx = (widget.minTileSizePx * widget.minTileSizePx) * (widget.compact ? 0.7 : 1.0);
         final tinyByQ = <Quadrant, List<TreemapRect>>{
           Quadrant.q1: [],
           Quadrant.q2: [],
@@ -306,17 +305,14 @@ class _TreemapCanvasState extends State<TreemapCanvas>
           for (final tr in widget.layout) {
             final r = _px(tr.rect01, size);
             // Represent as tiny if smaller than min interactive area (squared)
-            if (r.width < widget.minTileSizePx ||
-                r.height < widget.minTileSizePx ||
-                r.width * r.height < minAreaPx) {
+            if (r.width < widget.minTileSizePx || r.height < widget.minTileSizePx || r.width * r.height < minAreaPx) {
               tinyByQ[tr.task.quadrant]!.add(tr);
             }
           }
         }
         if (widget.onEditTask != null || widget.onMarkDone != null) {
           // Adjust button visibility threshold by density
-          final double minAreaForButtons =
-              LayoutConstants.minAreaForButtons * (widget.compact ? 0.85 : 1.0);
+          final double minAreaForButtons = LayoutConstants.minAreaForButtons * (widget.compact ? 0.85 : 1.0);
           for (final tr in widget.layout) {
             final r = _px(tr.rect01, size);
             // Show edit button only for reasonably large tiles
@@ -360,8 +356,7 @@ class _TreemapCanvasState extends State<TreemapCanvas>
             final r01To = _nextRects01[id] ?? tr.rect01;
             final r01 = _lerpSnapRect(r01From, r01To, curveT);
             final r = _px(r01, size);
-            if (r.width >= widget.minTileSizePx &&
-                r.height >= widget.minTileSizePx) {
+            if (r.width >= widget.minTileSizePx && r.height >= widget.minTileSizePx) {
               overlay.add(
                 Positioned(
                   key: ValueKey('tile_$id'),
@@ -432,9 +427,7 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                       }
                     : null,
                 child: MouseRegion(
-                  cursor: _draggingId != null
-                      ? SystemMouseCursors.grabbing
-                      : SystemMouseCursors.basic,
+                  cursor: _draggingId != null ? SystemMouseCursors.grabbing : SystemMouseCursors.basic,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTapDown: (d) {
@@ -504,9 +497,7 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                         widget.onLowConfidenceLongPress!(t);
                         return;
                       }
-                      final msg = t == null
-                          ? 'Tarea'
-                          : '${t.title} • P${t.priority} • ${t.minutes}m';
+                      final msg = t == null ? 'Tarea' : '${t.title} • P${t.priority} • ${t.minutes}m';
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(msg),
@@ -528,9 +519,7 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                       }
                     },
                     onPanEnd: (d) {
-                      if (widget.inlineEditId == null &&
-                          _draggingId != null &&
-                          widget.zoom == null) {
+                      if (widget.inlineEditId == null && _draggingId != null && widget.zoom == null) {
                         final q = _quadrantAt(_lastPos ?? Offset.zero, size);
                         if (q != null) {
                           widget.onDropToQuadrant?.call(_draggingId!, q);
@@ -561,8 +550,7 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                               widget.layout,
                               draggingId: _draggingId,
                               pointer: _lastPos,
-                              hoverQuadrant:
-                                  widget.zoom == null ? _hoverQuadrant : null,
+                              hoverQuadrant: widget.zoom == null ? _hoverQuadrant : null,
                               presentQuadrant: widget.presentQuadrant,
                               zoom: widget.zoom,
                               prevRects01: _prevRects01,
@@ -580,15 +568,11 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                               outrosVersion: _outrosVersion,
                               outlineColor: Theme.of(
                                 context,
-                              )
-                                  .colorScheme
-                                  .outlineVariant
-                                  .withValues(alpha: 0.28),
+                              ).colorScheme.outlineVariant.withValues(alpha: 0.28),
                               tileBorderColor: UiTokens.stroke(
                                 Theme.of(context).colorScheme,
                               ),
-                              onSurface:
-                                  Theme.of(context).colorScheme.onSurface,
+                              onSurface: Theme.of(context).colorScheme.onSurface,
                               onSurfaceVariant: Theme.of(
                                 context,
                               ).colorScheme.onSurfaceVariant,
@@ -599,8 +583,7 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                               warningTaskIds: widget.warningTaskIds,
                               categoryColorService: widget.categoryColorService,
                               colorByCategory: widget.colorByCategory,
-                              showConfidenceIndicators:
-                                  widget.showConfidenceIndicators,
+                              showConfidenceIndicators: widget.showConfidenceIndicators,
                               showAutoTags: widget.showAutoTags,
                             ),
                             isComplex: true,
@@ -666,10 +649,8 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                 double? bottom;
                 switch (q) {
                   case Quadrant.q1:
-                    right = size.width / 2 +
-                        m; // anchor to Q1 right edge minus margin
-                    bottom = size.height / 2 +
-                        m; // anchor to Q1 bottom edge minus margin
+                    right = size.width / 2 + m; // anchor to Q1 right edge minus margin
+                    bottom = size.height / 2 + m; // anchor to Q1 bottom edge minus margin
                     break;
                   case Quadrant.q2:
                     right = m; // right edge of parent minus margin
@@ -726,9 +707,7 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                                 ? Colors.black.withValues(alpha: 0.20)
                                 : Colors.white.withValues(alpha: 0.18);
                             // Use dark gray text in minimal mode for better visibility on light surfaces
-                            final textColor = widget.minimal
-                                ? const Color(0xFF424242)
-                                : Colors.white;
+                            final textColor = widget.minimal ? const Color(0xFF424242) : Colors.white;
                             return Container(
                               width: widget.minTileSizePx,
                               height: widget.minTileSizePx,
@@ -853,14 +832,11 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                     IconButton(
                       tooltip: '+15m',
                       icon: const Icon(Icons.add_alarm),
-                      onPressed: widget.onEditTask == null
-                          ? null
-                          : () => widget.onEditTask!(t.id),
+                      onPressed: widget.onEditTask == null ? null : () => widget.onEditTask!(t.id),
                     ),
                     PopupMenuButton<Quadrant>(
                       tooltip: 'Mover a',
-                      onSelected: (dest) =>
-                          widget.onDropToQuadrant?.call(t.id, dest),
+                      onSelected: (dest) => widget.onDropToQuadrant?.call(t.id, dest),
                       itemBuilder: (_) => [
                         const PopupMenuItem(
                           value: Quadrant.q1,
@@ -1013,14 +989,10 @@ class _CheckDot extends StatelessWidget {
         color: Colors.transparent,
         child: Container(
           decoration: BoxDecoration(
-            color: minimal
-                ? Colors.white.withValues(alpha: 0.9)
-                : Colors.black.withValues(alpha: 0.45),
+            color: minimal ? Colors.white.withValues(alpha: 0.9) : Colors.black.withValues(alpha: 0.45),
             shape: BoxShape.circle,
             border: Border.all(
-              color: minimal
-                  ? Colors.black26
-                  : Colors.white.withValues(alpha: 0.25),
+              color: minimal ? Colors.black26 : Colors.white.withValues(alpha: 0.25),
               width: 1,
             ),
           ),
@@ -1154,14 +1126,12 @@ class _TaskHoverTooltip extends StatelessWidget {
                       icon: Icons.calendar_today,
                       label: 'Due',
                       value: _formatFullDate(task.due!),
-                      isUrgent: task.due!.isBefore(DateTime.now()) ||
-                          task.due!.difference(DateTime.now()).inDays <= 1,
+                      isUrgent: task.due!.isBefore(DateTime.now()) || task.due!.difference(DateTime.now()).inDays <= 1,
                     ),
                     const SizedBox(height: 8),
                   ],
                   // Category
-                  if (_categoryNameForTask(task) != null &&
-                      _categoryNameForTask(task)!.isNotEmpty) ...[
+                  if (_categoryNameForTask(task) != null && _categoryNameForTask(task)!.isNotEmpty) ...[
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -1177,23 +1147,18 @@ class _TaskHoverTooltip extends StatelessWidget {
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: (categoryColorService ??
-                                    const CategoryColorService())
+                            color: (categoryColorService ?? const CategoryColorService())
                                 .getLightVariant(_categoryNameForTask(task)!),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: (categoryColorService ??
-                                      const CategoryColorService())
+                              color: (categoryColorService ?? const CategoryColorService())
                                   .getDarkVariant(_categoryNameForTask(task)!),
                               width: 1,
                             ),
                           ),
                           child: Text(
                             _categoryNameForTask(task)!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
                           ),
@@ -1203,8 +1168,7 @@ class _TaskHoverTooltip extends StatelessWidget {
                     const SizedBox(height: 8),
                   ],
 
-                  if (showConfidenceIndicators &&
-                      task.classificationConfidence == ConfidenceLevel.low) ...[
+                  if (showConfidenceIndicators && task.classificationConfidence == ConfidenceLevel.low) ...[
                     _TooltipRow(
                       icon: Icons.warning_amber_rounded,
                       label: 'Clasificación',
@@ -1243,21 +1207,13 @@ class _TaskHoverTooltip extends StatelessWidget {
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .secondaryContainer
-                                          .withValues(alpha: 0.5),
+                                      color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.5),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
                                       tag,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSecondaryContainer,
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Theme.of(context).colorScheme.onSecondaryContainer,
                                           ),
                                     ),
                                   ),
@@ -1276,8 +1232,7 @@ class _TaskHoverTooltip extends StatelessWidget {
                     Text(
                       'Notes',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w600,
                           ),
                     ),
@@ -1306,20 +1261,7 @@ class _TaskHoverTooltip extends StatelessWidget {
     if (diff == 0) return 'Today';
     if (diff == 1) return 'Tomorrow';
 
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }
@@ -1362,17 +1304,13 @@ class _TooltipRow extends StatelessWidget {
         Icon(
           icon,
           size: 16,
-          color: isUrgent
-              ? Colors.redAccent
-              : Theme.of(context).colorScheme.onSurfaceVariant,
+          color: isUrgent ? Colors.redAccent : Theme.of(context).colorScheme.onSurfaceVariant,
         ),
         const SizedBox(width: 8),
         Text(
           value,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: isUrgent
-                    ? Colors.redAccent
-                    : Theme.of(context).colorScheme.onSurface,
+                color: isUrgent ? Colors.redAccent : Theme.of(context).colorScheme.onSurface,
                 fontWeight: isUrgent ? FontWeight.w600 : FontWeight.normal,
               ),
         ),
@@ -1489,20 +1427,7 @@ class _TreemapPainter extends CustomPainter {
     }
 
     // Otherwise show date
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${due.day} ${months[due.month - 1]}';
   }
 
@@ -1587,9 +1512,8 @@ class _TreemapPainter extends CustomPainter {
       ];
       for (int i = 0; i < 4; i++) {
         final q = Quadrant.values[i];
-        final areaSum = layout
-            .where((e) => e.task.quadrant == q)
-            .fold<double>(0, (a, e) => a + (e.rect01.width * e.rect01.height));
+        final areaSum =
+            layout.where((e) => e.task.quadrant == q).fold<double>(0, (a, e) => a + (e.rect01.width * e.rect01.height));
         final quadArea = 0.5 * 0.5; // normalized
         final pct = (areaSum / quadArea * 100).clamp(0.0, 999.0);
         final label = '${q.name}: ${pct.toStringAsFixed(1)}%';
@@ -1613,17 +1537,13 @@ class _TreemapPainter extends CustomPainter {
       final qColor = minimal ? Colors.black : _byQuadrant(hoverQuadrant!);
       final overlay = Paint()
         ..style = PaintingStyle.fill
-        ..color = minimal
-            ? Colors.black.withValues(alpha: 0.06)
-            : qColor.withValues(alpha: 0.08);
+        ..color = minimal ? Colors.black.withValues(alpha: 0.06) : qColor.withValues(alpha: 0.08);
       canvas.drawRect(qRect, overlay);
 
       // Soft border glow
       final border = Paint()
         ..style = PaintingStyle.stroke
-        ..color = minimal
-            ? Colors.black.withValues(alpha: 0.25)
-            : qColor.withValues(alpha: 0.25)
+        ..color = minimal ? Colors.black.withValues(alpha: 0.25) : qColor.withValues(alpha: 0.25)
         ..strokeWidth = 2;
       canvas.drawRect(qRect.deflate(1), border);
     }
@@ -1689,9 +1609,7 @@ class _TreemapPainter extends CustomPainter {
           final v = pointer! - scaled.center;
           final len = v.distance;
           final maxShift = 6.0;
-          shift += len > 0
-              ? Offset(v.dx / len * maxShift, v.dy / len * maxShift)
-              : Offset.zero;
+          shift += len > 0 ? Offset(v.dx / len * maxShift, v.dy / len * maxShift) : Offset.zero;
         }
         // Magnetism: bias towards center of hovered quadrant
         if (hoverQuadrant != null) {
@@ -1700,9 +1618,7 @@ class _TreemapPainter extends CustomPainter {
           final mlen = mv.distance;
           final mMax = 8.0;
           final bias = 0.12; // fraction towards center
-          final mshift = mlen > 0
-              ? Offset(mv.dx / mlen * mMax * bias, mv.dy / mlen * mMax * bias)
-              : Offset.zero;
+          final mshift = mlen > 0 ? Offset(mv.dx / mlen * mMax * bias, mv.dy / mlen * mMax * bias) : Offset.zero;
           shift += mshift;
         }
         drawRect = scaled.shift(shift);
@@ -1729,8 +1645,7 @@ class _TreemapPainter extends CustomPainter {
               .getLightVariant(categoryName, opacity: minimal ? 0.18 : 0.28)
           : tileFillColor;
       final strokeColor = colorByCategory && categoryName != null
-          ? (categoryColorService ?? const CategoryColorService())
-              .getDarkVariant(categoryName, opacity: 0.48)
+          ? (categoryColorService ?? const CategoryColorService()).getDarkVariant(categoryName, opacity: 0.48)
           : tileBorderColor;
       paint
         ..style = PaintingStyle.fill
@@ -1742,8 +1657,7 @@ class _TreemapPainter extends CustomPainter {
         ..strokeWidth = UiTokens.tileStroke;
       canvas.drawRRect(rr, paint);
 
-      final isLowConfidence =
-          tr.task.classificationConfidence == ConfidenceLevel.low;
+      final isLowConfidence = tr.task.classificationConfidence == ConfidenceLevel.low;
       if (showConfidenceIndicators && isLowConfidence) {
         final markerPaint = Paint()
           ..style = PaintingStyle.fill
@@ -1824,8 +1738,7 @@ class _TreemapPainter extends CustomPainter {
       final showLabel = !minimal || isDragging || pointerInside || isSelected;
 
       // Calculate priority/time metadata height for bottom positioning
-      final responsiveMetaSize =
-          typography.metaFontSize(size).toDouble() * textScale;
+      final responsiveMetaSize = typography.metaFontSize(size).toDouble() * textScale;
       final meta = 'P${tr.task.priority} • ${tr.task.minutes}m';
       final metaPainter = _textPainter(
         meta,
@@ -1844,9 +1757,7 @@ class _TreemapPainter extends CustomPainter {
 
       // Title
       if (showLabel && canShowTitle) {
-        final responsiveTitleSize =
-            (debugTreemap ? 16.0 : typography.titleFontSize(size).toDouble()) *
-                textScale;
+        final responsiveTitleSize = (debugTreemap ? 16.0 : typography.titleFontSize(size).toDouble()) * textScale;
         final tp = _textPainter(
           tr.task.title,
           drawRect,
@@ -1876,8 +1787,7 @@ class _TreemapPainter extends CustomPainter {
                 ? Colors.orangeAccent
                 : onSurfaceVariant;
 
-        final responsiveDueDateSize =
-            typography.metaFontSize(size).toDouble() * textScale * 0.95;
+        final responsiveDueDateSize = typography.metaFontSize(size).toDouble() * textScale * 0.95;
         final dueDatePainter = _textPainter(
           '📅 $dueDateText',
           drawRect,
@@ -1903,8 +1813,7 @@ class _TreemapPainter extends CustomPainter {
 
         // Draw category pill background
         final categoryText = categoryName;
-        final responsiveCategorySize =
-            typography.metaFontSize(size).toDouble() * textScale * 0.9;
+        final responsiveCategorySize = typography.metaFontSize(size).toDouble() * textScale * 0.9;
         final categoryPainter = _textPainter(
           categoryText,
           drawRect,
@@ -1952,8 +1861,7 @@ class _TreemapPainter extends CustomPainter {
       // PROGRESSIVE CONTENT: Tags (area > 35,000 px²)
       if (showLabel &&
           _showTags(area) &&
-          (tr.task.tags.isNotEmpty ||
-              (showAutoTags && tr.task.autoTags.isNotEmpty)) &&
+          (tr.task.tags.isNotEmpty || (showAutoTags && tr.task.autoTags.isNotEmpty)) &&
           currentY + 14 < drawRect.bottom - bottomReserved - 6 &&
           !debugTreemap) {
         final mergedTags = [
@@ -1964,11 +1872,9 @@ class _TreemapPainter extends CustomPainter {
         final displayTags = mergedTags.take(maxTags).toList();
         final hasMoreTags = mergedTags.length > maxTags;
 
-        final tagsText = displayTags.join(' · ') +
-            (hasMoreTags ? ' · +${mergedTags.length - maxTags}' : '');
+        final tagsText = displayTags.join(' · ') + (hasMoreTags ? ' · +${mergedTags.length - maxTags}' : '');
 
-        final responsiveTagSize =
-            typography.metaFontSize(size).toDouble() * textScale * 0.85;
+        final responsiveTagSize = typography.metaFontSize(size).toDouble() * textScale * 0.85;
         final tagsPainter = _textPainter(
           tagsText,
           drawRect,
@@ -1989,11 +1895,8 @@ class _TreemapPainter extends CustomPainter {
           tr.task.notes!.isNotEmpty &&
           currentY + 14 < drawRect.bottom - bottomReserved - 6 &&
           !debugTreemap) {
-        final responsiveNotesSize =
-            typography.metaFontSize(size).toDouble() * textScale;
-        final notesPreview = tr.task.notes!.length > 50
-            ? '${tr.task.notes!.substring(0, 50)}...'
-            : tr.task.notes!;
+        final responsiveNotesSize = typography.metaFontSize(size).toDouble() * textScale;
+        final notesPreview = tr.task.notes!.length > 50 ? '${tr.task.notes!.substring(0, 50)}...' : tr.task.notes!;
         final tp3 = _textPainter(
           notesPreview,
           drawRect,
@@ -2022,11 +1925,8 @@ class _TreemapPainter extends CustomPainter {
 
       // Debug labels for each tile
       if (debugTreemap && !minimal) {
-        final area =
-            (drawRect.width * drawRect.height) / (size.width * size.height);
-        final ratio = drawRect.width == 0 || drawRect.height == 0
-            ? 0.0
-            : (drawRect.width / drawRect.height).abs();
+        final area = (drawRect.width * drawRect.height) / (size.width * size.height);
+        final ratio = drawRect.width == 0 || drawRect.height == 0 ? 0.0 : (drawRect.width / drawRect.height).abs();
         final rr = ratio < 1 ? 1 / (ratio == 0.0 ? 1.0 : ratio) : ratio;
         TreemapDebugOverlay.labelTile(canvas, drawRect, tr.task.id, area, rr);
       }
@@ -2047,11 +1947,8 @@ class _TreemapPainter extends CustomPainter {
           );
           final r = _snapRect(r0);
           final rr = RRect.fromRectAndRadius(r, const Radius.circular(12));
-          final baseColor = o.quadrant == null
-              ? (minimal ? Colors.black : Colors.white)
-              : _byQuadrant(o.quadrant!);
-          final baseAlpha =
-              (debugTreemap && !minimal) ? 0.28 : (minimal ? 0.25 : 0.18);
+          final baseColor = o.quadrant == null ? (minimal ? Colors.black : Colors.white) : _byQuadrant(o.quadrant!);
+          final baseAlpha = (debugTreemap && !minimal) ? 0.28 : (minimal ? 0.25 : 0.18);
           final fill = Paint()
             ..style = PaintingStyle.fill
             ..color = baseColor.withValues(alpha: baseAlpha * alpha);
@@ -2059,9 +1956,7 @@ class _TreemapPainter extends CustomPainter {
           final stroke = Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = (debugTreemap && !minimal) ? 2.0 : 1.0
-            ..color = (minimal
-                    ? Colors.black.withValues(alpha: 0.20)
-                    : Colors.white.withValues(alpha: 0.18))
+            ..color = (minimal ? Colors.black.withValues(alpha: 0.20) : Colors.white.withValues(alpha: 0.18))
                 .withValues(alpha: (minimal ? 0.20 : 0.18) * alpha);
           canvas.drawRRect(rr, stroke);
         }
@@ -2139,8 +2034,7 @@ class _TreemapPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRebuildSemantics(covariant _TreemapPainter oldDelegate) =>
-      oldDelegate.layout != layout;
+  bool shouldRebuildSemantics(covariant _TreemapPainter oldDelegate) => oldDelegate.layout != layout;
 
   @override
   SemanticsBuilderCallback get semanticsBuilder => (Size size) {
@@ -2259,8 +2153,7 @@ class _TreemapPainter extends CustomPainter {
 
   // Snap rect coordinates to pixel grid to reduce hairline gaps.
   Rect _snapRect(Rect r) {
-    double snap(double v) =>
-        (v + 0.5).floorToDouble() + 0.0; // prefer whole-pixel alignment
+    double snap(double v) => (v + 0.5).floorToDouble() + 0.0; // prefer whole-pixel alignment
     final l = snap(r.left);
     final t = snap(r.top);
     final rr = snap(r.right);
@@ -2283,15 +2176,13 @@ class _TreemapPainter extends CustomPainter {
   Path _getCachedPath(String taskId, Rect rect, double radius) {
     final key = '${taskId}_${rect.hashCode}_$radius#v$layoutVersion';
     return _pathCache.putIfAbsent(key, () {
-      return Path()
-        ..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
+      return Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
     });
   }
 
   /// Draw corner indicators when zoomed into a specific quadrant.
   /// Shows L-shaped markers in corners to indicate quadrant boundaries.
-  void _drawQuadrantCornerIndicators(
-      Canvas canvas, Size size, Quadrant zoomedQuadrant) {
+  void _drawQuadrantCornerIndicators(Canvas canvas, Size size, Quadrant zoomedQuadrant) {
     final cornerPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
@@ -2484,14 +2375,10 @@ List<Rect> _clusterShelves(List<Rect> rects) {
     for (var j = i + 1; j < rects.length; j++) {
       if (used[j]) continue;
       final rj = rects[j];
-      final sameRow = ((rj.top - base.top).abs() < eps &&
-              (rj.height - base.height).abs() < eps) ||
-          ((rj.bottom - base.bottom).abs() < eps &&
-              (rj.height - base.height).abs() < eps);
-      final sameCol = ((rj.left - base.left).abs() < eps &&
-              (rj.width - base.width).abs() < eps) ||
-          ((rj.right - base.right).abs() < eps &&
-              (rj.width - base.width).abs() < eps);
+      final sameRow = ((rj.top - base.top).abs() < eps && (rj.height - base.height).abs() < eps) ||
+          ((rj.bottom - base.bottom).abs() < eps && (rj.height - base.height).abs() < eps);
+      final sameCol = ((rj.left - base.left).abs() < eps && (rj.width - base.width).abs() < eps) ||
+          ((rj.right - base.right).abs() < eps && (rj.width - base.width).abs() < eps);
       if (sameRow || sameCol) {
         group.add(rj);
         used[j] = true;

@@ -54,8 +54,7 @@ class TaskRow extends StatelessWidget {
     final s = t.extension<SpacingTokens>();
     final borderColor = t.dividerColor;
     final done = task.completedAt != null;
-    final lowConfidence = showConfidenceIndicators &&
-        task.classificationConfidence == ConfidenceLevel.low;
+    final lowConfidence = showConfidenceIndicators && task.classificationConfidence == ConfidenceLevel.low;
 
     final row = SizedBox(
       height: 32,
@@ -93,8 +92,7 @@ class TaskRow extends StatelessWidget {
                 style: done
                     ? t.textTheme.bodyMedium?.copyWith(
                         decoration: TextDecoration.lineThrough,
-                        color: t.textTheme.bodyMedium?.color
-                            ?.withValues(alpha: 0.6),
+                        color: t.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                       )
                     : t.textTheme.bodyMedium,
               ),

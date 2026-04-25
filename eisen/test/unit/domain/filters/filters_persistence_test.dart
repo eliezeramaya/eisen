@@ -47,9 +47,7 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container
-          .read(activeCategoryFiltersProvider.notifier)
-          .update(['work', 'health']);
+      container.read(activeCategoryFiltersProvider.notifier).update(['work', 'health']);
       // State updated immediately
       expect(
         container.read(activeCategoryFiltersProvider),
@@ -69,9 +67,7 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container
-          .read(activeKindFiltersProvider.notifier)
-          .update([EntryKind.task, EntryKind.idea]);
+      container.read(activeKindFiltersProvider.notifier).update([EntryKind.task, EntryKind.idea]);
       expect(container.read(activeKindFiltersProvider), [
         EntryKind.task,
         EntryKind.idea,
@@ -84,9 +80,7 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container
-          .read(activeHorizonFiltersProvider.notifier)
-          .update([TimeHorizon.today, TimeHorizon.thisWeek]);
+      container.read(activeHorizonFiltersProvider.notifier).update([TimeHorizon.today, TimeHorizon.thisWeek]);
       expect(container.read(activeHorizonFiltersProvider), [
         TimeHorizon.today,
         TimeHorizon.thisWeek,
@@ -99,9 +93,7 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container
-          .read(activeEnergyFiltersProvider.notifier)
-          .update([EnergyLevel.low]);
+      container.read(activeEnergyFiltersProvider.notifier).update([EnergyLevel.low]);
       expect(
         container.read(activeEnergyFiltersProvider),
         [EnergyLevel.low],
@@ -114,9 +106,7 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container
-          .read(activeConfidenceFiltersProvider.notifier)
-          .update([ConfidenceLevel.low]);
+      container.read(activeConfidenceFiltersProvider.notifier).update([ConfidenceLevel.low]);
       expect(
         container.read(activeConfidenceFiltersProvider),
         [ConfidenceLevel.low],

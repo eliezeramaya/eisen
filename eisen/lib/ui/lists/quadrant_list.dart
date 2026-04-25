@@ -72,9 +72,7 @@ class QuadrantList extends ConsumerWidget {
                     onToggle: onToggle == null ? null : () => onToggle!(task),
                     onOpen: onOpen == null ? null : () => onOpen!(task),
                     categoryAccent: accent,
-                    categoryName: settings.colorByCategory && category != null
-                        ? category.name
-                        : null,
+                    categoryName: settings.colorByCategory && category != null ? category.name : null,
                     categoryNameLightBg: category != null
                         ? categoryColors.getLightVariant(
                             category.name,
