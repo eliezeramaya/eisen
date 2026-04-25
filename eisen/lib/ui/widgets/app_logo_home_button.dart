@@ -1,4 +1,5 @@
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/features/eisen_matrix/presentation/controllers/treemap_viewport_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,6 +29,7 @@ class AppLogoHomeButton extends ConsumerWidget {
               borderRadius: BorderRadius.circular(14),
               onTap: () {
                 ref.read(matrixControllerProvider.notifier).resetHomeView();
+                ref.read(treemapViewportControllerProvider.notifier).reset();
                 GoRouter.of(context).go('/matrix');
               },
               child: Center(

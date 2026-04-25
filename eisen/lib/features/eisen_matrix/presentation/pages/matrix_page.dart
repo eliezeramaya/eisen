@@ -8,19 +8,28 @@ import 'package:eisen/core/theme/app_theme.dart';
 import 'package:eisen/core/theme/colors.dart';
 import 'package:eisen/core/ui/app_text_scale.dart';
 import 'package:eisen/core/ui/ui_breakpoints.dart';
+import 'package:eisen/features/classification/presentation/category_color_service_factory.dart';
+import 'package:eisen/features/classification/presentation/controllers/category_config_controller.dart';
+import 'package:eisen/features/classification/presentation/controllers/classification_settings_controller.dart';
+import 'package:eisen/features/classification/presentation/widgets/classification_grouping_bar.dart';
 import 'package:eisen/features/demo/demo_tasks.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/features/eisen_matrix/presentation/controllers/treemap_viewport_controller.dart';
+import 'package:eisen/features/eisen_matrix/domain/treemap_viewport_state.dart';
+import 'package:eisen/features/eisen_matrix/application/semantic_treemap_builder.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/inspector_drawer.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/matrix_interactive_wrapper.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/minimap.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/profile_sheet.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/quadrant_empty_placeholder.dart';
+import 'package:eisen/features/eisen_matrix/presentation/widgets/semantic_treemap_view.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/settings_sheet_compact.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/toolbar.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/treemap_canvas.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/zoom_indicator.dart';
+import 'package:eisen/features/filters/presentation/widgets/category_filters_bar.dart';
 import 'package:eisen/features/insights/domain/nudge.dart';
 import 'package:eisen/features/insights/domain/nudge_controller.dart';
 import 'package:eisen/features/insights_adaptive/domain/adaptive_providers.dart';
@@ -111,6 +120,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
     final minimal =
         ref.watch(matrixControllerProvider.select((s) => s.minimal));
     final tasks = ref.watch(matrixTasksProvider);
+    final visibleTasks = ref.watch(visibleMatrixTasksProvider);
     final selectedId =
         ref.watch(matrixControllerProvider.select((s) => s.selectedId));
     final isLoading =
@@ -164,6 +174,28 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
     final overloadRiskAsync = ref.watch(overloadRiskTodayProvider);
     final overloadRisk =
         overloadRiskAsync.maybeWhen(data: (v) => v, orElse: () => null);
+    final classificationSettings =
+        ref.watch(classificationSettingsControllerProvider);
+    final categoryConfigs = ref.watch(categoryConfigControllerProvider);
+    final semanticViewport = ref.watch(treemapViewportControllerProvider);
+    final semanticViewportCtrl =
+        ref.read(treemapViewportControllerProvider.notifier);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final restoredSearch = semanticViewport.activeSearchQuery;
+      if (searchQuery.isEmpty &&
+          restoredSearch != null &&
+          restoredSearch.isNotEmpty) {
+        ctrl.setSearchQuery(restoredSearch);
+        return;
+      }
+      semanticViewportCtrl.syncSearchQuery(searchQuery);
+    });
+    final classificationCategoryColorService =
+        buildClassificationCategoryColorService(
+      categories: categoryConfigs,
+      userColorOverrides: ref.watch(uiPrefsProvider).categoryColors,
+    );
     final warningTasks = tasks
         .where((t) => t.completedAt == null && _procrastinationScore(t) >= 0.75)
         .map((t) => t.id)
@@ -173,12 +205,37 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         return ref.read(adaptivePolicyEngineProvider).getCurrentProfile();
       }),
     );
+    final semanticScene = buildSemanticTreemapScene(
+      tasks: visibleTasks,
+      categories: categoryConfigs,
+      viewport: semanticViewport,
+      searchQuery: searchQuery,
+    );
+    TreemapSemanticNode? semanticSelectedNode;
+    final selectedSemanticNodeId = semanticViewport.selectedNodeId;
+    if (selectedSemanticNodeId != null) {
+      for (final node in semanticScene.nodes) {
+        if (node.id == selectedSemanticNodeId) {
+          semanticSelectedNode = node;
+          break;
+        }
+      }
+    }
+    final canExitSemantic =
+        semanticViewport.zoomLevel != TreemapZoomLevel.global;
+    final showSemanticMap = canExitSemantic;
 
     return PopScope<void>(
-      canPop: zoom == null,
+      canPop: zoom == null && !canExitSemantic,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && zoom != null) {
-          ctrl.resetHomeView();
+        if (!didPop) {
+          if (canExitSemantic) {
+            _exitSemanticLevel(ctrl, semanticViewportCtrl, semanticViewport);
+            return;
+          }
+          if (zoom != null) {
+            ctrl.resetHomeView();
+          }
         }
       },
       child: Scaffold(
@@ -209,8 +266,9 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                 builder: (_) => const ProfileSheet(),
               ),
               onOpenContextTasks: () => context.push('/context-aware-tasks'),
-              onExitZoom: ctrl.resetHomeView,
-              canExitZoom: zoom != null,
+              onExitZoom: () => _exitSemanticLevel(
+                  ctrl, semanticViewportCtrl, semanticViewport),
+              canExitZoom: zoom != null || canExitSemantic,
               onOpenStats: () => context.push('/stats'),
               onOpenFocus: () => context.push('/focus'),
               // When workflow plan is enabled in Settings > General, show the
@@ -285,12 +343,25 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           ),
         ),
         floatingActionButton: showFocusFab
-            ? FloatingActionButton.extended(
-                heroTag: 'fab-focus',
-                icon: const Icon(Icons.bolt),
-                label: const Text('Focus'),
-                onPressed: () => context.push('/focus'),
-              )
+            ? canExitSemantic
+                ? FloatingActionButton.extended(
+                    heroTag: 'fab-view-all',
+                    icon: const Icon(Icons.grid_view_rounded),
+                    label: const Text('Ver todo'),
+                    onPressed: () {
+                      semanticViewportCtrl.reset(
+                        grouping: semanticViewport.grouping,
+                        density: semanticViewport.density,
+                      );
+                      ctrl.resetHomeView();
+                    },
+                  )
+                : FloatingActionButton.extended(
+                    heroTag: 'fab-focus',
+                    icon: const Icon(Icons.bolt),
+                    label: const Text('Focus'),
+                    onPressed: () => context.push('/focus'),
+                  )
             : null,
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         body: SafeArea(
@@ -368,6 +439,70 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                         ),
                                       )
                                     : const SizedBox(height: 2),
+                              ),
+                              const CategoryFiltersBar(
+                                padding: EdgeInsets.only(bottom: 12),
+                              ),
+                              ClassificationGroupingBar(
+                                tasks: visibleTasks,
+                                categories: categoryConfigs,
+                                settings: classificationSettings,
+                              ),
+                              _SemanticTreemapHeader(
+                                viewport: semanticViewport,
+                                scene: semanticScene,
+                                onJumpToLevel: (level) {
+                                  semanticViewportCtrl.jumpToLevel(level);
+                                  if (level == TreemapZoomLevel.global) {
+                                    ctrl.resetHomeView();
+                                  }
+                                },
+                                onSelectGrouping: (grouping) {
+                                  semanticViewportCtrl.setGrouping(grouping);
+                                },
+                                onSelectQuickFilter: (filter) {
+                                  semanticViewportCtrl.setQuickFilter(
+                                    semanticViewport.quickFilter == filter
+                                        ? null
+                                        : filter,
+                                  );
+                                },
+                                onViewAll: () {
+                                  semanticViewportCtrl.reset(
+                                    grouping: semanticViewport.grouping,
+                                    density: semanticViewport.density,
+                                  );
+                                  ctrl.resetHomeView();
+                                },
+                                onOpenReviewCenter: () =>
+                                    context.push('/classification-review'),
+                                onFocusExactTask: semanticScene
+                                            .exactTaskMatch ==
+                                        null
+                                    ? null
+                                    : () {
+                                        final task =
+                                            semanticScene.exactTaskMatch!;
+                                        final qLabel = _quadrantLabel(
+                                            context, task.quadrant);
+                                        semanticViewportCtrl.enterQuadrant(
+                                          task.quadrant,
+                                          label: qLabel,
+                                        );
+                                        semanticViewportCtrl.openCategory(
+                                          categoryId: task.categoryId ??
+                                              (task.category ?? 'sin-categoria')
+                                                  .trim()
+                                                  .toLowerCase()
+                                                  .replaceAll(' ', '-'),
+                                          categoryLabel: task.category ??
+                                              task.categoryId ??
+                                              'Sin categoria',
+                                        );
+                                        semanticViewportCtrl.focusTask(task);
+                                        ctrl.setZoom(task.quadrant);
+                                        ctrl.setPresentQuadrant(task.quadrant);
+                                      },
                               ),
                               if (legendsVisible)
                                 // AppTextScale applied: isolated + scaled legends
@@ -451,147 +586,443 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                 children: [
                                                   AnimatedSwitcher(
                                                     duration: const Duration(
-                                                        milliseconds: 240),
+                                                      milliseconds: 240,
+                                                    ),
                                                     switchInCurve:
                                                         Curves.easeOutCubic,
                                                     switchOutCurve:
                                                         Curves.easeOutCubic,
-                                                    child:
-                                                        MatrixInteractiveWrapper(
-                                                      key: ValueKey(
-                                                          '${zoom}_${dynamicLayout.length}_${suggested.length}'),
-                                                      child: TreemapCanvas(
-                                                        tasks: tasks,
-                                                        layout: dynamicLayout,
-                                                        compact: compact,
-                                                        suggestedIds: suggested,
-                                                        minimal: minimal,
-                                                        selectedId: selectedId,
-                                                        zoom: zoom,
-                                                        presentQuadrant: zoom ??
-                                                            ref
-                                                                .read(
-                                                                    matrixControllerProvider)
-                                                                .presentQuadrant,
-                                                        textScale: tileTsf,
-                                                        minTileSizePx: ref
-                                                            .watch(
-                                                                uiPrefsProvider)
-                                                            .minTileSizePx,
-                                                        categoryColorService: ref
-                                                            .watch(
-                                                                uiPrefsProvider)
-                                                            .categoryColorService,
-                                                        inlineEditId:
-                                                            _inlineEditId,
-                                                        lastMovedTaskId: ref
-                                                            .read(
-                                                                matrixControllerProvider)
-                                                            .lastMovedTaskId,
-                                                        loading: isLoading,
-                                                        warningTaskIds:
-                                                            warningTasks,
-                                                        onInlineSubmit:
-                                                            (id, title) {
-                                                          ctrl.updateTask(
-                                                              id,
-                                                              (t) => t.copyWith(
-                                                                  title:
-                                                                      title));
-                                                          setState(() =>
-                                                              _inlineEditId =
-                                                                  null);
-                                                        },
-                                                        onInlineCancel: (id) {
-                                                          final idx = tasks
-                                                              .indexWhere((e) =>
-                                                                  e.id == id);
-                                                          if (idx != -1) {
-                                                            final t =
-                                                                tasks[idx];
-                                                            if (t.title ==
-                                                                    'New Task' &&
-                                                                (t.notes ==
-                                                                        null ||
-                                                                    t.notes!
-                                                                        .isEmpty)) {
-                                                              ctrl.deleteTask(
-                                                                  id);
-                                                            }
-                                                          }
-                                                          setState(() =>
-                                                              _inlineEditId =
-                                                                  null);
-                                                        },
-                                                        onTap: (id) {
-                                                          ctrl.select(id);
-                                                          if (id != null) {
-                                                            WidgetsBinding
-                                                                .instance
-                                                                .addPostFrameCallback((_) =>
-                                                                    _scaffoldKey
-                                                                        .currentState
-                                                                        ?.openEndDrawer());
-                                                          }
-                                                        },
-                                                        onDropToQuadrant:
-                                                            (id, q) {
-                                                          final idx = tasks
-                                                              .indexWhere((t) =>
-                                                                  t.id == id);
-                                                          if (idx == -1) {
-                                                            return;
-                                                          }
-                                                          final prev =
-                                                              tasks[idx]
-                                                                  .quadrant;
-                                                          if (prev == q) {
-                                                            return; // no-op
-                                                          }
-                                                          ctrl.moveTaskToQuadrant(
-                                                              id, q);
-                                                          final qName = q.name
-                                                              .toUpperCase();
-                                                          ScaffoldMessenger.of(
-                                                                  context)
-                                                              .hideCurrentSnackBar();
-                                                          ScaffoldMessenger.of(
-                                                                  context)
-                                                              .showSnackBar(
-                                                            SnackBar(
-                                                              content: Text(
-                                                                  'Tarea movida a $qName'),
-                                                              action:
-                                                                  SnackBarAction(
-                                                                label:
-                                                                    'Deshacer',
-                                                                onPressed: () {
-                                                                  ctrl.moveTaskToQuadrant(
-                                                                      id, prev);
-                                                                },
-                                                              ),
-                                                              duration:
-                                                                  const Duration(
-                                                                      seconds:
-                                                                          4),
+                                                    child: showSemanticMap
+                                                        ? Stack(
+                                                            key: ValueKey(
+                                                              'semantic-${semanticViewport.zoomLevel.name}-${semanticViewport.selectedNodeId}',
                                                             ),
-                                                          );
-                                                        },
-                                                        onDoubleTapQuadrant:
-                                                            (q) {
-                                                          ctrl.setZoom(zoom == q
-                                                              ? null
-                                                              : q);
-                                                          ctrl.setPresentQuadrant(
-                                                              q);
-                                                          ctrl.invalidateLayout();
-                                                        },
-                                                      ),
-                                                    ),
+                                                            children: [
+                                                              Positioned.fill(
+                                                                child:
+                                                                    SemanticTreemapView(
+                                                                  scene:
+                                                                      semanticScene,
+                                                                  selectedNodeId:
+                                                                      semanticViewport
+                                                                          .selectedNodeId,
+                                                                  categoryColorService: classificationSettings
+                                                                          .colorByCategory
+                                                                      ? classificationCategoryColorService
+                                                                      : ref
+                                                                          .watch(
+                                                                              uiPrefsProvider)
+                                                                          .categoryColorService,
+                                                                  colorByCategory:
+                                                                      classificationSettings
+                                                                          .colorByCategory,
+                                                                  showConfidenceIndicators:
+                                                                      classificationSettings
+                                                                          .showConfidenceIndicators,
+                                                                  showAutoTags:
+                                                                      classificationSettings
+                                                                          .showAutoTags,
+                                                                  onNodeSelected:
+                                                                      (node) {
+                                                                    semanticViewportCtrl
+                                                                        .selectNode(
+                                                                      node.id,
+                                                                    );
+                                                                    if (screenWidth <
+                                                                        900) {
+                                                                      showModalBottomSheet<
+                                                                          void>(
+                                                                        context:
+                                                                            context,
+                                                                        showDragHandle:
+                                                                            true,
+                                                                        isScrollControlled:
+                                                                            true,
+                                                                        builder:
+                                                                            (_) =>
+                                                                                SafeArea(
+                                                                          top:
+                                                                              false,
+                                                                          child:
+                                                                              Padding(
+                                                                            padding:
+                                                                                const EdgeInsets.all(16),
+                                                                            child:
+                                                                                SemanticTreemapDetailsCard(
+                                                                              node: node,
+                                                                              onOpen: () {
+                                                                                Navigator.of(context).pop();
+                                                                                _openSemanticNode(
+                                                                                  context: context,
+                                                                                  ctrl: ctrl,
+                                                                                  viewportCtrl: semanticViewportCtrl,
+                                                                                  viewport: semanticViewport,
+                                                                                  node: node,
+                                                                                );
+                                                                              },
+                                                                              onReviewLowConfidence: () {
+                                                                                Navigator.of(context).pop();
+                                                                                semanticViewportCtrl.setQuickFilter(TreemapQuickFilter.lowConfidence);
+                                                                                context.push('/classification-review');
+                                                                              },
+                                                                              onOpenTaskInspector: () {
+                                                                                if (node.isTaskLeaf) {
+                                                                                  final task = node.tasks.single;
+                                                                                  ctrl.select(task.id);
+                                                                                  Navigator.of(context).pop();
+                                                                                  WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
+                                                                                }
+                                                                              },
+                                                                              onMarkDone: () {
+                                                                                if (node.isTaskLeaf) {
+                                                                                  final task = node.tasks.single;
+                                                                                  ctrl.markTaskDone(task.id);
+                                                                                  Navigator.of(context).pop();
+                                                                                }
+                                                                              },
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      );
+                                                                    }
+                                                                  },
+                                                                  onNodeOpen:
+                                                                      (node) {
+                                                                    _openSemanticNode(
+                                                                      context:
+                                                                          context,
+                                                                      ctrl:
+                                                                          ctrl,
+                                                                      viewportCtrl:
+                                                                          semanticViewportCtrl,
+                                                                      viewport:
+                                                                          semanticViewport,
+                                                                      node:
+                                                                          node,
+                                                                    );
+                                                                  },
+                                                                  onOpenTaskInspector:
+                                                                      (task) {
+                                                                    ctrl.select(
+                                                                        task.id);
+                                                                    WidgetsBinding
+                                                                        .instance
+                                                                        .addPostFrameCallback((_) => _scaffoldKey
+                                                                            .currentState
+                                                                            ?.openEndDrawer());
+                                                                  },
+                                                                  onReviewLowConfidence:
+                                                                      (node) {
+                                                                    semanticViewportCtrl
+                                                                        .setQuickFilter(
+                                                                      TreemapQuickFilter
+                                                                          .lowConfidence,
+                                                                    );
+                                                                    semanticViewportCtrl
+                                                                        .selectNode(
+                                                                      node.id,
+                                                                    );
+                                                                    context
+                                                                        .push(
+                                                                      '/classification-review',
+                                                                    );
+                                                                  },
+                                                                ),
+                                                              ),
+                                                              if (semanticSelectedNode !=
+                                                                      null &&
+                                                                  screenWidth >=
+                                                                      920)
+                                                                Positioned(
+                                                                  top: 16,
+                                                                  right: 16,
+                                                                  bottom: 16,
+                                                                  child:
+                                                                      SemanticTreemapDetailsCard(
+                                                                    node:
+                                                                        semanticSelectedNode,
+                                                                    onOpen: () {
+                                                                      final node =
+                                                                          semanticSelectedNode;
+                                                                      if (node ==
+                                                                          null) {
+                                                                        return;
+                                                                      }
+                                                                      _openSemanticNode(
+                                                                        context:
+                                                                            context,
+                                                                        ctrl:
+                                                                            ctrl,
+                                                                        viewportCtrl:
+                                                                            semanticViewportCtrl,
+                                                                        viewport:
+                                                                            semanticViewport,
+                                                                        node:
+                                                                            node,
+                                                                      );
+                                                                    },
+                                                                    onReviewLowConfidence:
+                                                                        () {
+                                                                      semanticViewportCtrl
+                                                                          .setQuickFilter(
+                                                                        TreemapQuickFilter
+                                                                            .lowConfidence,
+                                                                      );
+                                                                      context
+                                                                          .push(
+                                                                        '/classification-review',
+                                                                      );
+                                                                    },
+                                                                    onOpenTaskInspector:
+                                                                        () {
+                                                                      final node =
+                                                                          semanticSelectedNode;
+                                                                      if (node ==
+                                                                              null ||
+                                                                          !node
+                                                                              .isTaskLeaf) {
+                                                                        return;
+                                                                      }
+                                                                      final task = node
+                                                                          .tasks
+                                                                          .single;
+                                                                      ctrl.select(
+                                                                          task.id);
+                                                                      WidgetsBinding
+                                                                          .instance
+                                                                          .addPostFrameCallback((_) => _scaffoldKey
+                                                                              .currentState
+                                                                              ?.openEndDrawer());
+                                                                    },
+                                                                    onMarkDone:
+                                                                        () {
+                                                                      final node =
+                                                                          semanticSelectedNode;
+                                                                      if (node ==
+                                                                              null ||
+                                                                          !node
+                                                                              .isTaskLeaf) {
+                                                                        return;
+                                                                      }
+                                                                      ctrl.markTaskDone(
+                                                                        node
+                                                                            .tasks
+                                                                            .single
+                                                                            .id,
+                                                                      );
+                                                                    },
+                                                                  ),
+                                                                ),
+                                                            ],
+                                                          )
+                                                        : MatrixInteractiveWrapper(
+                                                            key: ValueKey(
+                                                              '${zoom}_${dynamicLayout.length}_${suggested.length}',
+                                                            ),
+                                                            enabled:
+                                                                !showSemanticMap,
+                                                            child:
+                                                                TreemapCanvas(
+                                                              tasks:
+                                                                  visibleTasks,
+                                                              layout:
+                                                                  dynamicLayout,
+                                                              compact: compact,
+                                                              suggestedIds:
+                                                                  suggested,
+                                                              minimal: minimal,
+                                                              selectedId:
+                                                                  selectedId,
+                                                              zoom: zoom,
+                                                              presentQuadrant: zoom ??
+                                                                  ref
+                                                                      .read(
+                                                                          matrixControllerProvider)
+                                                                      .presentQuadrant,
+                                                              textScale:
+                                                                  tileTsf,
+                                                              minTileSizePx: ref
+                                                                  .watch(
+                                                                    uiPrefsProvider,
+                                                                  )
+                                                                  .minTileSizePx,
+                                                              categoryColorService:
+                                                                  classificationSettings
+                                                                          .colorByCategory
+                                                                      ? classificationCategoryColorService
+                                                                      : ref
+                                                                          .watch(
+                                                                            uiPrefsProvider,
+                                                                          )
+                                                                          .categoryColorService,
+                                                              colorByCategory:
+                                                                  classificationSettings
+                                                                      .colorByCategory,
+                                                              showConfidenceIndicators:
+                                                                  classificationSettings
+                                                                      .showConfidenceIndicators,
+                                                              showAutoTags:
+                                                                  classificationSettings
+                                                                      .showAutoTags,
+                                                              inlineEditId:
+                                                                  _inlineEditId,
+                                                              lastMovedTaskId: ref
+                                                                  .read(
+                                                                    matrixControllerProvider,
+                                                                  )
+                                                                  .lastMovedTaskId,
+                                                              loading:
+                                                                  isLoading,
+                                                              warningTaskIds:
+                                                                  warningTasks,
+                                                              onInlineSubmit:
+                                                                  (id, title) {
+                                                                ctrl.updateTask(
+                                                                  id,
+                                                                  (t) => t
+                                                                      .copyWith(
+                                                                    title:
+                                                                        title,
+                                                                  ),
+                                                                );
+                                                                setState(
+                                                                  () =>
+                                                                      _inlineEditId =
+                                                                          null,
+                                                                );
+                                                              },
+                                                              onInlineCancel:
+                                                                  (id) {
+                                                                final idx = tasks
+                                                                    .indexWhere(
+                                                                  (e) =>
+                                                                      e.id ==
+                                                                      id,
+                                                                );
+                                                                if (idx != -1) {
+                                                                  final t =
+                                                                      tasks[
+                                                                          idx];
+                                                                  if (t.title ==
+                                                                          'New Task' &&
+                                                                      (t.notes ==
+                                                                              null ||
+                                                                          t.notes!
+                                                                              .isEmpty)) {
+                                                                    ctrl.deleteTask(
+                                                                      id,
+                                                                    );
+                                                                  }
+                                                                }
+                                                                setState(
+                                                                  () =>
+                                                                      _inlineEditId =
+                                                                          null,
+                                                                );
+                                                              },
+                                                              onTap: (id) {
+                                                                ctrl.select(id);
+                                                                if (id !=
+                                                                    null) {
+                                                                  WidgetsBinding
+                                                                      .instance
+                                                                      .addPostFrameCallback((_) => _scaffoldKey
+                                                                          .currentState
+                                                                          ?.openEndDrawer());
+                                                                }
+                                                              },
+                                                              onDropToQuadrant:
+                                                                  (id, q) {
+                                                                final idx = tasks
+                                                                    .indexWhere(
+                                                                  (t) =>
+                                                                      t.id ==
+                                                                      id,
+                                                                );
+                                                                if (idx == -1) {
+                                                                  return;
+                                                                }
+                                                                final prev =
+                                                                    tasks[idx]
+                                                                        .quadrant;
+                                                                if (prev == q) {
+                                                                  return;
+                                                                }
+                                                                ctrl.moveTaskToQuadrant(
+                                                                  id,
+                                                                  q,
+                                                                );
+                                                                final qName = q
+                                                                    .name
+                                                                    .toUpperCase();
+                                                                ScaffoldMessenger.of(
+                                                                        context)
+                                                                    .hideCurrentSnackBar();
+                                                                ScaffoldMessenger.of(
+                                                                        context)
+                                                                    .showSnackBar(
+                                                                  SnackBar(
+                                                                    content:
+                                                                        Text(
+                                                                      'Tarea movida a $qName',
+                                                                    ),
+                                                                    action:
+                                                                        SnackBarAction(
+                                                                      label:
+                                                                          'Deshacer',
+                                                                      onPressed:
+                                                                          () {
+                                                                        ctrl.moveTaskToQuadrant(
+                                                                          id,
+                                                                          prev,
+                                                                        );
+                                                                      },
+                                                                    ),
+                                                                    duration:
+                                                                        const Duration(
+                                                                      seconds:
+                                                                          4,
+                                                                    ),
+                                                                  ),
+                                                                );
+                                                              },
+                                                              onDoubleTapQuadrant:
+                                                                  (q) {
+                                                                semanticViewportCtrl
+                                                                    .enterQuadrant(
+                                                                  q,
+                                                                  label:
+                                                                      _quadrantLabel(
+                                                                    context,
+                                                                    q,
+                                                                  ),
+                                                                );
+                                                                ctrl.setZoom(q);
+                                                                ctrl.setPresentQuadrant(
+                                                                  q,
+                                                                );
+                                                                ctrl.invalidateLayout();
+                                                              },
+                                                            ),
+                                                          ),
                                                   ),
                                                   const ZoomIndicator(),
-                                                  if (dynamicLayout
-                                                      .isEmpty) ...[
+                                                  if (!showSemanticMap &&
+                                                      visibleTasks.isNotEmpty)
+                                                    Positioned(
+                                                      left: 12,
+                                                      top: 12,
+                                                      right: screenWidth < 720
+                                                          ? 12
+                                                          : 180,
+                                                      child:
+                                                          GlobalSemanticSummaryStrip(
+                                                        tasks: visibleTasks,
+                                                      ),
+                                                    ),
+                                                  if (!showSemanticMap &&
+                                                      dynamicLayout
+                                                          .isEmpty) ...[
                                                     Positioned(
                                                       left: 0,
                                                       top: 0,
@@ -645,8 +1076,9 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                       ),
                                                     ),
                                                   ],
-                                                  if (dynamicLayout
-                                                      .isNotEmpty) ...[
+                                                  if (!showSemanticMap &&
+                                                      dynamicLayout
+                                                          .isNotEmpty) ...[
                                                     if (!tasks.any((t) =>
                                                         t.completedAt == null &&
                                                         t.quadrant ==
@@ -764,16 +1196,20 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                       zoom: zoom,
                       tasks: tasks,
                       onSelectQuadrant: (q) {
+                        semanticViewportCtrl.enterQuadrant(
+                          q,
+                          label: _quadrantLabel(context, q),
+                        );
                         ctrl.setZoom(q);
                         ctrl.setPresentQuadrant(q);
                         ctrl.invalidateLayout();
                       },
                       onFullView: () {
-                        ctrl.setZoom(null);
-                        ctrl.setPresentQuadrant(Quadrant.q2);
-                        ctrl.select(null);
-                        ctrl.setQuery('');
-                        ctrl.invalidateLayout();
+                        semanticViewportCtrl.reset(
+                          grouping: semanticViewport.grouping,
+                          density: semanticViewport.density,
+                        );
+                        ctrl.resetHomeView();
                       },
                     ),
                   )
@@ -804,28 +1240,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
     }();
 
     final theme = Theme.of(context);
-    var filtered =
-        tasks.where((t) => t.completedAt == null).toList(growable: false);
-
-    // Apply the same advanced search filter used by the treemap layout so
-    // list/grid mode stays in sync with the matrix view.
-    final searchQuery =
-        ref.watch(matrixControllerProvider.select((s) => s.searchQuery));
-    final q = searchQuery.trim().toLowerCase();
-    if (q.isNotEmpty) {
-      filtered = filtered.where((t) {
-        final title = t.title.toLowerCase();
-        final notes = (t.notes ?? '').toLowerCase();
-        final category = (t.category ?? '').toLowerCase();
-        final categories = t.categories.map((c) => c.toLowerCase()).join(' ');
-        final tags = t.tags.map((c) => c.toLowerCase()).join(' ');
-        return title.contains(q) ||
-            notes.contains(q) ||
-            category.contains(q) ||
-            categories.contains(q) ||
-            tags.contains(q);
-      }).toList(growable: false);
-    }
+    final filtered = tasks.toList(growable: false);
     final q1 = filtered
         .where((t) => t.quadrant == Quadrant.q1)
         .toList(growable: false);
@@ -850,25 +1265,43 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             border: Border.all(
                 color: Colors.white.withValues(alpha: 0.06), width: 1),
           ),
-          child: MatrixDesktop(
-            q1: q1,
-            q2: q2,
-            q3: q3,
-            q4: q4,
-            onToggle: (task) {
-              final ctrl = ref.read(matrixControllerProvider.notifier);
-              final nowDone = task.completedAt == null;
-              ctrl.updateTask(
-                task.id,
-                (t) => t.copyWith(completedAt: nowDone ? DateTime.now() : null),
-              );
-            },
-            onOpen: (task) {
-              final ctrl = ref.read(matrixControllerProvider.notifier);
-              ctrl.select(task.id);
-              WidgetsBinding.instance.addPostFrameCallback(
-                  (_) => _scaffoldKey.currentState?.openEndDrawer());
-            },
+          child: Column(
+            children: [
+              const CategoryFiltersBar(
+                padding: EdgeInsets.fromLTRB(12, 12, 12, 4),
+              ),
+              ClassificationGroupingBar(
+                tasks: filtered,
+                categories: ref.watch(categoryConfigControllerProvider),
+                settings: ref.watch(classificationSettingsControllerProvider),
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+              ),
+              Expanded(
+                child: MatrixDesktop(
+                  q1: q1,
+                  q2: q2,
+                  q3: q3,
+                  q4: q4,
+                  onToggle: (task) {
+                    final ctrl = ref.read(matrixControllerProvider.notifier);
+                    final nowDone = task.completedAt == null;
+                    ctrl.updateTask(
+                      task.id,
+                      (t) => t.copyWith(
+                        completedAt: nowDone ? DateTime.now() : null,
+                      ),
+                    );
+                  },
+                  onOpen: (task) {
+                    final ctrl = ref.read(matrixControllerProvider.notifier);
+                    ctrl.select(task.id);
+                    WidgetsBinding.instance.addPostFrameCallback(
+                      (_) => _scaffoldKey.currentState?.openEndDrawer(),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1493,6 +1926,232 @@ class _LeftAxisLegends extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+void _exitSemanticLevel(
+  MatrixController matrixCtrl,
+  TreemapViewportController viewportCtrl,
+  TreemapViewportState viewport,
+) {
+  if (viewport.zoomLevel == TreemapZoomLevel.global) {
+    matrixCtrl.resetHomeView();
+    return;
+  }
+  if (viewport.zoomLevel == TreemapZoomLevel.category) {
+    viewportCtrl.reset(
+      grouping: viewport.grouping,
+      density: viewport.density,
+    );
+    matrixCtrl.resetHomeView();
+    return;
+  }
+  viewportCtrl.popLevel();
+}
+
+void _openSemanticNode({
+  required BuildContext context,
+  required MatrixController ctrl,
+  required TreemapViewportController viewportCtrl,
+  required TreemapViewportState viewport,
+  required TreemapSemanticNode node,
+}) {
+  switch (viewport.zoomLevel) {
+    case TreemapZoomLevel.global:
+      return;
+    case TreemapZoomLevel.category:
+      viewportCtrl.openCategory(
+        categoryId: node.id,
+        categoryLabel: node.label,
+      );
+      return;
+    case TreemapZoomLevel.subcategory:
+      viewportCtrl.openSubcategory(
+        subcategoryId: node.id,
+        subcategoryLabel: node.label,
+      );
+      return;
+    case TreemapZoomLevel.group:
+      viewportCtrl.openGroup(
+        groupId: node.id,
+        groupLabel: node.label,
+      );
+      return;
+    case TreemapZoomLevel.task:
+      if (!node.isTaskLeaf) {
+        return;
+      }
+      final task = node.tasks.single;
+      viewportCtrl.focusTask(task);
+      ctrl.select(task.id);
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => Scaffold.maybeOf(context)?.openEndDrawer(),
+      );
+      return;
+  }
+}
+
+String _quadrantLabel(BuildContext context, Quadrant quadrant) {
+  final isEs = Localizations.localeOf(context).languageCode == 'es';
+  if (!isEs) {
+    return switch (quadrant) {
+      Quadrant.q1 => 'Q1 · Do',
+      Quadrant.q2 => 'Q2 · Decide',
+      Quadrant.q3 => 'Q3 · Delegate',
+      Quadrant.q4 => 'Q4 · Eliminate',
+    };
+  }
+  return switch (quadrant) {
+    Quadrant.q1 => 'Q1 · Hacer',
+    Quadrant.q2 => 'Q2 · Planificar',
+    Quadrant.q3 => 'Q3 · Delegar',
+    Quadrant.q4 => 'Q4 · Eliminar',
+  };
+}
+
+class _SemanticTreemapHeader extends StatelessWidget {
+  const _SemanticTreemapHeader({
+    required this.viewport,
+    required this.scene,
+    required this.onJumpToLevel,
+    required this.onSelectGrouping,
+    required this.onSelectQuickFilter,
+    required this.onViewAll,
+    required this.onOpenReviewCenter,
+    this.onFocusExactTask,
+  });
+
+  final TreemapViewportState viewport;
+  final TreemapSemanticScene scene;
+  final ValueChanged<TreemapZoomLevel> onJumpToLevel;
+  final ValueChanged<TreemapGrouping> onSelectGrouping;
+  final ValueChanged<TreemapQuickFilter> onSelectQuickFilter;
+  final VoidCallback onViewAll;
+  final VoidCallback onOpenReviewCenter;
+  final VoidCallback? onFocusExactTask;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (var i = 0; i < viewport.breadcrumbPath.length; i++) ...[
+                  TextButton(
+                    onPressed: () => onJumpToLevel(
+                      TreemapZoomLevel.values[
+                          i.clamp(0, TreemapZoomLevel.values.length - 1)],
+                    ),
+                    child: Text(viewport.breadcrumbPath[i]),
+                  ),
+                  if (i != viewport.breadcrumbPath.length - 1)
+                    Text(
+                      '>',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                    ),
+                ],
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: onViewAll,
+                  icon: const Icon(Icons.restart_alt),
+                  label: const Text('Ver todo'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              FilledButton.tonalIcon(
+                onPressed: () async {
+                  final picked = await showMenu<TreemapGrouping>(
+                    context: context,
+                    position: const RelativeRect.fromLTRB(40, 140, 0, 0),
+                    items: [
+                      for (final grouping in TreemapGrouping.values)
+                        PopupMenuItem<TreemapGrouping>(
+                          value: grouping,
+                          child: Text(_groupingLabel(grouping)),
+                        ),
+                    ],
+                  );
+                  if (picked != null) {
+                    onSelectGrouping(picked);
+                  }
+                },
+                icon: const Icon(Icons.account_tree_outlined),
+                label: Text('Vista: ${_groupingLabel(viewport.grouping)}'),
+              ),
+              const SizedBox(width: 8),
+              if (scene.lowConfidenceCount > 0)
+                ActionChip(
+                  avatar: const Icon(Icons.rule_folder_outlined, size: 16),
+                  label: Text('Revisar ${scene.lowConfidenceCount}'),
+                  onPressed: onOpenReviewCenter,
+                ),
+              const Spacer(),
+              Text(
+                scene.subtitle,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final filter in TreemapQuickFilter.values)
+                FilterChip(
+                  selected: viewport.quickFilter == filter,
+                  onSelected: (_) => onSelectQuickFilter(filter),
+                  label: Text(_quickFilterLabel(filter)),
+                ),
+              if (onFocusExactTask != null)
+                ActionChip(
+                  avatar: const Icon(Icons.travel_explore, size: 16),
+                  label: const Text('Ir a coincidencia exacta'),
+                  onPressed: onFocusExactTask,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _groupingLabel(TreemapGrouping grouping) {
+    return switch (grouping) {
+      TreemapGrouping.category => 'Categoria',
+      TreemapGrouping.kind => 'Tipo',
+      TreemapGrouping.horizon => 'Horizonte',
+      TreemapGrouping.energy => 'Energia',
+      TreemapGrouping.client => 'Cliente',
+      TreemapGrouping.project => 'Proyecto',
+      TreemapGrouping.tag => 'Tags',
+      TreemapGrouping.confidence => 'Confianza',
+      TreemapGrouping.context => 'Contexto',
+    };
+  }
+
+  String _quickFilterLabel(TreemapQuickFilter filter) {
+    return switch (filter) {
+      TreemapQuickFilter.today => 'Hoy',
+      TreemapQuickFilter.week => 'Semana',
+      TreemapQuickFilter.highPriority => 'Alta prioridad',
+      TreemapQuickFilter.lowConfidence => 'Baja confianza',
+      TreemapQuickFilter.lowEnergy => 'Poca energia',
+    };
   }
 }
 

@@ -1,4 +1,11 @@
 import 'dart:math' as math;
+
+import 'package:eisen/features/classification/domain/entities/classification_metadata.dart';
+import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
+import 'package:eisen/features/classification/domain/enums/energy_level.dart';
+import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
+import 'package:eisen/features/classification/domain/enums/priority_level.dart';
+import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
 import 'package:equatable/equatable.dart';
 
 /// Eisenhower matrix quadrant.
@@ -117,6 +124,16 @@ class Task extends Equatable {
     this.startedAt,
     this.blockedReason,
     this.dependencies = const [],
+    this.kind = EntryKind.task,
+    this.categoryId,
+    this.subcategoryId,
+    this.groupId,
+    this.horizon,
+    this.energy,
+    this.inferredPriority,
+    this.classificationConfidence,
+    this.autoTags = const [],
+    this.classificationMetadata,
   });
   final String id;
   final String title;
@@ -158,6 +175,18 @@ class Task extends Equatable {
   final String? blockedReason; // Why task is blocked
   final List<String> dependencies; // IDs of tasks this depends on
 
+  // Smart Classification metadata
+  final EntryKind kind;
+  final String? categoryId;
+  final String? subcategoryId;
+  final String? groupId;
+  final TimeHorizon? horizon;
+  final EnergyLevel? energy;
+  final PriorityLevel? inferredPriority;
+  final ConfidenceLevel? classificationConfidence;
+  final List<String> autoTags;
+  final ClassificationMetadata? classificationMetadata;
+
   Task copyWith({
     String? title,
     Quadrant? quadrant,
@@ -190,6 +219,16 @@ class Task extends Equatable {
     DateTime? startedAt,
     String? blockedReason,
     List<String>? dependencies,
+    EntryKind? kind,
+    String? categoryId,
+    String? subcategoryId,
+    String? groupId,
+    TimeHorizon? horizon,
+    EnergyLevel? energy,
+    PriorityLevel? inferredPriority,
+    ConfidenceLevel? classificationConfidence,
+    List<String>? autoTags,
+    ClassificationMetadata? classificationMetadata,
   }) {
     return Task(
       id: id,
@@ -224,6 +263,18 @@ class Task extends Equatable {
       startedAt: startedAt ?? this.startedAt,
       blockedReason: blockedReason ?? this.blockedReason,
       dependencies: dependencies ?? this.dependencies,
+      kind: kind ?? this.kind,
+      categoryId: categoryId ?? this.categoryId,
+      subcategoryId: subcategoryId ?? this.subcategoryId,
+      groupId: groupId ?? this.groupId,
+      horizon: horizon ?? this.horizon,
+      energy: energy ?? this.energy,
+      inferredPriority: inferredPriority ?? this.inferredPriority,
+      classificationConfidence:
+          classificationConfidence ?? this.classificationConfidence,
+      autoTags: autoTags ?? this.autoTags,
+      classificationMetadata:
+          classificationMetadata ?? this.classificationMetadata,
     );
   }
 
@@ -303,6 +354,16 @@ class Task extends Equatable {
         startedAt,
         blockedReason,
         dependencies,
+        kind,
+        categoryId,
+        subcategoryId,
+        groupId,
+        horizon,
+        energy,
+        inferredPriority,
+        classificationConfidence,
+        autoTags,
+        classificationMetadata,
       ];
 }
 
