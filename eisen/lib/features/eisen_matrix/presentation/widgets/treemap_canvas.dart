@@ -45,6 +45,7 @@ class TreemapCanvas extends StatefulWidget {
     this.colorByCategory = false,
     this.showConfidenceIndicators = true,
     this.showAutoTags = true,
+    this.onLowConfidenceLongPress,
   });
   final List<Task> tasks;
   final List<TreemapRect> layout;
@@ -74,6 +75,8 @@ class TreemapCanvas extends StatefulWidget {
   final bool colorByCategory;
   final bool showConfidenceIndicators;
   final bool showAutoTags;
+  /// Called when a low-confidence task is long-pressed. Opens QuickReclassifySheet.
+  final void Function(Task task)? onLowConfidenceLongPress;
 
   @override
   State<TreemapCanvas> createState() => _TreemapCanvasState();
@@ -493,6 +496,14 @@ class _TreemapCanvasState extends State<TreemapCanvas>
                       if (id == null) return;
                       final idx = widget.tasks.indexWhere((e) => e.id == id);
                       final t = idx == -1 ? null : widget.tasks[idx];
+                      if (t != null &&
+                          widget.showConfidenceIndicators &&
+                          widget.onLowConfidenceLongPress != null &&
+                          t.classificationConfidence == ConfidenceLevel.low) {
+                        HapticFeedback.mediumImpact();
+                        widget.onLowConfidenceLongPress!(t);
+                        return;
+                      }
                       final msg = t == null
                           ? 'Tarea'
                           : '${t.title} • P${t.priority} • ${t.minutes}m';

@@ -12,6 +12,12 @@ import 'package:eisen/features/classification/presentation/category_color_servic
 import 'package:eisen/features/classification/presentation/controllers/category_config_controller.dart';
 import 'package:eisen/features/classification/presentation/controllers/classification_settings_controller.dart';
 import 'package:eisen/features/classification/presentation/widgets/classification_grouping_bar.dart';
+import 'package:eisen/features/classification/presentation/widgets/quick_reclassify_sheet.dart';
+import 'package:eisen/features/classification/domain/entities/classification_metadata.dart';
+import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
+import 'package:eisen/features/classification/domain/enums/energy_level.dart';
+import 'package:eisen/features/classification/domain/enums/priority_level.dart';
+import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
 import 'package:eisen/features/demo/demo_tasks.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
@@ -1002,6 +1008,64 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                                   q,
                                                                 );
                                                                 ctrl.invalidateLayout();
+                                                              },
+                                                              onLowConfidenceLongPress:
+                                                                  (task) async {
+                                                                final categories =
+                                                                    ref.read(
+                                                                  categoryConfigControllerProvider,
+                                                                );
+                                                                final meta =
+                                                                    task.classificationMetadata ??
+                                                                        ClassificationMetadata(
+                                                                          categoryId:
+                                                                              task.categoryId,
+                                                                          entryKind:
+                                                                              task.kind,
+                                                                          timeHorizon:
+                                                                              task.horizon ??
+                                                                                  TimeHorizon.someday,
+                                                                          energyLevel:
+                                                                              task.energy ??
+                                                                                  EnergyLevel.medium,
+                                                                          priorityLevel:
+                                                                              PriorityLevel.medium,
+                                                                          confidenceScore:
+                                                                              0.4,
+                                                                          confidenceLevel:
+                                                                              ConfidenceLevel.low,
+                                                                        );
+                                                                final result = await showModalBottomSheet<
+                                                                    QuickReclassifyResult>(
+                                                                  context:
+                                                                      context,
+                                                                  isScrollControlled:
+                                                                      true,
+                                                                  builder:
+                                                                      (_) =>
+                                                                          QuickReclassifySheet(
+                                                                    metadata:
+                                                                        meta,
+                                                                    categories:
+                                                                        categories,
+                                                                  ),
+                                                                );
+                                                                if (result !=
+                                                                    null) {
+                                                                  ctrl.updateTask(
+                                                                    task.id,
+                                                                    (t) =>
+                                                                        t.copyWith(
+                                                                      categoryId:
+                                                                          result
+                                                                              .metadata
+                                                                              .categoryId,
+                                                                      classificationMetadata:
+                                                                          result
+                                                                              .metadata,
+                                                                    ),
+                                                                  );
+                                                                }
                                                               },
                                                             ),
                                                           ),

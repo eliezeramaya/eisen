@@ -41,9 +41,7 @@ Future<void> _saveStringList(String key, List<String> values) async {
 
 /// Active category filters selected by the user in the UI.
 /// Persisted between sessions via SharedPreferences.
-final activeCategoryFiltersProvider =
-    NotifierProvider<ActiveCategoryFilters, List<String>>(
-        ActiveCategoryFilters.new);
+final activeCategoryFiltersProvider = NotifierProvider<ActiveCategoryFilters, List<String>>(ActiveCategoryFilters.new);
 
 class ActiveCategoryFilters extends Notifier<List<String>> {
   @override
@@ -67,8 +65,7 @@ class ActiveCategoryFilters extends Notifier<List<String>> {
 // Kind filters
 // ---------------------------------------------------------------------------
 
-final activeKindFiltersProvider =
-    NotifierProvider<ActiveKindFilters, List<EntryKind>>(
+final activeKindFiltersProvider = NotifierProvider<ActiveKindFilters, List<EntryKind>>(
   ActiveKindFilters.new,
 );
 
@@ -82,10 +79,8 @@ class ActiveKindFilters extends Notifier<List<EntryKind>> {
   Future<void> _loadAsync() async {
     final names = await _loadStringList(_kKindFiltersKey);
     if (names.isEmpty) return;
-    final parsed = names
-        .map((n) => EntryKind.values.where((e) => e.name == n).firstOrNull)
-        .whereType<EntryKind>()
-        .toList();
+    final parsed =
+        names.map((n) => EntryKind.values.where((e) => e.name == n).firstOrNull).whereType<EntryKind>().toList();
     if (parsed.isNotEmpty) state = parsed;
   }
 
@@ -101,8 +96,7 @@ class ActiveKindFilters extends Notifier<List<EntryKind>> {
 // Horizon filters
 // ---------------------------------------------------------------------------
 
-final activeHorizonFiltersProvider =
-    NotifierProvider<ActiveHorizonFilters, List<TimeHorizon>>(
+final activeHorizonFiltersProvider = NotifierProvider<ActiveHorizonFilters, List<TimeHorizon>>(
   ActiveHorizonFilters.new,
 );
 
@@ -116,18 +110,15 @@ class ActiveHorizonFilters extends Notifier<List<TimeHorizon>> {
   Future<void> _loadAsync() async {
     final names = await _loadStringList(_kHorizonFiltersKey);
     if (names.isEmpty) return;
-    final parsed = names
-        .map((n) => TimeHorizon.values.where((e) => e.name == n).firstOrNull)
-        .whereType<TimeHorizon>()
-        .toList();
+    final parsed =
+        names.map((n) => TimeHorizon.values.where((e) => e.name == n).firstOrNull).whereType<TimeHorizon>().toList();
     if (parsed.isNotEmpty) state = parsed;
   }
 
   void update(List<TimeHorizon> newFilters) {
     state = newFilters;
     unawaited(
-      _saveStringList(
-          _kHorizonFiltersKey, newFilters.map((e) => e.name).toList()),
+      _saveStringList(_kHorizonFiltersKey, newFilters.map((e) => e.name).toList()),
     );
   }
 }
@@ -136,8 +127,7 @@ class ActiveHorizonFilters extends Notifier<List<TimeHorizon>> {
 // Energy filters
 // ---------------------------------------------------------------------------
 
-final activeEnergyFiltersProvider =
-    NotifierProvider<ActiveEnergyFilters, List<EnergyLevel>>(
+final activeEnergyFiltersProvider = NotifierProvider<ActiveEnergyFilters, List<EnergyLevel>>(
   ActiveEnergyFilters.new,
 );
 
@@ -151,18 +141,15 @@ class ActiveEnergyFilters extends Notifier<List<EnergyLevel>> {
   Future<void> _loadAsync() async {
     final names = await _loadStringList(_kEnergyFiltersKey);
     if (names.isEmpty) return;
-    final parsed = names
-        .map((n) => EnergyLevel.values.where((e) => e.name == n).firstOrNull)
-        .whereType<EnergyLevel>()
-        .toList();
+    final parsed =
+        names.map((n) => EnergyLevel.values.where((e) => e.name == n).firstOrNull).whereType<EnergyLevel>().toList();
     if (parsed.isNotEmpty) state = parsed;
   }
 
   void update(List<EnergyLevel> newFilters) {
     state = newFilters;
     unawaited(
-      _saveStringList(
-          _kEnergyFiltersKey, newFilters.map((e) => e.name).toList()),
+      _saveStringList(_kEnergyFiltersKey, newFilters.map((e) => e.name).toList()),
     );
   }
 }
@@ -171,8 +158,7 @@ class ActiveEnergyFilters extends Notifier<List<EnergyLevel>> {
 // Confidence filters
 // ---------------------------------------------------------------------------
 
-final activeConfidenceFiltersProvider =
-    NotifierProvider<ActiveConfidenceFilters, List<ConfidenceLevel>>(
+final activeConfidenceFiltersProvider = NotifierProvider<ActiveConfidenceFilters, List<ConfidenceLevel>>(
   ActiveConfidenceFilters.new,
 );
 
@@ -188,8 +174,7 @@ class ActiveConfidenceFilters extends Notifier<List<ConfidenceLevel>> {
     if (names.isEmpty) return;
     final parsed = names
         .map(
-          (n) =>
-              ConfidenceLevel.values.where((e) => e.name == n).firstOrNull,
+          (n) => ConfidenceLevel.values.where((e) => e.name == n).firstOrNull,
         )
         .whereType<ConfidenceLevel>()
         .toList();
@@ -199,8 +184,7 @@ class ActiveConfidenceFilters extends Notifier<List<ConfidenceLevel>> {
   void update(List<ConfidenceLevel> newFilters) {
     state = newFilters;
     unawaited(
-      _saveStringList(
-          _kConfidenceFiltersKey, newFilters.map((e) => e.name).toList()),
+      _saveStringList(_kConfidenceFiltersKey, newFilters.map((e) => e.name).toList()),
     );
   }
 }
@@ -215,8 +199,7 @@ bool matchesTaskClassificationFilters({
 }) {
   if (categoryIds.isNotEmpty) {
     final taskCategory = _normalizedCategory(task);
-    final selected =
-        categoryIds.map((item) => item.trim().toLowerCase()).toSet();
+    final selected = categoryIds.map((item) => item.trim().toLowerCase()).toSet();
     if (taskCategory == null || !selected.contains(taskCategory)) {
       return false;
     }
@@ -225,17 +208,14 @@ bool matchesTaskClassificationFilters({
   if (kinds.isNotEmpty && !kinds.contains(task.kind)) {
     return false;
   }
-  if (horizons.isNotEmpty &&
-      (task.horizon == null || !horizons.contains(task.horizon))) {
+  if (horizons.isNotEmpty && (task.horizon == null || !horizons.contains(task.horizon))) {
     return false;
   }
-  if (energies.isNotEmpty &&
-      (task.energy == null || !energies.contains(task.energy))) {
+  if (energies.isNotEmpty && (task.energy == null || !energies.contains(task.energy))) {
     return false;
   }
   if (confidences.isNotEmpty &&
-      (task.classificationConfidence == null ||
-          !confidences.contains(task.classificationConfidence))) {
+      (task.classificationConfidence == null || !confidences.contains(task.classificationConfidence))) {
     return false;
   }
 

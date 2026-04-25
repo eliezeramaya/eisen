@@ -39,15 +39,10 @@ class HeuristicClassification {
 
   TimeHorizon get fallbackHorizon => EntryKind.idea == entryKind
       ? TimeHorizon.someday
-      : (entryKind == EntryKind.habit
-          ? TimeHorizon.thisMonth
-          : TimeHorizon.thisWeek);
+      : (entryKind == EntryKind.habit ? TimeHorizon.thisMonth : TimeHorizon.thisWeek);
 
-  EnergyLevel get fallbackEnergy => entryKind == EntryKind.shoppingItem
-      ? EnergyLevel.low
-      : EnergyLevel.medium;
-  PriorityLevel get fallbackPriority =>
-      entryKind == EntryKind.idea ? PriorityLevel.low : PriorityLevel.medium;
+  EnergyLevel get fallbackEnergy => entryKind == EntryKind.shoppingItem ? EnergyLevel.low : EnergyLevel.medium;
+  PriorityLevel get fallbackPriority => entryKind == EntryKind.idea ? PriorityLevel.low : PriorityLevel.medium;
 
   int get signalCount {
     var total = reasons.length;
@@ -68,10 +63,7 @@ class HeuristicClassifier {
     required List<CategoryConfig> categories,
     required ClassificationSettings settings,
   }) {
-    final tokens = _tokenPattern
-        .allMatches(normalizedInput)
-        .map((match) => match.group(0)!)
-        .toSet();
+    final tokens = _tokenPattern.allMatches(normalizedInput).map((match) => match.group(0)!).toSet();
     final vocabularyMatch = ClassificationVocabulary.bestMatch(
       normalizedInput,
       tokens,
@@ -112,8 +104,7 @@ class HeuristicClassifier {
       priority: priority,
       categoryId: categoryResolution.id,
     );
-    final matchedKeywords =
-        vocabularyMatch?.matchedKeywords ?? const <String>[];
+    final matchedKeywords = vocabularyMatch?.matchedKeywords ?? const <String>[];
     final tags = extractTags(
       normalizedInput,
       vocabularyMatch: vocabularyMatch,
@@ -127,8 +118,7 @@ class HeuristicClassifier {
     final reasons = <String>[
       if (categoryResolution.id != null)
         'Coincidencia heurística con categoría ${categoryResolution.label ?? categoryResolution.id}.',
-      if (matchedKeywords.isNotEmpty)
-        'Keywords detectadas: ${matchedKeywords.join(', ')}.',
+      if (matchedKeywords.isNotEmpty) 'Keywords detectadas: ${matchedKeywords.join(', ')}.',
       ..._kindReasons(normalizedInput, kind),
       ..._horizonReasons(normalizedInput, horizon),
       ..._energyReasons(normalizedInput, energy),
@@ -172,9 +162,7 @@ class HeuristicClassifier {
       return EntryKind.shoppingItem;
     }
     if (profile == ClassificationVocabulary.finance) {
-      return _hasDateCue(input) || input.contains('pagar')
-          ? EntryKind.reminder
-          : EntryKind.task;
+      return _hasDateCue(input) || input.contains('pagar') ? EntryKind.reminder : EntryKind.task;
     }
     if (profile == ClassificationVocabulary.health) {
       return detectHabits &&
@@ -189,9 +177,7 @@ class HeuristicClassifier {
     if (profile == ClassificationVocabulary.ideas) {
       return EntryKind.idea;
     }
-    if (input.contains('idea') ||
-        input.contains('concepto') ||
-        input.contains('boceto')) {
+    if (input.contains('idea') || input.contains('concepto') || input.contains('boceto')) {
       return EntryKind.idea;
     }
     if (input.contains('proyecto') ||
@@ -224,8 +210,7 @@ class HeuristicClassifier {
     ClassificationVocabularyMatch? vocabularyMatch,
     Set<String>? tokens,
   }) {
-    final tokenSet = tokens ??
-        _tokenPattern.allMatches(input).map((match) => match.group(0)!).toSet();
+    final tokenSet = tokens ?? _tokenPattern.allMatches(input).map((match) => match.group(0)!).toSet();
     final vocabularyCategoryId = _resolveVocabularyCategoryId(
       vocabularyMatch,
       categories,
@@ -291,16 +276,13 @@ class HeuristicClassifier {
         input.contains('esta semana')) {
       return TimeHorizon.thisWeek;
     }
-    if (input.contains('este mes') ||
-        input.contains('proximo mes') ||
-        input.contains('proximo')) {
+    if (input.contains('este mes') || input.contains('proximo mes') || input.contains('proximo')) {
       return TimeHorizon.thisMonth;
     }
     if (vocabularyMatch?.profile == ClassificationVocabulary.ideas) {
       return TimeHorizon.someday;
     }
-    if (vocabularyMatch?.profile == ClassificationVocabulary.health &&
-        inferredKind == EntryKind.habit) {
+    if (vocabularyMatch?.profile == ClassificationVocabulary.health && inferredKind == EntryKind.habit) {
       return TimeHorizon.thisMonth;
     }
     if (inferredKind == EntryKind.habit) return TimeHorizon.thisMonth;
@@ -337,10 +319,7 @@ class HeuristicClassifier {
         input.contains('renders')) {
       return EnergyLevel.high;
     }
-    if (input.contains('comprar') ||
-        input.contains('pagar') ||
-        input.contains('mandado') ||
-        input.contains('llamar')) {
+    if (input.contains('comprar') || input.contains('pagar') || input.contains('mandado') || input.contains('llamar')) {
       return EnergyLevel.low;
     }
     return EnergyLevel.medium;
@@ -353,9 +332,7 @@ class HeuristicClassifier {
     EnergyLevel? inferredEnergy,
     ClassificationVocabularyMatch? vocabularyMatch,
   }) {
-    if (input.contains('urgente') ||
-        input.contains('asap') ||
-        input.contains('hoy')) {
+    if (input.contains('urgente') || input.contains('asap') || input.contains('hoy')) {
       return PriorityLevel.critical;
     }
     if (vocabularyMatch?.profile == ClassificationVocabulary.workArchitecture &&
@@ -365,8 +342,7 @@ class HeuristicClassifier {
             input.contains('presupuesto'))) {
       return PriorityLevel.high;
     }
-    if (vocabularyMatch?.profile == ClassificationVocabulary.finance &&
-        _hasDateCue(input)) {
+    if (vocabularyMatch?.profile == ClassificationVocabulary.finance && _hasDateCue(input)) {
       return PriorityLevel.high;
     }
     if (inferredKind == EntryKind.shoppingItem && _hasDateCue(input)) {
@@ -391,8 +367,7 @@ class HeuristicClassifier {
     required String? categoryId,
   }) {
     final matchCount = vocabularyMatch?.matchedKeywords.length ?? 0;
-    if (vocabularyMatch?.profile == ClassificationVocabulary.shopping &&
-        matchCount >= 1) {
+    if (vocabularyMatch?.profile == ClassificationVocabulary.shopping && matchCount >= 1) {
       return ConfidenceLevel.high;
     }
     if (vocabularyMatch?.profile == ClassificationVocabulary.workArchitecture) {
@@ -405,12 +380,9 @@ class HeuristicClassifier {
       return ConfidenceLevel.medium;
     }
     if (vocabularyMatch != null) {
-      return vocabularyMatch.isStrong
-          ? vocabularyMatch.profile.baseConfidence
-          : ConfidenceLevel.medium;
+      return vocabularyMatch.isStrong ? vocabularyMatch.profile.baseConfidence : ConfidenceLevel.medium;
     }
-    if (categoryId != null &&
-        (kind == EntryKind.idea || horizon == TimeHorizon.today)) {
+    if (categoryId != null && (kind == EntryKind.idea || horizon == TimeHorizon.today)) {
       return ConfidenceLevel.medium;
     }
     if (priority == PriorityLevel.critical) {
@@ -481,9 +453,7 @@ class HeuristicClassifier {
       case TimeHorizon.today:
         return const ['Se detectó una referencia inmediata.'];
       case TimeHorizon.thisWeek:
-        return input.contains('viernes') ||
-                input.contains('manana') ||
-                input.contains('mañana')
+        return input.contains('viernes') || input.contains('manana') || input.contains('mañana')
             ? const ['Se detectó una referencia de esta semana.']
             : const [];
       case TimeHorizon.thisMonth:
@@ -527,10 +497,8 @@ class HeuristicClassifier {
     }
     return switch (confidence) {
       ConfidenceLevel.high => 'La entrada tiene señales claras y consistentes.',
-      ConfidenceLevel.medium =>
-        'La entrada tiene señales útiles pero todavía generales.',
-      ConfidenceLevel.low =>
-        'La entrada tiene pocas señales y conviene revisarla.',
+      ConfidenceLevel.medium => 'La entrada tiene señales útiles pero todavía generales.',
+      ConfidenceLevel.low => 'La entrada tiene pocas señales y conviene revisarla.',
     };
   }
 
@@ -549,14 +517,11 @@ class HeuristicClassifier {
       }
     }
     for (final category in categories) {
-      if (category.name.toLowerCase() ==
-          vocabularyMatch.profile.categoryLabel.toLowerCase()) {
+      if (category.name.toLowerCase() == vocabularyMatch.profile.categoryLabel.toLowerCase()) {
         return category.id;
       }
       if (category.aliases.any(
-        (alias) =>
-            alias.trim().toLowerCase() ==
-            vocabularyMatch.profile.categoryLabel.toLowerCase(),
+        (alias) => alias.trim().toLowerCase() == vocabularyMatch.profile.categoryLabel.toLowerCase(),
       )) {
         return category.id;
       }

@@ -39,8 +39,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final bottom = MediaQuery.paddingOf(context).bottom;
-    final previewState =
-        ref.watch(quickCaptureClassificationControllerProvider);
+    final previewState = ref.watch(quickCaptureClassificationControllerProvider);
     final categories = ref.watch(categoryConfigControllerProvider);
 
     return Container(
@@ -77,7 +76,8 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                 onChanged: _handleTitleChanged,
                 onSubmitted: (_) => _save(),
               ),
-              if (previewState.isLoading && previewState.preview == null) ...[                const SizedBox(height: 8),
+              if (previewState.isLoading && previewState.preview == null) ...[
+                const SizedBox(height: 8),
                 LinearProgressIndicator(
                   minHeight: 2,
                   borderRadius: BorderRadius.circular(1),
@@ -101,9 +101,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                   spacing: 8,
                   children: [
                     FilledButton.tonalIcon(
-                      onPressed: previewState.isLoading
-                          ? null
-                          : () => _classifyNow(_titleCtrl.text),
+                      onPressed: previewState.isLoading ? null : () => _classifyNow(_titleCtrl.text),
                       icon: const Icon(Icons.auto_awesome),
                       label: const Text('Reclasificar'),
                     ),
@@ -127,21 +125,17 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                   const SizedBox(width: 12),
                   SegmentedButton<Quadrant>(
                     segments: [
-                      for (final q in Quadrant.values)
-                        ButtonSegment(
-                            value: q, label: Text(q.name.toUpperCase())),
+                      for (final q in Quadrant.values) ButtonSegment(value: q, label: Text(q.name.toUpperCase())),
                     ],
                     selected: {_quadrant},
-                    onSelectionChanged: (s) =>
-                        setState(() => _quadrant = s.first),
+                    onSelectionChanged: (s) => setState(() => _quadrant = s.first),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _categoryCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Categoría (opcional)'),
+                decoration: const InputDecoration(labelText: 'Categoría (opcional)'),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
@@ -157,9 +151,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   }
 
   void _handleTitleChanged(String value) {
-    ref
-        .read(quickCaptureClassificationControllerProvider.notifier)
-        .setInput(value);
+    ref.read(quickCaptureClassificationControllerProvider.notifier).setInput(value);
     _classifyDebounce?.cancel();
     final trimmed = value.trim();
     if (trimmed.isEmpty) return;
@@ -171,12 +163,9 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
 
   Future<void> _classifyNow(String input) async {
     if (input.trim().isEmpty) return;
-    await ref
-        .read(quickCaptureClassificationControllerProvider.notifier)
-        .classifyNow();
+    await ref.read(quickCaptureClassificationControllerProvider.notifier).classifyNow();
     if (!mounted) return;
-    final preview =
-        ref.read(quickCaptureClassificationControllerProvider).preview;
+    final preview = ref.read(quickCaptureClassificationControllerProvider).preview;
     if (preview?.categoryId != null && _categoryCtrl.text.trim().isEmpty) {
       final categories = ref.read(categoryConfigControllerProvider);
       CategoryConfig? category;
@@ -206,9 +195,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
       ),
     );
     if (!mounted || result == null) return;
-    await ref
-        .read(quickCaptureClassificationControllerProvider.notifier)
-        .applyUserCorrection(
+    await ref.read(quickCaptureClassificationControllerProvider.notifier).applyUserCorrection(
           original: metadata,
           corrected: result.metadata,
           rememberDecision: true,
@@ -229,16 +216,14 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
     final cat = _categoryCtrl.text.trim();
 
     _classifyDebounce?.cancel();
-    final quickController =
-        ref.read(quickCaptureClassificationControllerProvider.notifier);
+    final quickController = ref.read(quickCaptureClassificationControllerProvider.notifier);
 
     final id = await quickController.persistTaskWithClassification(
       rawText: title,
       quadrant: _quadrant,
       manualCategoryLabel: cat.isEmpty ? null : cat,
     );
-    final preview =
-        ref.read(quickCaptureClassificationControllerProvider).preview;
+    final preview = ref.read(quickCaptureClassificationControllerProvider).preview;
     final categories = ref.read(categoryConfigControllerProvider);
 
     if (!mounted) return;
@@ -332,9 +317,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
             categories: container.read(categoryConfigControllerProvider),
           ),
         );
-    await container
-        .read(classificationReviewControllerProvider.notifier)
-        .recordCorrection(
+    await container.read(classificationReviewControllerProvider.notifier).recordCorrection(
           inputText: original.inputText,
           original: original,
           corrected: corrected,
