@@ -39,7 +39,7 @@ class HeuristicClassification {
 
   TimeHorizon get fallbackHorizon => EntryKind.idea == entryKind
       ? TimeHorizon.someday
-      : ((entryKind == EntryKind.habit || entryKind == EntryKind.shoppingItem)
+      : (entryKind == EntryKind.habit
           ? TimeHorizon.thisMonth
           : TimeHorizon.thisWeek);
 

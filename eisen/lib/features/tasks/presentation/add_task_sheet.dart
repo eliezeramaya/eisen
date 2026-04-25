@@ -77,6 +77,19 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                 onChanged: _handleTitleChanged,
                 onSubmitted: (_) => _save(),
               ),
+              if (previewState.isLoading && previewState.preview == null) ...[                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  minHeight: 2,
+                  borderRadius: BorderRadius.circular(1),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Analizando entrada…',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
               if (previewState.preview != null) ...[
                 const SizedBox(height: 12),
                 ClassificationPreviewCard(
