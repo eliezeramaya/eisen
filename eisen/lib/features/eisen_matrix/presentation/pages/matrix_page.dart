@@ -1866,11 +1866,15 @@ class _SemanticTreemapHeader extends StatelessWidget {
                   onPressed: onOpenReviewCenter,
                 ),
               const Spacer(),
-              Text(
-                scene.subtitle,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
+              Flexible(
+                child: Text(
+                  scene.subtitle,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                ),
               ),
             ],
           ),
