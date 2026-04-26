@@ -24,8 +24,7 @@ class ClassificationGroupingBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groups = <_GroupSummary>[
-      if (settings.allowGroupingByCategory)
-        ..._categoryGroups(tasks, categories),
+      if (settings.allowGroupingByCategory) ..._categoryGroups(tasks, categories),
       if (settings.allowGroupingByKind)
         ..._enumGroups(
           'Tipo',
@@ -45,18 +44,16 @@ class ClassificationGroupingBar extends ConsumerWidget {
           (task) => task.energy?.label ?? 'Sin energía',
         ),
     ];
-    final lowConfidenceCount = tasks
-        .where((task) => task.classificationConfidence == ConfidenceLevel.low)
-        .length;
+    final lowConfidenceCount = tasks.where((task) => task.classificationConfidence == ConfidenceLevel.low).length;
 
     if (groups.isEmpty && lowConfidenceCount == 0) {
       return const SizedBox.shrink();
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    return Padding(
       padding: padding,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           if (lowConfidenceCount > 0) ...[
             ActionChip(
@@ -67,17 +64,45 @@ class ClassificationGroupingBar extends ConsumerWidget {
                 final next = current.contains(ConfidenceLevel.low)
                     ? current.where((item) => item != ConfidenceLevel.low)
                     : <ConfidenceLevel>{...current, ConfidenceLevel.low};
-                ref
-                    .read(activeConfidenceFiltersProvider.notifier)
-                    .update(next.toList());
+                ref.read(activeConfidenceFiltersProvider.notifier).update(next.toList());
               },
             ),
             const SizedBox(width: 8),
           ],
-          for (final group in groups.take(16)) ...[
-            _GroupChip(group: group),
-            const SizedBox(width: 8),
-          ],
+          if (groups.isNotEmpty)
+            PopupMenuButton<void>(
+              tooltip: 'Ver distribución',
+              offset: const Offset(0, 44),
+              itemBuilder: (_) => [
+                for (final group in groups.take(16))
+                  PopupMenuItem<void>(
+                    enabled: false,
+                    height: 36,
+                    child: Row(
+                      children: [
+                        Text(
+                          '${group.dimension}: ',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                        Text(
+                          group.label,
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${group.count}',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+              child: _GroupSummaryPill(groups: groups.take(16).toList()),
+            ),
         ],
       ),
     );
@@ -175,4 +200,51 @@ class _GroupSummary {
   final String dimension;
   final String label;
   final int count;
+}
+
+class _GroupSummaryPill extends StatelessWidget {
+  const _GroupSummaryPill({required this.groups});
+
+  final List<_GroupSummary> groups;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final first = groups.first;
+    final extra = groups.length - 1;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.55)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '${first.dimension} ',
+            style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+          ),
+          Text(
+            '${first.label} ${first.count}',
+            style: tt.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          if (extra > 0) ...[
+            const SizedBox(width: 6),
+            Text(
+              '+$extra',
+              style: tt.labelSmall?.copyWith(
+                color: cs.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          const SizedBox(width: 4),
+          Icon(Icons.arrow_drop_down, size: 14, color: cs.onSurfaceVariant),
+        ],
+      ),
+    );
+  }
 }

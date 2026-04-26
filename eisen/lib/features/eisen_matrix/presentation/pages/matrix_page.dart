@@ -1875,22 +1875,33 @@ class _SemanticTreemapHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          Row(
             children: [
-              for (final filter in TreemapQuickFilter.values)
-                FilterChip(
-                  selected: viewport.quickFilter == filter,
-                  onSelected: (_) => onSelectQuickFilter(filter),
-                  label: Text(_quickFilterLabel(filter)),
+              PopupMenuButton<TreemapQuickFilter>(
+                tooltip: 'Filtros rápidos',
+                offset: const Offset(0, 44),
+                onSelected: onSelectQuickFilter,
+                itemBuilder: (_) => [
+                  for (final filter in TreemapQuickFilter.values)
+                    CheckedPopupMenuItem<TreemapQuickFilter>(
+                      value: filter,
+                      checked: viewport.quickFilter == filter,
+                      child: Text(_quickFilterLabel(filter)),
+                    ),
+                ],
+                child: _QuickFilterPill(
+                  activeFilter: viewport.quickFilter,
+                  labelFor: _quickFilterLabel,
                 ),
-              if (onFocusExactTask != null)
+              ),
+              if (onFocusExactTask != null) ...[
+                const SizedBox(width: 8),
                 ActionChip(
                   avatar: const Icon(Icons.travel_explore, size: 16),
                   label: const Text('Ir a coincidencia exacta'),
                   onPressed: onFocusExactTask,
                 ),
+              ],
             ],
           ),
         ],
@@ -1920,6 +1931,53 @@ class _SemanticTreemapHeader extends StatelessWidget {
       TreemapQuickFilter.lowConfidence => 'Baja confianza',
       TreemapQuickFilter.lowEnergy => 'Poca energia',
     };
+  }
+}
+
+class _QuickFilterPill extends StatelessWidget {
+  const _QuickFilterPill({
+    required this.activeFilter,
+    required this.labelFor,
+  });
+
+  final TreemapQuickFilter? activeFilter;
+  final String Function(TreemapQuickFilter) labelFor;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final hasActive = activeFilter != null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: hasActive ? cs.tertiaryContainer : null,
+        border: Border.all(
+          color: hasActive ? cs.tertiary : cs.outline,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.filter_list, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            hasActive ? labelFor(activeFilter!) : 'Filtros rápidos',
+            style: tt.labelMedium?.copyWith(
+              color: hasActive ? cs.onTertiaryContainer : null,
+              fontWeight: hasActive ? FontWeight.w600 : null,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.arrow_drop_down,
+            size: 16,
+            color: hasActive ? cs.onTertiaryContainer : cs.onSurfaceVariant,
+          ),
+        ],
+      ),
+    );
   }
 }
 

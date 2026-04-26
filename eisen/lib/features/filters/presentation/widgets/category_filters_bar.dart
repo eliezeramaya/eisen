@@ -1,3 +1,4 @@
+import 'package:eisen/features/classification/domain/entities/category_config.dart';
 import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
 import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
@@ -17,10 +18,7 @@ class CategoryFiltersBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categories = ref
-        .watch(categoryConfigControllerProvider)
-        .where((item) => !item.isHidden)
-        .toList()
+    final categories = ref.watch(categoryConfigControllerProvider).where((item) => !item.isHidden).toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     final activeCategories = ref.watch(activeCategoryFiltersProvider);
     final activeKinds = ref.watch(activeKindFiltersProvider);
@@ -28,44 +26,69 @@ class CategoryFiltersBar extends ConsumerWidget {
     final activeEnergies = ref.watch(activeEnergyFiltersProvider);
     final activeConfidences = ref.watch(activeConfidenceFiltersProvider);
 
-    final activeCount = activeCategories.length +
-        activeKinds.length +
-        activeHorizons.length +
-        activeEnergies.length +
-        activeConfidences.length;
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    CategoryConfig? activeSingle;
+    if (activeCategories.length == 1) {
+      try {
+        activeSingle = categories.firstWhere(
+          (c) => c.id == activeCategories.first,
+        );
+      } catch (_) {}
+    }
+
+    final catLabel = activeCategories.isEmpty
+        ? 'Categoría'
+        : activeCategories.length == 1
+            ? (activeSingle?.name ?? 'Categoría')
+            : 'Categoría (${activeCategories.length})';
+
+    final smartCount = activeKinds.length + activeHorizons.length + activeEnergies.length + activeConfidences.length;
+
+    return Padding(
       padding: padding,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          for (final category in categories)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FilterChip(
-                label: Text(category.name),
-                selected: activeCategories.contains(category.id),
-                onSelected: (selected) {
-                  final next = [...activeCategories];
-                  if (selected) {
-                    next.add(category.id);
-                  } else {
-                    next.remove(category.id);
-                  }
-                  ref
-                      .read(activeCategoryFiltersProvider.notifier)
-                      .update(next.toSet().toList());
-                },
-              ),
+          PopupMenuButton<String>(
+            tooltip: 'Seleccionar categorías',
+            offset: const Offset(0, 44),
+            itemBuilder: (_) => [
+              for (final category in categories)
+                CheckedPopupMenuItem<String>(
+                  value: category.id,
+                  checked: activeCategories.contains(category.id),
+                  child: Text(category.name),
+                ),
+            ],
+            onSelected: (id) {
+              final next = [...activeCategories];
+              if (next.contains(id)) {
+                next.remove(id);
+              } else {
+                next.add(id);
+              }
+              ref.read(activeCategoryFiltersProvider.notifier).update(next.toSet().toList());
+            },
+            child: _DropdownPill(
+              label: catLabel,
+              hasActive: activeCategories.isNotEmpty,
+              cs: cs,
+              tt: tt,
             ),
+          ),
           const SizedBox(width: 8),
           OutlinedButton.icon(
             key: const Key('btn_manage_filters'),
             onPressed: () => _openDialog(context),
-            icon: const Icon(Icons.tune),
-            label: Text(
-              activeCount == 0 ? 'Smart filters' : 'Filtros ($activeCount)',
-            ),
+            icon: smartCount > 0
+                ? Badge(
+                    label: Text('$smartCount'),
+                    child: const Icon(Icons.tune, size: 18),
+                  )
+                : const Icon(Icons.tune, size: 18),
+            label: const Text('Smart filters'),
           ),
         ],
       ),
@@ -85,10 +108,7 @@ class _ManageFiltersDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categories = ref
-        .watch(categoryConfigControllerProvider)
-        .where((item) => !item.isHidden)
-        .toList()
+    final categories = ref.watch(categoryConfigControllerProvider).where((item) => !item.isHidden).toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     final activeCategories = ref.watch(activeCategoryFiltersProvider);
@@ -123,9 +143,7 @@ class _ManageFiltersDialog extends ConsumerWidget {
                           } else {
                             next.remove(category.id);
                           }
-                          ref
-                              .read(activeCategoryFiltersProvider.notifier)
-                              .update(next.toSet().toList());
+                          ref.read(activeCategoryFiltersProvider.notifier).update(next.toSet().toList());
                         },
                       ),
                   ],
@@ -137,8 +155,7 @@ class _ManageFiltersDialog extends ConsumerWidget {
                   values: EntryKind.values,
                   selected: activeKinds,
                   labelFor: (item) => item.label,
-                  onChanged: (next) =>
-                      ref.read(activeKindFiltersProvider.notifier).update(next),
+                  onChanged: (next) => ref.read(activeKindFiltersProvider.notifier).update(next),
                 ),
               ),
               _Section(
@@ -147,9 +164,7 @@ class _ManageFiltersDialog extends ConsumerWidget {
                   values: TimeHorizon.values,
                   selected: activeHorizons,
                   labelFor: (item) => item.label,
-                  onChanged: (next) => ref
-                      .read(activeHorizonFiltersProvider.notifier)
-                      .update(next),
+                  onChanged: (next) => ref.read(activeHorizonFiltersProvider.notifier).update(next),
                 ),
               ),
               _Section(
@@ -158,9 +173,7 @@ class _ManageFiltersDialog extends ConsumerWidget {
                   values: EnergyLevel.values,
                   selected: activeEnergies,
                   labelFor: (item) => item.label,
-                  onChanged: (next) => ref
-                      .read(activeEnergyFiltersProvider.notifier)
-                      .update(next),
+                  onChanged: (next) => ref.read(activeEnergyFiltersProvider.notifier).update(next),
                 ),
               ),
               _Section(
@@ -169,9 +182,7 @@ class _ManageFiltersDialog extends ConsumerWidget {
                   values: ConfidenceLevel.values,
                   selected: activeConfidences,
                   labelFor: (item) => item.label,
-                  onChanged: (next) => ref
-                      .read(activeConfidenceFiltersProvider.notifier)
-                      .update(next),
+                  onChanged: (next) => ref.read(activeConfidenceFiltersProvider.notifier).update(next),
                 ),
               ),
             ],
@@ -247,6 +258,52 @@ class _Section extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           child,
+        ],
+      ),
+    );
+  }
+}
+
+class _DropdownPill extends StatelessWidget {
+  const _DropdownPill({
+    required this.label,
+    required this.hasActive,
+    required this.cs,
+    required this.tt,
+  });
+
+  final String label;
+  final bool hasActive;
+  final ColorScheme cs;
+  final TextTheme tt;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: hasActive ? cs.secondaryContainer : null,
+        border: Border.all(
+          color: hasActive ? cs.secondary : cs.outline,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: tt.labelMedium?.copyWith(
+              color: hasActive ? cs.onSecondaryContainer : cs.onSurface,
+              fontWeight: hasActive ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.arrow_drop_down,
+            size: 16,
+            color: hasActive ? cs.onSecondaryContainer : cs.onSurfaceVariant,
+          ),
         ],
       ),
     );
