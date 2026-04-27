@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:eisen/features/eisen_matrix/domain/category_colors.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/treemap_density_resolver.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,6 +40,7 @@ class UiPrefsData {
     this.minTileSizePx =
         44.0, // 30-44px, responsive (desktop: 30-44, mobile: 40-44)
     this.categoryColors = const {}, // User color overrides per category
+    this.quadrantLabelStyle = QuadrantLabelStyle.professional,
   });
   final ThemeMode themeMode;
   final bool compact;
@@ -87,6 +89,7 @@ class UiPrefsData {
   final double minTileSizePx; // 30.0..44.0
   // Category color overrides (key: normalized category name, value: ARGB color as int)
   final Map<String, int> categoryColors;
+  final QuadrantLabelStyle quadrantLabelStyle;
 
   UiPrefsData copyWith({
     ThemeMode? themeMode,
@@ -119,6 +122,7 @@ class UiPrefsData {
     String? viewMode,
     double? minTileSizePx,
     Map<String, int>? categoryColors,
+    QuadrantLabelStyle? quadrantLabelStyle,
   }) =>
       UiPrefsData(
         themeMode: themeMode ?? this.themeMode,
@@ -153,6 +157,7 @@ class UiPrefsData {
         viewMode: viewMode ?? this.viewMode,
         minTileSizePx: minTileSizePx ?? this.minTileSizePx,
         categoryColors: categoryColors ?? this.categoryColors,
+        quadrantLabelStyle: quadrantLabelStyle ?? this.quadrantLabelStyle,
       );
 
   Map<String, Object?> toJson() => {
@@ -186,6 +191,7 @@ class UiPrefsData {
         'viewMode': viewMode,
         'minTileSizePx': minTileSizePx,
         'categoryColors': categoryColors,
+        'quadrantLabelStyle': quadrantLabelStyle.name,
       };
 
   static UiPrefsData fromJson(Map<String, Object?> json) {
@@ -271,6 +277,8 @@ class UiPrefsData {
       categoryColors: (json['categoryColors'] is Map)
           ? Map<String, int>.from(json['categoryColors'] as Map)
           : const {},
+      quadrantLabelStyle:
+          quadrantLabelStyleFromName(json['quadrantLabelStyle'] as String?),
     );
   }
 
@@ -502,6 +510,11 @@ class UiPrefsController extends Notifier<UiPrefsData> {
     const allowed = {'treemap', 'list'};
     final m = allowed.contains(mode) ? mode : 'treemap';
     state = state.copyWith(viewMode: m);
+    await _save();
+  }
+
+  Future<void> setQuadrantLabelStyle(QuadrantLabelStyle style) async {
+    state = state.copyWith(quadrantLabelStyle: style);
     await _save();
   }
 

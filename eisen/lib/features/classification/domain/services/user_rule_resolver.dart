@@ -6,6 +6,7 @@ import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/enums/priority_level.dart';
 import 'package:eisen/features/classification/domain/enums/rule_match_type.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 
 class UserRuleResolution {
   const UserRuleResolution({
@@ -15,6 +16,7 @@ class UserRuleResolution {
     this.timeHorizon,
     this.energyLevel,
     this.priorityLevel,
+    this.suggestedQuadrant,
     this.matchedRuleId,
     this.matchedAliasId,
     this.matchedKeywords = const <String>[],
@@ -27,6 +29,7 @@ class UserRuleResolution {
   final TimeHorizon? timeHorizon;
   final EnergyLevel? energyLevel;
   final PriorityLevel? priorityLevel;
+  final Quadrant? suggestedQuadrant;
   final String? matchedRuleId;
   final String? matchedAliasId;
   final List<String> matchedKeywords;
@@ -70,6 +73,7 @@ class UserRuleResolver {
         timeHorizon: rule.targetHorizon,
         energyLevel: rule.targetEnergy,
         priorityLevel: rule.targetPriority,
+        suggestedQuadrant: rule.targetQuadrant,
         matchedRuleId: rule.id,
         matchedKeywords: <String>[
           ...matchedKeywords,
@@ -116,6 +120,7 @@ class UserRuleResolver {
       timeHorizon: bestAlias.timeHorizon,
       energyLevel: bestAlias.energyLevel,
       priorityLevel: bestAlias.priorityLevel,
+      suggestedQuadrant: bestAlias.suggestedQuadrant,
       matchedAliasId: bestAlias.id,
       matchedKeywords: bestHits,
       reasons: <String>[

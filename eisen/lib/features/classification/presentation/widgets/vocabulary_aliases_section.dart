@@ -5,6 +5,8 @@ import 'package:eisen/features/classification/domain/entities/vocabulary_alias.d
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/presentation/controllers/category_config_controller.dart';
 import 'package:eisen/features/classification/presentation/controllers/vocabulary_alias_controller.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -29,9 +31,8 @@ class VocabularyAliasesSection extends ConsumerWidget {
           for (final alias in aliases)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title:
-                  Text('${alias.term} → ${_categoryName(categories, alias)}'),
-              subtitle: Text(alias.aliases.join(', ')),
+              title: Text('${alias.term} → ${_aliasTarget(categories, alias)}'),
+              subtitle: Text(_aliasSubtitle(alias)),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -143,6 +144,26 @@ String _categoryName(List<CategoryConfig> categories, VocabularyAlias alias) {
   return 'Sin categoría';
 }
 
+String _aliasTarget(List<CategoryConfig> categories, VocabularyAlias alias) {
+  final category = _categoryName(categories, alias);
+  final quadrant = alias.suggestedQuadrant;
+  if (quadrant == null) return category;
+  final label = getQuadrantLabel(
+    quadrant,
+    QuadrantLabelStyle.professional,
+  ).title;
+  if (alias.mappedCategoryId == null) return label;
+  return '$category · $label';
+}
+
+String _aliasSubtitle(VocabularyAlias alias) {
+  final aliases = alias.aliases.join(', ');
+  final kind = alias.mappedKind?.label;
+  if (kind == null || kind.isEmpty) return aliases;
+  if (aliases.isEmpty) return kind;
+  return '$aliases · $kind';
+}
+
 class _AliasEditorSheet extends StatefulWidget {
   const _AliasEditorSheet({
     required this.categories,
@@ -164,6 +185,7 @@ class _AliasEditorSheetState extends State<_AliasEditorSheet> {
   );
   late String? _categoryId = widget.initial?.mappedCategoryId;
   late EntryKind? _kind = widget.initial?.mappedKind;
+  late Quadrant? _quadrant = widget.initial?.suggestedQuadrant;
   late bool _enabled = widget.initial?.enabled ?? true;
 
   @override
@@ -237,6 +259,30 @@ class _AliasEditorSheetState extends State<_AliasEditorSheet> {
                 ],
                 onChanged: (value) => setState(() => _kind = value),
               ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<Quadrant?>(
+                initialValue: _quadrant,
+                decoration: const InputDecoration(
+                  labelText: 'Cuadrante sugerido',
+                ),
+                items: [
+                  const DropdownMenuItem<Quadrant?>(
+                    value: null,
+                    child: Text('Sin cuadrante'),
+                  ),
+                  for (final quadrant in Quadrant.values)
+                    DropdownMenuItem<Quadrant?>(
+                      value: quadrant,
+                      child: Text(
+                        getQuadrantLabel(
+                          quadrant,
+                          QuadrantLabelStyle.professional,
+                        ).title,
+                      ),
+                    ),
+                ],
+                onChanged: (value) => setState(() => _quadrant = value),
+              ),
               const SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
@@ -275,8 +321,10 @@ class _AliasEditorSheetState extends State<_AliasEditorSheet> {
         aliases: variants,
         mappedCategoryId: _categoryId,
         mappedKind: _kind,
+        suggestedQuadrant: _quadrant,
         enabled: _enabled,
         createdAt: widget.initial?.createdAt ?? DateTime.now(),
+        updatedAt: DateTime.now(),
       ),
     );
   }

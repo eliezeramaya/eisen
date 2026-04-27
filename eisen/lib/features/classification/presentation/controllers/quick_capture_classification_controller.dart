@@ -1,8 +1,6 @@
-import 'package:eisen/features/classification/domain/entities/classification_correction_event.dart';
 import 'package:eisen/features/classification/domain/entities/classification_metadata.dart';
-import 'package:eisen/features/classification/domain/enums/classification_source.dart';
-import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
 import 'package:eisen/features/classification/domain/enums/correction_source.dart';
+import 'package:eisen/features/classification/domain/services/classification_correction_builder.dart';
 import 'package:eisen/features/classification/domain/services/task_classification_mapper.dart';
 import 'package:eisen/features/classification/presentation/controllers/category_config_controller.dart';
 import 'package:eisen/features/classification/presentation/providers/classification_providers.dart';
@@ -88,37 +86,11 @@ class QuickCaptureClassificationController
     applyOverride(corrected);
     if (!rememberDecision) return;
 
-    final event = ClassificationCorrectionEvent(
-      id: 'correction-${DateTime.now().microsecondsSinceEpoch}',
-      rawText: corrected.inputText,
-      originalCategoryId: source.categoryId,
-      correctedCategoryId: corrected.categoryId,
-      originalKind: source.entryKind,
-      correctedKind: corrected.entryKind,
-      originalHorizon: source.timeHorizon,
-      correctedHorizon: corrected.timeHorizon,
-      originalEnergy: source.energyLevel,
-      correctedEnergy: corrected.energyLevel,
-      confidenceBefore: source.confidenceLevel,
+    final event = buildClassificationCorrectionEvent(
+      original: source,
+      corrected: corrected,
+      inputText: corrected.inputText,
       source: CorrectionSource.quickCapture,
-      detectedKeyword: corrected.matchedKeywords.isEmpty
-          ? null
-          : corrected.matchedKeywords.first,
-      originalClassification: source,
-      correctedClassification: corrected.copyWith(
-        confidenceScore: 0.96,
-        confidenceLevel: ConfidenceLevel.high,
-        source: ClassificationSource.userCorrection,
-        signals: <String>[
-          ...corrected.signals,
-          'user-correction',
-        ],
-        isUserConfirmed: true,
-        wasUserCorrected: true,
-        isAutoClassified: false,
-        updatedAt: DateTime.now(),
-      ),
-      createdAt: DateTime.now(),
       correctionNote: note,
     );
     await _repository.recordCorrection(event);
@@ -133,7 +105,8 @@ class QuickCaptureClassificationController
   }) async {
     final metadata = state.preview?.inputText.trim() == rawText.trim()
         ? state.preview
-        : await classifyInput(rawText);
+        : await classifyInput(rawText) ??
+            await _repository.classifyEntry(rawText.trim());
     final matrixController = ref.read(matrixControllerProvider.notifier);
     final id = matrixController.createTask(
       quadrant: quadrant,

@@ -1,11 +1,12 @@
 import 'package:eisen/features/classification/domain/entities/category_config.dart';
 import 'package:eisen/features/classification/domain/entities/classification_metadata.dart';
 import 'package:eisen/features/classification/domain/entities/classification_rule.dart';
-import 'package:eisen/features/classification/domain/enums/classification_source.dart';
-import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/enums/rule_match_type.dart';
 import 'package:eisen/features/classification/domain/enums/rule_priority.dart';
+import 'package:eisen/features/classification/domain/services/classification_correction_builder.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:flutter/material.dart';
 
 class QuickReclassifyResult {
@@ -37,6 +38,7 @@ class QuickReclassifySheet extends StatefulWidget {
 class _QuickReclassifySheetState extends State<QuickReclassifySheet> {
   late String? _categoryId = widget.metadata.categoryId;
   late EntryKind _entryKind = widget.metadata.entryKind;
+  late Quadrant? _suggestedQuadrant = widget.metadata.suggestedQuadrant;
   late bool _rememberDecision = false;
   late bool _createRule = false;
 
@@ -90,6 +92,31 @@ class _QuickReclassifySheetState extends State<QuickReclassifySheet> {
                 values: EntryKind.values,
                 labelFor: (item) => item.label,
                 onChanged: (value) => setState(() => _entryKind = value),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<Quadrant?>(
+                initialValue: _suggestedQuadrant,
+                decoration: const InputDecoration(
+                  labelText: 'Cuadrante sugerido',
+                ),
+                items: [
+                  const DropdownMenuItem<Quadrant?>(
+                    value: null,
+                    child: Text('Sin sugerencia'),
+                  ),
+                  for (final quadrant in Quadrant.values)
+                    DropdownMenuItem<Quadrant?>(
+                      value: quadrant,
+                      child: Text(
+                        getQuadrantLabel(
+                          quadrant,
+                          QuadrantLabelStyle.professional,
+                        ).title,
+                      ),
+                    ),
+                ],
+                onChanged: (value) =>
+                    setState(() => _suggestedQuadrant = value),
               ),
               const SizedBox(height: 16),
               SwitchListTile(
@@ -148,35 +175,13 @@ class _QuickReclassifySheetState extends State<QuickReclassifySheet> {
   void _save() {
     Navigator.of(context).pop(
       QuickReclassifyResult(
-        metadata: ClassificationMetadata(
-          categoryId: _categoryId,
-          inputText: widget.metadata.inputText,
-          normalizedText: widget.metadata.normalizedText,
-          entryKind: _entryKind,
-          timeHorizon: widget.metadata.timeHorizon,
-          energyLevel: widget.metadata.energyLevel,
-          priorityLevel: widget.metadata.priorityLevel,
-          confidenceScore: 0.96,
-          confidenceLevel: ConfidenceLevel.high,
-          classifierVersion: widget.metadata.classifierVersion,
-          source: ClassificationSource.userCorrection,
-          matchedRuleId: widget.metadata.matchedRuleId,
-          matchedAliasId: widget.metadata.matchedAliasId,
-          matchedKeywords: widget.metadata.matchedKeywords,
-          signals: <String>[
-            ...widget.metadata.signals,
-            'user-correction',
-          ],
-          appliedRuleIds: widget.metadata.appliedRuleIds,
-          suggestedCategoryId: widget.metadata.suggestedCategoryId,
-          confidenceReason: widget.metadata.confidenceReason,
-          reasons: widget.metadata.reasons,
-          isAutoClassified: false,
-          wasUserCorrected: true,
-          isUserConfirmed: true,
-          classifiedAt: widget.metadata.classifiedAt,
-          createdAt: widget.metadata.createdAt,
-          updatedAt: DateTime.now(),
+        metadata: buildUserCorrectedMetadata(
+          widget.metadata.copyWith(
+            categoryId: _categoryId,
+            entryKind: _entryKind,
+            suggestedQuadrant: _suggestedQuadrant,
+            clearSuggestedQuadrant: _suggestedQuadrant == null,
+          ),
         ),
         rememberDecision: _rememberDecision,
         createRule: _createRule,
@@ -206,6 +211,7 @@ ClassificationRule buildRuleFromReclassification({
     targetHorizon: corrected.timeHorizon,
     targetEnergy: corrected.energyLevel,
     targetPriority: corrected.priorityLevel,
+    targetQuadrant: corrected.suggestedQuadrant,
     targetTags: <String>[keyword],
     priority: RulePriority.high,
     scoreBoost: 0.24,

@@ -5,6 +5,7 @@ import 'package:eisen/features/classification/domain/enums/confidence_level.dart
 import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/services/task_classification_mapper.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/task_visual_weight.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_viewport_state.dart';
 
 class TreemapSemanticNode {
@@ -42,7 +43,11 @@ class TreemapSemanticNode {
 
   Task? get topTask => tasks.isEmpty
       ? null
-      : ([...tasks]..sort((a, b) => weight(b).compareTo(weight(a)))).first;
+      : ([...tasks]..sort(
+              (a, b) => computeTaskVisualWeight(b)
+                  .compareTo(computeTaskVisualWeight(a)),
+            ))
+          .first;
 
   bool get isTaskLeaf => level == TreemapZoomLevel.task && tasks.length == 1;
 }
@@ -83,7 +88,10 @@ TreemapSemanticScene buildSemanticTreemapScene({
   final scoped = _applyViewportScope(filtered, viewport, categories);
   final normalizedQuery = normalizeMatrixSearchText(searchQuery.trim());
   final exactTask = _findExactTaskMatch(scoped, normalizedQuery);
-  final totalWeight = scoped.fold<double>(0, (sum, task) => sum + weight(task));
+  final totalWeight = scoped.fold<double>(
+    0,
+    (sum, task) => sum + computeTaskVisualWeight(task),
+  );
   final lowConfidenceCount = scoped
       .where((task) => task.classificationConfidence == ConfidenceLevel.low)
       .length;
@@ -291,7 +299,10 @@ List<TreemapSemanticNode> _buildTaskNodes({
   required double totalWeight,
   required String searchQuery,
 }) {
-  final sorted = [...tasks]..sort((a, b) => weight(b).compareTo(weight(a)));
+  final sorted = [...tasks]..sort(
+      (a, b) =>
+          computeTaskVisualWeight(b).compareTo(computeTaskVisualWeight(a)),
+    );
   return [
     for (final task in sorted)
       TreemapSemanticNode(
@@ -299,10 +310,11 @@ List<TreemapSemanticNode> _buildTaskNodes({
         label: task.title,
         level: TreemapZoomLevel.task,
         tasks: <Task>[task],
-        totalWeight: weight(task),
+        totalWeight: computeTaskVisualWeight(task),
         categoryId: _categoryKey(task, categories),
         categoryLabel: _categoryLabel(task, categories),
-        loadShare: totalWeight <= 0 ? 0 : weight(task) / totalWeight,
+        loadShare:
+            totalWeight <= 0 ? 0 : computeTaskVisualWeight(task) / totalWeight,
         lowConfidenceCount:
             task.classificationConfidence == ConfidenceLevel.low ? 1 : 0,
         matchedSearch: _taskMatchesQuery(task, searchQuery),
@@ -324,8 +336,10 @@ List<TreemapSemanticNode> _buildNodesFromGroups({
   final nodes = <TreemapSemanticNode>[];
   for (final entry in groups.entries) {
     final nodeTasks = entry.value;
-    final nodeWeight =
-        nodeTasks.fold<double>(0, (sum, task) => sum + weight(task));
+    final nodeWeight = nodeTasks.fold<double>(
+      0,
+      (sum, task) => sum + computeTaskVisualWeight(task),
+    );
     final dominant = _dominantCategory(nodeTasks, categories);
     nodes.add(
       TreemapSemanticNode(

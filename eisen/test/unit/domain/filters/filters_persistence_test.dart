@@ -1,3 +1,4 @@
+import 'package:eisen/core/services/storage_prefs.dart';
 import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
 import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
@@ -6,9 +7,7 @@ import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/filters/filters_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-// A minimal task for filter tests.
 Task _task({
   String categoryId = 'work',
   EntryKind kind = EntryKind.task,
@@ -30,87 +29,149 @@ Task _task({
     );
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  group('filters persistence', () {
+    test('category filters start empty and persist across containers',
+        () async {
+      final storage = _InMemoryStoragePrefs();
 
-  setUp(() {
-    SharedPreferences.setMockInitialValues({});
-  });
-
-  group('ActiveCategoryFilters', () {
-    test('starts empty', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      expect(container.read(activeCategoryFiltersProvider), isEmpty);
-    });
-
-    test('update() changes state and persists', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      container.read(activeCategoryFiltersProvider.notifier).update(['work', 'health']);
-      // State updated immediately
-      expect(
-        container.read(activeCategoryFiltersProvider),
-        ['work', 'health'],
+      final first = ProviderContainer(
+        overrides: [
+          filtersStorageProvider.overrideWithValue(storage),
+        ],
       );
+      addTearDown(first.dispose);
+
+      expect(first.read(activeCategoryFiltersProvider), isEmpty);
+      await first
+          .read(activeCategoryFiltersProvider.notifier)
+          .update(['work', 'health']);
+      expect(await storage.loadStringListField('filters.categories'), [
+        'work',
+        'health',
+      ]);
+
+      final second = ProviderContainer(
+        overrides: [
+          filtersStorageProvider.overrideWithValue(storage),
+        ],
+      );
+      addTearDown(second.dispose);
+      await _waitFor(
+          () => second.read(activeCategoryFiltersProvider).length == 2);
+      expect(second.read(activeCategoryFiltersProvider), ['work', 'health']);
     });
-  });
 
-  group('ActiveKindFilters', () {
-    test('starts empty', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      expect(container.read(activeKindFiltersProvider), isEmpty);
-    });
+    test('kind filters persist across containers', () async {
+      final storage = _InMemoryStoragePrefs();
+      final first = ProviderContainer(
+        overrides: [
+          filtersStorageProvider.overrideWithValue(storage),
+        ],
+      );
+      addTearDown(first.dispose);
 
-    test('update() stores EntryKind values', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+      await first
+          .read(activeKindFiltersProvider.notifier)
+          .update([EntryKind.task, EntryKind.idea]);
+      expect(await storage.loadStringListField('filters.kinds'), [
+        'task',
+        'idea',
+      ]);
 
-      container.read(activeKindFiltersProvider.notifier).update([EntryKind.task, EntryKind.idea]);
-      expect(container.read(activeKindFiltersProvider), [
+      final second = ProviderContainer(
+        overrides: [
+          filtersStorageProvider.overrideWithValue(storage),
+        ],
+      );
+      addTearDown(second.dispose);
+      await _waitFor(() => second.read(activeKindFiltersProvider).length == 2);
+      expect(second.read(activeKindFiltersProvider), [
         EntryKind.task,
         EntryKind.idea,
       ]);
     });
-  });
 
-  group('ActiveHorizonFilters', () {
-    test('update() stores TimeHorizon values', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+    test('horizon filters persist across containers', () async {
+      final storage = _InMemoryStoragePrefs();
+      final first = ProviderContainer(
+        overrides: [
+          filtersStorageProvider.overrideWithValue(storage),
+        ],
+      );
+      addTearDown(first.dispose);
 
-      container.read(activeHorizonFiltersProvider.notifier).update([TimeHorizon.today, TimeHorizon.thisWeek]);
-      expect(container.read(activeHorizonFiltersProvider), [
+      await first
+          .read(activeHorizonFiltersProvider.notifier)
+          .update([TimeHorizon.today, TimeHorizon.thisWeek]);
+      expect(await storage.loadStringListField('filters.horizons'), [
+        'today',
+        'thisWeek',
+      ]);
+
+      final second = ProviderContainer(
+        overrides: [
+          filtersStorageProvider.overrideWithValue(storage),
+        ],
+      );
+      addTearDown(second.dispose);
+      await _waitFor(
+        () => second.read(activeHorizonFiltersProvider).length == 2,
+      );
+      expect(second.read(activeHorizonFiltersProvider), [
         TimeHorizon.today,
         TimeHorizon.thisWeek,
       ]);
     });
-  });
 
-  group('ActiveEnergyFilters', () {
-    test('update() stores EnergyLevel values', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      container.read(activeEnergyFiltersProvider.notifier).update([EnergyLevel.low]);
-      expect(
-        container.read(activeEnergyFiltersProvider),
-        [EnergyLevel.low],
+    test('energy filters persist across containers', () async {
+      final storage = _InMemoryStoragePrefs();
+      final first = ProviderContainer(
+        overrides: [
+          filtersStorageProvider.overrideWithValue(storage),
+        ],
       );
+      addTearDown(first.dispose);
+
+      await first
+          .read(activeEnergyFiltersProvider.notifier)
+          .update([EnergyLevel.low]);
+      expect(await storage.loadStringListField('filters.energies'), ['low']);
+
+      final second = ProviderContainer(
+        overrides: [
+          filtersStorageProvider.overrideWithValue(storage),
+        ],
+      );
+      addTearDown(second.dispose);
+      await _waitFor(() => second.read(activeEnergyFiltersProvider).isNotEmpty);
+      expect(second.read(activeEnergyFiltersProvider), [EnergyLevel.low]);
     });
-  });
 
-  group('ActiveConfidenceFilters', () {
-    test('update() stores ConfidenceLevel values', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      container.read(activeConfidenceFiltersProvider.notifier).update([ConfidenceLevel.low]);
-      expect(
-        container.read(activeConfidenceFiltersProvider),
-        [ConfidenceLevel.low],
+    test('confidence filters persist across containers', () async {
+      final storage = _InMemoryStoragePrefs();
+      final first = ProviderContainer(
+        overrides: [
+          filtersStorageProvider.overrideWithValue(storage),
+        ],
       );
+      addTearDown(first.dispose);
+
+      await first
+          .read(activeConfidenceFiltersProvider.notifier)
+          .update([ConfidenceLevel.low]);
+      expect(await storage.loadStringListField('filters.confidences'), ['low']);
+
+      final second = ProviderContainer(
+        overrides: [
+          filtersStorageProvider.overrideWithValue(storage),
+        ],
+      );
+      addTearDown(second.dispose);
+      await _waitFor(
+        () => second.read(activeConfidenceFiltersProvider).isNotEmpty,
+      );
+      expect(
+          second.read(activeConfidenceFiltersProvider), [ConfidenceLevel.low]);
     });
   });
 
@@ -192,4 +253,34 @@ void main() {
       );
     });
   });
+}
+
+class _InMemoryStoragePrefs extends StoragePrefs {
+  final Map<String, List<String>> _fields = <String, List<String>>{};
+
+  @override
+  Future<List<String>> loadStringListField(String fieldKey) async {
+    return List<String>.from(_fields[fieldKey] ?? const <String>[]);
+  }
+
+  @override
+  Future<void> saveStringListField(
+    String fieldKey,
+    List<String> values,
+  ) async {
+    _fields[fieldKey] = List<String>.from(values);
+  }
+}
+
+Future<void> _waitFor(
+  bool Function() condition, {
+  Duration timeout = const Duration(milliseconds: 250),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (!condition()) {
+    if (DateTime.now().isAfter(deadline)) {
+      return;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
 }

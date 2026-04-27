@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/task_visual_weight.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -78,7 +79,12 @@ class LayoutCache {
 /// Otherwise, each quadrant gets a 0.5 × 0.5 subregion and tasks are distributed.
 ///
 /// This is the original non-stable layout without EMA or bandit tie-breaking.
-List<TreemapRect> computeSquarifiedLayout(List<Task> tasks, {Quadrant? zoom}) {
+List<TreemapRect> computeSquarifiedLayout(
+  List<Task> tasks, {
+  Quadrant? zoom,
+  Map<Quadrant, double> quadrantLearningAdjustments =
+      const <Quadrant, double>{},
+}) {
   final byQuadrant = <Quadrant, List<Task>>{
     Quadrant.q1: [],
     Quadrant.q2: [],
@@ -92,7 +98,11 @@ List<TreemapRect> computeSquarifiedLayout(List<Task> tasks, {Quadrant? zoom}) {
   final full = const Rect.fromLTWH(0, 0, 1, 1);
 
   if (zoom != null) {
-    final out = _layoutIntoRect(byQuadrant[zoom]!, full);
+    final out = _layoutIntoRect(
+      byQuadrant[zoom]!,
+      full,
+      quadrantLearningAdjustments: quadrantLearningAdjustments,
+    );
     if (debugTreemap) {
       _checkAreaSum('computeSquarifiedLayout(zoom)',
           out.map((e) => e.rect01).toList(), full);
@@ -112,7 +122,11 @@ List<TreemapRect> computeSquarifiedLayout(List<Task> tasks, {Quadrant? zoom}) {
 
   final out = <TreemapRect>[];
   for (final q in Quadrant.values) {
-    final part = _layoutIntoRect(byQuadrant[q]!, qRects[q]!);
+    final part = _layoutIntoRect(
+      byQuadrant[q]!,
+      qRects[q]!,
+      quadrantLearningAdjustments: quadrantLearningAdjustments,
+    );
     if (debugTreemap) {
       _checkAreaSum('computeSquarifiedLayout($q)',
           part.map((e) => e.rect01).toList(), qRects[q]!);
@@ -125,11 +139,19 @@ List<TreemapRect> computeSquarifiedLayout(List<Task> tasks, {Quadrant? zoom}) {
   return out;
 }
 
-List<TreemapRect> _layoutIntoRect(List<Task> tasks, Rect rect) {
+List<TreemapRect> _layoutIntoRect(
+  List<Task> tasks,
+  Rect rect, {
+  Map<Quadrant, double> quadrantLearningAdjustments =
+      const <Quadrant, double>{},
+}) {
   if (tasks.isEmpty) return const [];
   // Defensive: clamp weights to finite positive range
   var values = tasks.map((t) {
-    final w = weight(t);
+    final w = computeTaskVisualWeight(
+      t,
+      quadrantLearningAdjustments: quadrantLearningAdjustments,
+    );
     if (!w.isFinite || w <= 0) return 1.0; // fallback
     return w.clamp(0.0001, 1e9);
   }).toList();
@@ -253,6 +275,8 @@ List<TreemapRect> computeStableLayout(
   LayoutCache? cache,
   BanditService? bandit,
   double? minTileArea01,
+  Map<Quadrant, double> quadrantLearningAdjustments =
+      const <Quadrant, double>{},
 }) {
   final byQuadrant = <Quadrant, List<Task>>{
     Quadrant.q1: [],
@@ -267,8 +291,14 @@ List<TreemapRect> computeStableLayout(
   final full = const Rect.fromLTWH(0, 0, 1, 1);
   if (zoom != null) {
     final out = _layoutStableIntoRect(
-        byQuadrant[zoom]!, full, cache, bandit, zoom,
-        minTileArea01: minTileArea01);
+      byQuadrant[zoom]!,
+      full,
+      cache,
+      bandit,
+      zoom,
+      minTileArea01: minTileArea01,
+      quadrantLearningAdjustments: quadrantLearningAdjustments,
+    );
     if (debugTreemap) {
       _checkAreaSum(
           'computeStableLayout(zoom)', out.map((e) => e.rect01).toList(), full);
@@ -289,8 +319,14 @@ List<TreemapRect> computeStableLayout(
   final out = <TreemapRect>[];
   for (final q in Quadrant.values) {
     final part = _layoutStableIntoRect(
-        byQuadrant[q]!, qRects[q]!, cache, bandit, q,
-        minTileArea01: minTileArea01);
+      byQuadrant[q]!,
+      qRects[q]!,
+      cache,
+      bandit,
+      q,
+      minTileArea01: minTileArea01,
+      quadrantLearningAdjustments: quadrantLearningAdjustments,
+    );
     if (debugTreemap) {
       _checkAreaSum('computeStableLayout($q)',
           part.map((e) => e.rect01).toList(), qRects[q]!);
@@ -314,9 +350,18 @@ List<TreemapRect> layoutQuadrantStable(
   BanditService? bandit,
   Quadrant quadrant, {
   double? minTileArea01,
+  Map<Quadrant, double> quadrantLearningAdjustments =
+      const <Quadrant, double>{},
 }) =>
-    _layoutStableIntoRect(tasks, rect, cache, bandit, quadrant,
-        minTileArea01: minTileArea01);
+    _layoutStableIntoRect(
+      tasks,
+      rect,
+      cache,
+      bandit,
+      quadrant,
+      minTileArea01: minTileArea01,
+      quadrantLearningAdjustments: quadrantLearningAdjustments,
+    );
 
 /// Computes a penalty cost for reordering stability.
 ///
@@ -327,13 +372,18 @@ double reorderPenalty(int prevRank, int newRank, {double tau = 0.02}) =>
 
 List<TreemapRect> _layoutStableIntoRect(List<Task> tasks, Rect rect,
     LayoutCache? cache, BanditService? bandit, Quadrant quadrant,
-    {double? minTileArea01}) {
+    {double? minTileArea01,
+    Map<Quadrant, double> quadrantLearningAdjustments =
+        const <Quadrant, double>{}}) {
   if (tasks.isEmpty) return const [];
 
   // Smoothed, root-scaled areas
   final values = <double>[];
   for (final t in tasks) {
-    final w = weight(t);
+    final w = computeTaskVisualWeight(
+      t,
+      quadrantLearningAdjustments: quadrantLearningAdjustments,
+    );
     _checkFinite('weight(${t.id})', w);
     final prev = cache?.lastWeight[t.id] ?? w;
     final smooth = ema(prev, w);

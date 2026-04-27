@@ -1,6 +1,7 @@
 import 'package:eisen/core/design_system/widgets/eisen_card.dart';
 import 'package:eisen/core/design_system/widgets/eisen_section_header.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:eisen/features/insights/domain/nudge_controller.dart';
 import 'package:eisen/features/settings/application/appearance_preview_controller.dart';
 import 'package:eisen/features/settings/domain/language_controller.dart';
@@ -47,6 +48,10 @@ class GeneralPanel extends ConsumerWidget {
           subtitle: 'Activa el modo plan de trabajo',
         ),
         _WorkflowCard(prefs: prefs),
+        const SizedBox(height: 12),
+        _QuadrantLabelStyleCard(prefs: prefs),
+        const SizedBox(height: 12),
+        const _ArchiveCard(),
         const SizedBox(height: 24),
         const EisenSectionHeader(
           title: 'Smart Classification',
@@ -61,6 +66,75 @@ class GeneralPanel extends ConsumerWidget {
         ),
         _AiCard(prefs: prefs),
       ],
+    );
+  }
+}
+
+class _QuadrantLabelStyleCard extends ConsumerWidget {
+  const _QuadrantLabelStyleCard({required this.prefs});
+
+  final UiPrefsData prefs;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ctrl = ref.read(uiPrefsControllerProvider.notifier);
+    return EisenCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.dashboard_customize_outlined),
+            title: Text('Estilo de nombres de cuadrantes'),
+            subtitle: Text('Define cómo se muestran los cuadrantes en Eisen.'),
+          ),
+          DropdownButtonFormField<QuadrantLabelStyle>(
+            initialValue: prefs.quadrantLabelStyle,
+            decoration: const InputDecoration(
+              labelText: 'Estilo',
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: QuadrantLabelStyle.classic,
+                child: Text('Clásico - Q1, Q2, Q3, Q4'),
+              ),
+              DropdownMenuItem(
+                value: QuadrantLabelStyle.professional,
+                child: Text(
+                  'Profesional - Crítico, Crecimiento, De otros, Archivar',
+                ),
+              ),
+              DropdownMenuItem(
+                value: QuadrantLabelStyle.action,
+                child: Text('Acción - Haz ahora, Planifica, Delega, Archivar'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value != null) ctrl.setQuadrantLabelStyle(value);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArchiveCard extends StatelessWidget {
+  const _ArchiveCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return EisenCard(
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: const Icon(Icons.archive_outlined),
+        title: const Text('Archivo consultable'),
+        subtitle: const Text(
+          'Consulta tareas archivadas, filtra y restaura cuando haga falta.',
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push('/archive'),
+      ),
     );
   }
 }

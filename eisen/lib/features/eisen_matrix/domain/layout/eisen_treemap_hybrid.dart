@@ -8,8 +8,13 @@ import 'package:eisen/features/eisen_matrix/domain/treemap_layout.dart'
 import 'package:eisen/features/eisen_matrix/domain/weight.dart';
 
 class EisenTreemapHybrid {
-  const EisenTreemapHybrid(this.cfg);
+  const EisenTreemapHybrid(
+    this.cfg, {
+    this.quadrantLearningAdjustments = const <Quadrant, double>{},
+  });
+
   final LayoutConfig cfg;
+  final Map<Quadrant, double> quadrantLearningAdjustments;
 
   /// Returns TreemapRects across all quadrants. If [only] is provided, lays out
   /// only that quadrant in the full [0..1] area.
@@ -52,7 +57,15 @@ class EisenTreemapHybrid {
 
       // Compute weights (smoothed)
       final weights = list
-          .map((t) => _smooth(importanceWeight(t), cfg.gamma))
+          .map(
+            (t) => _smooth(
+              importanceWeight(
+                t,
+                quadrantLearningAdjustments: quadrantLearningAdjustments,
+              ),
+              cfg.gamma,
+            ),
+          )
           .toList(growable: false);
       final idx = List.generate(list.length, (i) => i)
         ..sort((a, b) => weights[b].compareTo(weights[a]));

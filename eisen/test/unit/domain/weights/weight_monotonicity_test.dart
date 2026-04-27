@@ -77,8 +77,7 @@ void main() {
       expect(wMedium > wShort, isTrue, reason: '60 min should weigh > 15 min');
     });
 
-    test('urgent tasks have higher weight than non-urgent (same other params)',
-        () {
+    test('quadrant-aware order is Q1 > Q2 > Q3 > Q4 (same other params)', () {
       final urgentQ1 =
           baseTask.copyWith(quadrant: Quadrant.q1); // Urgent & Important
       final urgentQ3 =
@@ -93,13 +92,10 @@ void main() {
       final wQ2 = weight(notUrgentQ2);
       final wQ4 = weight(notUrgentQ4);
 
-      // Urgent tasks (Q1, Q3) should have urgBoost = 1.15 vs 1.0 for non-urgent
-      expect(wQ1 > wQ2, isTrue,
-          reason:
-              'Q1 (urgent) should weigh > Q2 (not urgent) with same params');
-      expect(wQ3 > wQ4, isTrue,
-          reason:
-              'Q3 (urgent) should weigh > Q4 (not urgent) with same params');
+      expect(wQ1 > wQ2, isTrue, reason: 'Q1 should weigh > Q2');
+      expect(wQ2 > wQ3, isTrue,
+          reason: 'Q2 growth should stay visible above Q3');
+      expect(wQ3 > wQ4, isTrue, reason: 'Q3 should weigh > Q4');
     });
 
     test('weight handles null due date gracefully (base dueBoost = 1.0)', () {
@@ -166,12 +162,11 @@ void main() {
     });
 
     test('weight output is within documented range', () {
-      // Documented range: ~3.78 to ~318.2
-      // Min: priority=1, minutes=5, no boosts, max decay
+      // Min: priority=1, minutes=5, low quadrant boost, max decay
       final minTask = Task(
         id: 'min',
         title: 'Min',
-        quadrant: Quadrant.q2, // Not urgent
+        quadrant: Quadrant.q4,
         priority: 1,
         minutes: 5,
         due: null, // No due boost
@@ -187,7 +182,7 @@ void main() {
         normalizedMinutes: null,
       );
 
-      // Max: priority=10, minutes=240, urgent, due soon, fresh
+      // Max: priority=10, minutes=240, Q1, due soon, fresh
       final now = DateTime.now();
       final maxTask = Task(
         id: 'max',
@@ -212,12 +207,8 @@ void main() {
       final wMin = weight(minTask);
       final wMax = weight(maxTask);
 
-      // Allow some tolerance for calculation variations
-      // Note: Actual min is higher due to freshness multiplier (0.75 + 0.25*freshness) with minimum 0.75
-      expect(wMin >= 2.5, isTrue,
-          reason: 'Min weight should be ~3.78 (adjusted for freshness)');
-      expect(wMin <= 6.0, isTrue,
-          reason: 'Min weight should be ~3.78 (adjusted for freshness)');
+      expect(wMin >= 1.0, isTrue, reason: 'Min weight should stay positive');
+      expect(wMin <= 4.0, isTrue, reason: 'Min weight should stay compact');
       // Max weight can vary significantly depending on due date timing
       expect(wMax >= 200, isTrue, reason: 'Max weight should be substantial');
       expect(wMax.isFinite, isTrue, reason: 'Max weight must be finite');

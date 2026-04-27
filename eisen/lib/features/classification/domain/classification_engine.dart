@@ -17,11 +17,24 @@ class LocalClassificationEngine {
     List<CategoryConfig> categories = CategoryConfigDefaults.values,
     ClassificationSettings settings = ClassificationSettingsDefaults.value,
   }) {
+    final normalizedInput = services.normalizeClassificationText(input);
+    final afterUserRules = _applyUserRulesStub(normalizedInput);
+    final afterAliases = _applyAliasesStub(afterUserRules);
     final heuristics = _heuristicClassifier.classify(
-      normalizedInput: services.normalizeClassificationText(input),
+      normalizedInput: afterAliases,
       categories: categories,
       settings: settings,
     );
     return heuristics.result;
+  }
+
+  String _applyUserRulesStub(String input) {
+    // TODO: resolve deterministic user rules before heuristics.
+    return input;
+  }
+
+  String _applyAliasesStub(String input) {
+    // TODO: expand personalized aliases before heuristics.
+    return input;
   }
 }

@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/features/classification/domain/entities/category_config.dart';
 import 'package:eisen/features/classification/domain/entities/classification_metadata.dart';
+import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
+import 'package:eisen/features/classification/domain/services/classification_correction_builder.dart';
 import 'package:eisen/features/classification/domain/services/task_classification_mapper.dart';
 import 'package:eisen/features/classification/presentation/controllers/category_config_controller.dart';
 import 'package:eisen/features/classification/presentation/controllers/classification_review_controller.dart';
@@ -10,6 +13,7 @@ import 'package:eisen/features/classification/presentation/controllers/quick_cap
 import 'package:eisen/features/classification/presentation/widgets/classification_preview_card.dart';
 import 'package:eisen/features/classification/presentation/widgets/quick_reclassify_sheet.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +29,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   final _titleCtrl = TextEditingController();
   final _categoryCtrl = TextEditingController();
   Quadrant _quadrant = Quadrant.q2;
+  bool _hasUserSelectedQuadrant = false;
   Timer? _classifyDebounce;
 
   @override
@@ -39,8 +44,11 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final bottom = MediaQuery.paddingOf(context).bottom;
-    final previewState = ref.watch(quickCaptureClassificationControllerProvider);
+    final previewState =
+        ref.watch(quickCaptureClassificationControllerProvider);
     final categories = ref.watch(categoryConfigControllerProvider);
+    final labelStyle =
+        ref.watch(uiPrefsProvider.select((prefs) => prefs.quadrantLabelStyle));
 
     return Container(
       decoration: BoxDecoration(
@@ -76,32 +84,56 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                 onChanged: _handleTitleChanged,
                 onSubmitted: (_) => _save(),
               ),
-              if (previewState.isLoading && previewState.preview == null) ...[
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  minHeight: 2,
-                  borderRadius: BorderRadius.circular(1),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Analizando entrada…',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
-              ],
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: previewState.isLoading
+                    ? Padding(
+                        key: const ValueKey('classification-loading'),
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            LinearProgressIndicator(
+                              minHeight: 2,
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Analizando entrada…',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
               if (previewState.preview != null) ...[
                 const SizedBox(height: 12),
                 ClassificationPreviewCard(
                   metadata: previewState.preview!,
                   categories: categories,
+                  compact: true,
+                  onTapCategory: () => _selectPreviewCategory(
+                    previewState.preview!,
+                    categories,
+                  ),
+                  onTapKind: () => _selectPreviewKind(previewState.preview!),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   children: [
                     FilledButton.tonalIcon(
-                      onPressed: previewState.isLoading ? null : () => _classifyNow(_titleCtrl.text),
+                      onPressed: previewState.isLoading
+                          ? null
+                          : () => _classifyNow(_titleCtrl.text),
                       icon: const Icon(Icons.auto_awesome),
                       label: const Text('Reclasificar'),
                     ),
@@ -123,19 +155,33 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                 children: [
                   const Text('Cuadrante:'),
                   const SizedBox(width: 12),
-                  SegmentedButton<Quadrant>(
-                    segments: [
-                      for (final q in Quadrant.values) ButtonSegment(value: q, label: Text(q.name.toUpperCase())),
-                    ],
-                    selected: {_quadrant},
-                    onSelectionChanged: (s) => setState(() => _quadrant = s.first),
+                  Expanded(
+                    child: SegmentedButton<Quadrant>(
+                      showSelectedIcon: false,
+                      segments: [
+                        for (final q in Quadrant.values)
+                          ButtonSegment(
+                            value: q,
+                            label: Text(
+                              getQuadrantLabel(q, labelStyle).shortLabel,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      selected: {_quadrant},
+                      onSelectionChanged: (s) => setState(() {
+                        _quadrant = s.first;
+                        _hasUserSelectedQuadrant = true;
+                      }),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _categoryCtrl,
-                decoration: const InputDecoration(labelText: 'Categoría (opcional)'),
+                decoration:
+                    const InputDecoration(labelText: 'Categoría (opcional)'),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
@@ -151,7 +197,9 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   }
 
   void _handleTitleChanged(String value) {
-    ref.read(quickCaptureClassificationControllerProvider.notifier).setInput(value);
+    ref
+        .read(quickCaptureClassificationControllerProvider.notifier)
+        .setInput(value);
     _classifyDebounce?.cancel();
     final trimmed = value.trim();
     if (trimmed.isEmpty) return;
@@ -163,9 +211,12 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
 
   Future<void> _classifyNow(String input) async {
     if (input.trim().isEmpty) return;
-    await ref.read(quickCaptureClassificationControllerProvider.notifier).classifyNow();
+    await ref
+        .read(quickCaptureClassificationControllerProvider.notifier)
+        .classifyNow();
     if (!mounted) return;
-    final preview = ref.read(quickCaptureClassificationControllerProvider).preview;
+    final preview =
+        ref.read(quickCaptureClassificationControllerProvider).preview;
     if (preview?.categoryId != null && _categoryCtrl.text.trim().isEmpty) {
       final categories = ref.read(categoryConfigControllerProvider);
       CategoryConfig? category;
@@ -178,6 +229,10 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
       if (category != null) {
         _categoryCtrl.text = category.name;
       }
+    }
+    final suggested = preview?.suggestedQuadrant;
+    if (!_hasUserSelectedQuadrant && suggested != null) {
+      setState(() => _quadrant = suggested);
     }
   }
 
@@ -195,7 +250,9 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
       ),
     );
     if (!mounted || result == null) return;
-    await ref.read(quickCaptureClassificationControllerProvider.notifier).applyUserCorrection(
+    await ref
+        .read(quickCaptureClassificationControllerProvider.notifier)
+        .applyUserCorrection(
           original: metadata,
           corrected: result.metadata,
           rememberDecision: true,
@@ -210,20 +267,111 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
     }
   }
 
+  Future<void> _selectPreviewCategory(
+    ClassificationMetadata metadata,
+    List<CategoryConfig> categories,
+  ) async {
+    final selected = await showModalBottomSheet<String?>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              const ListTile(
+                title: Text('Selecciona una categoría'),
+              ),
+              ListTile(
+                title: const Text('Sin categoría'),
+                leading: const Icon(Icons.remove_circle_outline),
+                selected: metadata.categoryId == null,
+                onTap: () => Navigator.of(context).pop(null),
+              ),
+              for (final category in categories)
+                ListTile(
+                  leading: Icon(
+                    Icons.label_outline,
+                    color: Color(category.colorValue),
+                  ),
+                  title: Text(category.label),
+                  selected: metadata.categoryId == category.id,
+                  onTap: () => Navigator.of(context).pop(category.id),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (!mounted) {
+      return;
+    }
+    final updated = buildUserCorrectedMetadata(
+      metadata.copyWith(categoryId: selected),
+    );
+    ref
+        .read(quickCaptureClassificationControllerProvider.notifier)
+        .applyOverride(updated);
+
+    final selectedCategory =
+        selected == null ? null : _findCategoryById(categories, selected);
+    _categoryCtrl.text = selectedCategory?.name ?? '';
+  }
+
+  Future<void> _selectPreviewKind(ClassificationMetadata metadata) async {
+    final selected = await showModalBottomSheet<EntryKind>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              const ListTile(
+                title: Text('Selecciona un tipo'),
+              ),
+              for (final kind in EntryKind.values)
+                ListTile(
+                  title: Text(kind.label),
+                  selected: kind == metadata.entryKind,
+                  onTap: () => Navigator.of(context).pop(kind),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (selected == null) {
+      return;
+    }
+    ref
+        .read(quickCaptureClassificationControllerProvider.notifier)
+        .applyOverride(
+          buildUserCorrectedMetadata(
+            metadata.copyWith(entryKind: selected),
+          ),
+        );
+  }
+
   Future<void> _save() async {
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) return;
     final cat = _categoryCtrl.text.trim();
 
     _classifyDebounce?.cancel();
-    final quickController = ref.read(quickCaptureClassificationControllerProvider.notifier);
+    final quickController =
+        ref.read(quickCaptureClassificationControllerProvider.notifier);
 
+    final preview =
+        ref.read(quickCaptureClassificationControllerProvider).preview;
+    final effectiveQuadrant = _hasUserSelectedQuadrant
+        ? _quadrant
+        : (preview?.suggestedQuadrant ?? _quadrant);
     final id = await quickController.persistTaskWithClassification(
       rawText: title,
-      quadrant: _quadrant,
+      quadrant: effectiveQuadrant,
       manualCategoryLabel: cat.isEmpty ? null : cat,
     );
-    final preview = ref.read(quickCaptureClassificationControllerProvider).preview;
     final categories = ref.read(categoryConfigControllerProvider);
 
     if (!mounted) return;
@@ -317,7 +465,10 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
             categories: container.read(categoryConfigControllerProvider),
           ),
         );
-    await container.read(classificationReviewControllerProvider.notifier).recordCorrection(
+    await container
+        .read(classificationReviewControllerProvider.notifier)
+        .recordCorrection(
+          taskId: taskId,
           inputText: original.inputText,
           original: original,
           corrected: corrected,
@@ -334,5 +485,20 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
     ScaffoldMessenger.of(hostContext).showSnackBar(
       const SnackBar(content: Text('Clasificación corregida')),
     );
+  }
+
+  CategoryConfig? _findCategoryById(
+    List<CategoryConfig> categories,
+    String? id,
+  ) {
+    if (id == null) {
+      return null;
+    }
+    for (final category in categories) {
+      if (category.id == id) {
+        return category;
+      }
+    }
+    return null;
   }
 }

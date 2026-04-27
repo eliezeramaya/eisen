@@ -146,6 +146,10 @@ class LocalPrefsMatrixRepository implements MatrixRepository {
       completedAt: j['completedAt'] != null
           ? DateTime.tryParse(j['completedAt'] as String)
           : null,
+      isArchived: j['isArchived'] as bool? ?? false,
+      archivedAt: j['archivedAt'] != null
+          ? DateTime.tryParse(j['archivedAt'] as String)
+          : null,
       kind: parsedKind,
       categoryId: parsedCategoryId,
       subcategoryId: j['subcategoryId'] as String?,
@@ -177,6 +181,8 @@ class LocalPrefsMatrixRepository implements MatrixRepository {
         'createdAt': t.createdAt?.toIso8601String(),
         'updatedAt': t.updatedAt?.toIso8601String(),
         'completedAt': t.completedAt?.toIso8601String(),
+        'isArchived': t.isArchived,
+        'archivedAt': t.archivedAt?.toIso8601String(),
         'kind': t.kind.name,
         'categoryId': t.categoryId,
         'subcategoryId': t.subcategoryId,

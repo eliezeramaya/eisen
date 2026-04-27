@@ -1,4 +1,5 @@
 import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,6 +20,7 @@ void main() {
       expect(data.minimal, isFalse);
       expect(data.topKPerQuadrant, 20);
       expect(data.advancedInsightsEnabled, isTrue);
+      expect(data.quadrantLabelStyle, QuadrantLabelStyle.professional);
     });
 
     test('save then load returns same values', () async {
@@ -51,6 +53,7 @@ void main() {
         ganttShowTodayLine: false,
         densityPreset: 'compact',
         viewMode: 'list',
+        quadrantLabelStyle: QuadrantLabelStyle.action,
       );
 
       await repo.save(original);
@@ -68,7 +71,8 @@ void main() {
       expect(copy.showAxisLegends, base.showAxisLegends);
     });
 
-    test('tolerates corrupted stored data and falls back to defaults', () async {
+    test('tolerates corrupted stored data and falls back to defaults',
+        () async {
       SharedPreferences.setMockInitialValues({
         'eisen.ui.v1': '{invalid json',
       });
