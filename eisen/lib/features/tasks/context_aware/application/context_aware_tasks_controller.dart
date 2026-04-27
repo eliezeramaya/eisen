@@ -83,7 +83,8 @@ class ContextAwareTasksController extends Notifier<ContextState> {
         (!isAutoMode || permissionState != ContextPermissionState.denied);
 
     return ContextState(
-      currentLocationTag: preset.tag,
+      currentLocationTag:
+          (isAutoMode && !canUseCoordinates) ? unknownContextPreset.tag : preset.tag,
       latitude: canUseCoordinates ? preset.latitude : null,
       longitude: canUseCoordinates ? preset.longitude : null,
       isAutoMode: isAutoMode,

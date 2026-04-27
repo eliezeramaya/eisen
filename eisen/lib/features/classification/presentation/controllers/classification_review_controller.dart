@@ -1,10 +1,11 @@
 import 'package:eisen/features/classification/domain/entities/classification_correction_event.dart';
 import 'package:eisen/features/classification/domain/entities/classification_metadata.dart';
 import 'package:eisen/features/classification/domain/entities/rule_suggestion.dart';
-import 'package:eisen/features/classification/domain/enums/classification_source.dart';
 import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
 import 'package:eisen/features/classification/domain/enums/correction_source.dart';
 import 'package:eisen/features/classification/domain/enums/suggestion_status.dart';
+import 'package:eisen/features/classification/domain/services/classification_correction_builder.dart';
+import 'package:eisen/features/classification/domain/services/quadrant_learning_engine.dart';
 import 'package:eisen/features/classification/presentation/controllers/classification_rules_controller.dart';
 import 'package:eisen/features/classification/presentation/providers/classification_providers.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
@@ -17,21 +18,25 @@ class ClassificationReviewState {
   const ClassificationReviewState({
     this.corrections = const <ClassificationCorrectionEvent>[],
     this.suggestions = const <RuleSuggestion>[],
+    this.learningProfile = QuadrantLearningProfile.neutral,
     this.isLoading = false,
   });
 
   final List<ClassificationCorrectionEvent> corrections;
   final List<RuleSuggestion> suggestions;
+  final QuadrantLearningProfile learningProfile;
   final bool isLoading;
 
   ClassificationReviewState copyWith({
     List<ClassificationCorrectionEvent>? corrections,
     List<RuleSuggestion>? suggestions,
+    QuadrantLearningProfile? learningProfile,
     bool? isLoading,
   }) {
     return ClassificationReviewState(
       corrections: corrections ?? this.corrections,
       suggestions: suggestions ?? this.suggestions,
+      learningProfile: learningProfile ?? this.learningProfile,
       isLoading: isLoading ?? this.isLoading,
     );
   }
@@ -40,6 +45,7 @@ class ClassificationReviewState {
 class ClassificationReviewController
     extends Notifier<ClassificationReviewState> {
   late final _repository = ref.read(classificationRepositoryProvider);
+  final _learningEngine = const QuadrantLearningEngine();
 
   @override
   ClassificationReviewState build() {
@@ -51,9 +57,11 @@ class ClassificationReviewController
     state = state.copyWith(isLoading: true);
     final corrections = await _repository.loadCorrections();
     final suggestions = await _repository.suggestRules();
+    final learningProfile = _learningEngine.learnFromCorrections(corrections);
     state = ClassificationReviewState(
       corrections: corrections,
       suggestions: suggestions,
+      learningProfile: learningProfile,
       isLoading: false,
     );
   }
@@ -99,42 +107,19 @@ class ClassificationReviewController
     required String inputText,
     required ClassificationMetadata original,
     required ClassificationMetadata corrected,
+    String? taskId,
     String? note,
   }) async {
-    final event = ClassificationCorrectionEvent(
-      id: 'correction-${DateTime.now().microsecondsSinceEpoch}',
-      rawText: inputText,
-      originalCategoryId: original.categoryId,
-      correctedCategoryId: corrected.categoryId,
-      originalKind: original.entryKind,
-      correctedKind: corrected.entryKind,
-      originalHorizon: original.timeHorizon,
-      correctedHorizon: corrected.timeHorizon,
-      originalEnergy: original.energyLevel,
-      correctedEnergy: corrected.energyLevel,
-      confidenceBefore: original.confidenceLevel,
+    final event = buildClassificationCorrectionEvent(
+      original: original,
+      corrected: corrected,
+      inputText: inputText,
       source: CorrectionSource.reviewCenter,
-      detectedKeyword: corrected.matchedKeywords.isEmpty
-          ? null
-          : corrected.matchedKeywords.first,
-      originalClassification: original,
-      correctedClassification: corrected.copyWith(
-        confidenceScore: 0.96,
-        confidenceLevel: ConfidenceLevel.high,
-        source: ClassificationSource.userCorrection,
-        signals: <String>[
-          ...corrected.signals,
-          'user-correction',
-        ],
-        isUserConfirmed: true,
-        wasUserCorrected: true,
-        isAutoClassified: false,
-        updatedAt: DateTime.now(),
-      ),
-      createdAt: DateTime.now(),
+      taskId: taskId,
       correctionNote: note,
     );
     await _repository.recordCorrection(event);
+    ref.invalidate(quadrantLearningProfileProvider);
     await _load();
   }
 }

@@ -99,7 +99,8 @@ void main() {
   test('task without classificationMetadata loads without crash', () async {
     // Simulate old-format task that never had metadata
     SharedPreferences.setMockInitialValues({
-      'eisen.tasks.v1': '{"tasks":[{"id":"old-1","title":"Tarea vieja","quadrant":2,"priority":5,"minutes":30}]}',
+      'eisen.tasks.v1':
+          '{"tasks":[{"id":"old-1","title":"Tarea vieja","quadrant":2,"priority":5,"minutes":30}]}',
     });
 
     final repo = LocalPrefsMatrixRepository(StoragePrefs());
@@ -114,5 +115,28 @@ void main() {
     expect(task.kind, EntryKind.task);
     // Metadata is auto-generated for migrated tasks
     expect(task.classificationMetadata, isNotNull);
+  });
+
+  test('archive fields are backward compatible and round-trip', () async {
+    SharedPreferences.setMockInitialValues({
+      'eisen.tasks.v1':
+          '{"tasks":[{"id":"old-archive","title":"Legacy","quadrant":1,"priority":5,"minutes":30}]}',
+    });
+
+    final repo = LocalPrefsMatrixRepository(StoragePrefs());
+    final legacy = await repo.load();
+    expect(legacy.single.isArchived, isFalse);
+    expect(legacy.single.archivedAt, isNull);
+
+    final archivedAt = DateTime(2026, 4, 26, 10);
+    final archived = legacy.single.copyWith(
+      isArchived: true,
+      archivedAt: archivedAt,
+    );
+    await repo.save([archived]);
+
+    final loaded = await repo.load();
+    expect(loaded.single.isArchived, isTrue);
+    expect(loaded.single.archivedAt, archivedAt);
   });
 }

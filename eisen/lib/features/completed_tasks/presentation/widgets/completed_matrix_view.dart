@@ -1,4 +1,5 @@
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:flutter/material.dart';
 
 import 'completed_task_card.dart';
@@ -246,14 +247,26 @@ class _QuadrantPanel extends StatelessWidget {
         Quadrant.q1 => Icons.priority_high,
         Quadrant.q2 => Icons.schedule,
         Quadrant.q3 => Icons.forward_to_inbox,
-        Quadrant.q4 => Icons.delete_outline,
+        Quadrant.q4 => Icons.archive_outlined,
       };
 
   String _getQuadrantTitle(Quadrant q) => switch (q) {
-        Quadrant.q1 => 'Q1: Hacer Primero',
-        Quadrant.q2 => 'Q2: Programar',
-        Quadrant.q3 => 'Q3: Delegar',
-        Quadrant.q4 => 'Q4: Eliminar',
+        Quadrant.q1 => getQuadrantLabel(
+            Quadrant.q1,
+            QuadrantLabelStyle.professional,
+          ).title,
+        Quadrant.q2 => getQuadrantLabel(
+            Quadrant.q2,
+            QuadrantLabelStyle.professional,
+          ).title,
+        Quadrant.q3 => getQuadrantLabel(
+            Quadrant.q3,
+            QuadrantLabelStyle.professional,
+          ).title,
+        Quadrant.q4 => getQuadrantLabel(
+            Quadrant.q4,
+            QuadrantLabelStyle.professional,
+          ).title,
       };
 }
 

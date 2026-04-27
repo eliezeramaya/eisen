@@ -4,6 +4,7 @@ import 'package:eisen/features/classification/domain/enums/correction_source.dar
 import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:flutter/foundation.dart';
 
 @immutable
@@ -19,11 +20,15 @@ class ClassificationCorrectionEvent {
     required this.correctedHorizon,
     required this.originalEnergy,
     required this.correctedEnergy,
+    this.originalQuadrant,
+    this.correctedQuadrant,
     required this.confidenceBefore,
     this.source = CorrectionSource.reviewCenter,
     required this.createdAt,
     this.taskId,
     this.detectedKeyword,
+    this.extractedKeywords = const <String>[],
+    this.dominantKeyword,
     this.originalClassification,
     this.correctedClassification,
     this.correctionNote,
@@ -40,9 +45,13 @@ class ClassificationCorrectionEvent {
   final TimeHorizon? correctedHorizon;
   final EnergyLevel? originalEnergy;
   final EnergyLevel? correctedEnergy;
+  final Quadrant? originalQuadrant;
+  final Quadrant? correctedQuadrant;
   final ConfidenceLevel confidenceBefore;
   final CorrectionSource source;
   final String? detectedKeyword;
+  final List<String> extractedKeywords;
+  final String? dominantKeyword;
   final DateTime createdAt;
   final ClassificationMetadata? originalClassification;
   final ClassificationMetadata? correctedClassification;
@@ -63,9 +72,13 @@ class ClassificationCorrectionEvent {
     TimeHorizon? correctedHorizon,
     EnergyLevel? originalEnergy,
     EnergyLevel? correctedEnergy,
+    Quadrant? originalQuadrant,
+    Quadrant? correctedQuadrant,
     ConfidenceLevel? confidenceBefore,
     CorrectionSource? source,
     String? detectedKeyword,
+    List<String>? extractedKeywords,
+    String? dominantKeyword,
     DateTime? createdAt,
     ClassificationMetadata? originalClassification,
     ClassificationMetadata? correctedClassification,
@@ -83,9 +96,13 @@ class ClassificationCorrectionEvent {
       correctedHorizon: correctedHorizon ?? this.correctedHorizon,
       originalEnergy: originalEnergy ?? this.originalEnergy,
       correctedEnergy: correctedEnergy ?? this.correctedEnergy,
+      originalQuadrant: originalQuadrant ?? this.originalQuadrant,
+      correctedQuadrant: correctedQuadrant ?? this.correctedQuadrant,
       confidenceBefore: confidenceBefore ?? this.confidenceBefore,
       source: source ?? this.source,
       detectedKeyword: detectedKeyword ?? this.detectedKeyword,
+      extractedKeywords: extractedKeywords ?? this.extractedKeywords,
+      dominantKeyword: dominantKeyword ?? this.dominantKeyword,
       createdAt: createdAt ?? this.createdAt,
       originalClassification:
           originalClassification ?? this.originalClassification,

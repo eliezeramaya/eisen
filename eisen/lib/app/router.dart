@@ -1,3 +1,4 @@
+import 'package:eisen/features/archive/presentation/archive_screen.dart';
 import 'package:eisen/features/calendar_gantt/presentation/pages/workflow_plan_page.dart';
 import 'package:eisen/features/classification/presentation/screens/classification_review_screen.dart';
 import 'package:eisen/features/classification/presentation/screens/classification_settings_screen.dart';
@@ -140,6 +141,14 @@ final GoRouter _router = GoRouter(
       pageBuilder: (context, state) => _fadeSlidePage(
         state,
         const ClassificationReviewScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/archive',
+      name: 'archive',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        state,
+        const ArchiveScreen(),
       ),
     ),
     GoRoute(

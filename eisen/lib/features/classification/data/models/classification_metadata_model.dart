@@ -6,6 +6,7 @@ import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/enums/priority_level.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 
 class ClassificationMetadataModel extends ClassificationMetadata {
   ClassificationMetadataModel({
@@ -28,6 +29,10 @@ class ClassificationMetadataModel extends ClassificationMetadata {
     super.suggestedCategoryId,
     super.confidenceReason,
     super.reasons,
+    super.suggestedQuadrant,
+    super.urgencyScore,
+    super.importanceScore,
+    super.quadrantReason,
     super.isAutoClassified,
     super.wasUserCorrected,
     super.isUserConfirmed,
@@ -59,6 +64,10 @@ class ClassificationMetadataModel extends ClassificationMetadata {
       suggestedCategoryId: entity.suggestedCategoryId,
       confidenceReason: entity.confidenceReason,
       reasons: entity.reasons,
+      suggestedQuadrant: entity.suggestedQuadrant,
+      urgencyScore: entity.urgencyScore,
+      importanceScore: entity.importanceScore,
+      quadrantReason: entity.quadrantReason,
       isAutoClassified: entity.isAutoClassified,
       wasUserCorrected: entity.wasUserCorrected,
       isUserConfirmed: entity.isUserConfirmed,
@@ -124,6 +133,14 @@ class ClassificationMetadataModel extends ClassificationMetadata {
       confidenceReason:
           json['confidenceReason'] as String? ?? legacyReasons.join(' '),
       reasons: legacyReasons,
+      suggestedQuadrant: enumFromName(
+        Quadrant.values,
+        json['suggestedQuadrant'] as String?,
+        null,
+      ),
+      urgencyScore: (json['urgencyScore'] as num?)?.toDouble() ?? 0.0,
+      importanceScore: (json['importanceScore'] as num?)?.toDouble() ?? 0.0,
+      quadrantReason: json['quadrantReason'] as String? ?? '',
       isAutoClassified: json['isAutoClassified'] as bool? ?? true,
       wasUserCorrected: json['wasUserCorrected'] as bool? ??
           json['isUserConfirmed'] as bool? ??
@@ -161,6 +178,10 @@ class ClassificationMetadataModel extends ClassificationMetadata {
         'suggestedCategoryId': suggestedCategoryId,
         'confidenceReason': confidenceReason,
         'reasons': reasons,
+        'suggestedQuadrant': suggestedQuadrant?.name,
+        'urgencyScore': urgencyScore,
+        'importanceScore': importanceScore,
+        'quadrantReason': quadrantReason,
         'isAutoClassified': isAutoClassified,
         'wasUserCorrected': wasUserCorrected,
         'isUserConfirmed': isUserConfirmed,

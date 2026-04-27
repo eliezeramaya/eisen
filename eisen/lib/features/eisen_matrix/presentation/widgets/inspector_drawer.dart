@@ -1,6 +1,8 @@
 import 'package:eisen/core/responsive/layout_tokens.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_recommendations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -39,10 +41,12 @@ class InspectorDrawer extends ConsumerStatefulWidget {
       required this.task,
       required this.onChanged,
       required this.onDelete,
+      this.onArchive,
       this.onComplete});
   final Task task;
   final ValueChanged<Task> onChanged;
   final VoidCallback onDelete;
+  final VoidCallback? onArchive;
   final VoidCallback? onComplete;
 
   @override
@@ -83,6 +87,9 @@ class _InspectorDrawerState extends ConsumerState<InspectorDrawer> {
 
   @override
   Widget build(BuildContext context) {
+    final labelStyle =
+        ref.watch(uiPrefsProvider.select((prefs) => prefs.quadrantLabelStyle));
+    final currentQuadrantLabel = getQuadrantLabel(_quadrant, labelStyle);
     return Drawer(
       child: SafeArea(
         child: ListView(
@@ -270,7 +277,9 @@ class _InspectorDrawerState extends ConsumerState<InspectorDrawer> {
               decoration: const InputDecoration(labelText: 'Quadrant'),
               items: Quadrant.values
                   .map((q) => DropdownMenuItem(
-                      value: q, child: Text(q.name.toUpperCase())))
+                        value: q,
+                        child: Text(getQuadrantLabel(q, labelStyle).title),
+                      ))
                   .toList(),
               onChanged: (q) {
                 if (q != null) {
@@ -279,7 +288,22 @@ class _InspectorDrawerState extends ConsumerState<InspectorDrawer> {
                 }
               },
             ),
+            const SizedBox(height: AppSpacing.xs),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.tips_and_updates_outlined),
+              title: Text(currentQuadrantLabel.subtitle),
+              subtitle: Text(getQuadrantRecommendation(_quadrant)),
+            ),
             const Divider(height: AppSpacing.lg),
+            if (_quadrant == Quadrant.q4 && widget.onArchive != null) ...[
+              FilledButton.icon(
+                onPressed: widget.onArchive,
+                icon: const Icon(Icons.archive_outlined),
+                label: const Text('Archivar'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
             Row(
               children: [
                 Expanded(

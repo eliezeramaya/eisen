@@ -6,6 +6,7 @@ import 'package:eisen/features/classification/domain/enums/priority_level.dart';
 import 'package:eisen/features/classification/domain/enums/rule_match_type.dart';
 import 'package:eisen/features/classification/domain/enums/rule_priority.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 
 class ClassificationRuleModel extends ClassificationRule {
   const ClassificationRuleModel({
@@ -18,6 +19,7 @@ class ClassificationRuleModel extends ClassificationRule {
     super.targetHorizon,
     super.targetEnergy,
     super.targetPriority,
+    super.targetQuadrant,
     super.targetTags,
     super.description,
     super.priority,
@@ -39,6 +41,7 @@ class ClassificationRuleModel extends ClassificationRule {
       targetHorizon: entity.targetHorizon,
       targetEnergy: entity.targetEnergy,
       targetPriority: entity.targetPriority,
+      targetQuadrant: entity.targetQuadrant,
       targetTags: entity.targetTags,
       description: entity.description,
       priority: entity.priority,
@@ -84,6 +87,12 @@ class ClassificationRuleModel extends ClassificationRule {
         json['targetPriority'] as String? ?? json['priorityLevel'] as String?,
         null,
       ),
+      targetQuadrant: enumFromName(
+        Quadrant.values,
+        json['targetQuadrant'] as String? ??
+            json['suggestedQuadrant'] as String?,
+        null,
+      ),
       targetTags: (json['targetTags'] as List?)?.cast<String>() ?? const [],
       description: json['description'] as String?,
       priority: enumFromName(
@@ -115,6 +124,7 @@ class ClassificationRuleModel extends ClassificationRule {
         'targetHorizon': targetHorizon?.name,
         'targetEnergy': targetEnergy?.name,
         'targetPriority': targetPriority?.name,
+        'targetQuadrant': targetQuadrant?.name,
         'targetTags': targetTags,
         'description': description,
         'priority': priority.name,

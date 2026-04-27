@@ -8,6 +8,7 @@ import 'package:eisen/features/classification/domain/enums/classification_source
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/services/confidence_scorer.dart';
 import 'package:eisen/features/classification/domain/services/heuristic_classifier.dart';
+import 'package:eisen/features/classification/domain/services/urgency_importance_scorer.dart';
 import 'package:eisen/features/classification/domain/services/user_rule_resolver.dart';
 
 abstract class ClassificationEngine {
@@ -26,13 +27,16 @@ class DefaultClassificationEngine implements ClassificationEngine {
     required UserRuleResolver ruleResolver,
     required HeuristicClassifier heuristicClassifier,
     required ConfidenceScorer confidenceScorer,
+    UrgencyImportanceScorer scorer = const UrgencyImportanceScorer(),
   })  : _ruleResolver = ruleResolver,
         _heuristicClassifier = heuristicClassifier,
-        _confidenceScorer = confidenceScorer;
+        _confidenceScorer = confidenceScorer,
+        _scorer = scorer;
 
   final UserRuleResolver _ruleResolver;
   final HeuristicClassifier _heuristicClassifier;
   final ConfidenceScorer _confidenceScorer;
+  final UrgencyImportanceScorer _scorer;
 
   @override
   ClassificationMetadata classify({
@@ -89,8 +93,27 @@ class DefaultClassificationEngine implements ClassificationEngine {
           heuristics.categoryId == null)
         'Se aplicó la categoría por defecto.',
     ];
+    final urgencyScore = _scorer.computeUrgencyScore(
+      normalizedText: normalized,
+      horizon: resolvedHorizon,
+    );
+    final importanceScore = _scorer.computeImportanceScore(
+      normalizedText: normalized,
+      kind: resolvedKind,
+      category: resolvedCategoryId ?? heuristics.categoryLabel,
+      autoTags: heuristics.extractedTags,
+    );
+    final quadrantInference = _scorer.infer(
+      urgency: urgencyScore,
+      importance: importanceScore,
+    );
+    final suggestedQuadrant =
+        resolution.suggestedQuadrant ?? quadrantInference.suggestedQuadrant;
+    final quadrantReason = resolution.suggestedQuadrant == null
+        ? quadrantInference.reason
+        : 'Cuadrante sugerido por regla o alias personalizado';
 
-    final score = _confidenceScorer.score(
+    final confidence = _confidenceScorer.evaluate(
       ClassificationConfidenceInput(
         source: source,
         heuristicSignalCount: heuristics.signalCount,
@@ -104,8 +127,8 @@ class DefaultClassificationEngine implements ClassificationEngine {
         hasPriority: resolution.priorityLevel != null ||
             heuristics.priorityLevel != heuristics.fallbackPriority,
       ),
+      settings,
     );
-    final level = _confidenceScorer.levelFor(score, settings);
 
     return ClassificationMetadata(
       inputText: input,
@@ -115,8 +138,8 @@ class DefaultClassificationEngine implements ClassificationEngine {
       timeHorizon: resolvedHorizon,
       energyLevel: resolvedEnergy,
       priorityLevel: resolvedPriority,
-      confidenceScore: score,
-      confidenceLevel: level,
+      confidenceScore: confidence.score,
+      confidenceLevel: confidence.level,
       classifierVersion: settings.classifierVersion.isEmpty
           ? kCurrentClassifierVersion
           : settings.classifierVersion,
@@ -134,12 +157,15 @@ class DefaultClassificationEngine implements ClassificationEngine {
       suggestedCategoryId: heuristics.categoryId,
       confidenceReason: source == ClassificationSource.heuristic
           ? heuristics.confidenceReason
-          : _confidenceScorer.reasonFor(
-              source: source,
-              level: level,
-              heuristicSignalCount: heuristics.signalCount,
-            ),
-      reasons: reasons,
+          : confidence.reason,
+      reasons: <String>[
+        ...reasons,
+        quadrantReason,
+      ],
+      suggestedQuadrant: suggestedQuadrant,
+      urgencyScore: urgencyScore,
+      importanceScore: importanceScore,
+      quadrantReason: quadrantReason,
       isAutoClassified: true,
       classifiedAt: timestamp,
       createdAt: timestamp,

@@ -10,6 +10,8 @@ import 'package:eisen/features/classification/domain/enums/rule_priority.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
 import 'package:eisen/features/classification/presentation/controllers/category_config_controller.dart';
 import 'package:eisen/features/classification/presentation/controllers/classification_rules_controller.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -169,6 +171,15 @@ class _RuleTile extends StatelessWidget {
                 Chip(label: Text(rule.targetHorizon!.label)),
               if (rule.targetEnergy != null)
                 Chip(label: Text('Energía ${rule.targetEnergy!.label}')),
+              if (rule.targetQuadrant != null)
+                Chip(
+                  label: Text(
+                    getQuadrantLabel(
+                      rule.targetQuadrant!,
+                      QuadrantLabelStyle.professional,
+                    ).title,
+                  ),
+                ),
               if (rule.targetTags.isNotEmpty)
                 Chip(label: Text(rule.targetTags.join(', '))),
             ],
@@ -221,6 +232,7 @@ class _RuleEditorSheetState extends State<_RuleEditorSheet> {
   late TimeHorizon? _horizon = widget.initial?.targetHorizon;
   late EnergyLevel? _energy = widget.initial?.targetEnergy;
   late PriorityLevel? _priorityLevel = widget.initial?.targetPriority;
+  late Quadrant? _quadrant = widget.initial?.targetQuadrant;
   late RulePriority _rulePriority =
       widget.initial?.priority ?? RulePriority.normal;
   late RuleMatchType _matchType =
@@ -314,6 +326,17 @@ class _RuleEditorSheetState extends State<_RuleEditorSheet> {
                 values: PriorityLevel.values,
                 labelFor: (item) => item.label,
                 onChanged: (value) => setState(() => _priorityLevel = value),
+              ),
+              const SizedBox(height: 12),
+              _optionalEnumField<Quadrant>(
+                label: 'Cuadrante sugerido opcional',
+                value: _quadrant,
+                values: Quadrant.values,
+                labelFor: (item) => getQuadrantLabel(
+                  item,
+                  QuadrantLabelStyle.professional,
+                ).title,
+                onChanged: (value) => setState(() => _quadrant = value),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -429,6 +452,7 @@ class _RuleEditorSheetState extends State<_RuleEditorSheet> {
         targetHorizon: _horizon,
         targetEnergy: _energy,
         targetPriority: _priorityLevel,
+        targetQuadrant: _quadrant,
         targetTags: _tagsController.text
             .split(',')
             .map((item) => item.trim().toLowerCase())

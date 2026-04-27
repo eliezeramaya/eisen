@@ -3,6 +3,7 @@ import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/enums/priority_level.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:flutter/foundation.dart';
 
 @immutable
@@ -18,6 +19,7 @@ class VocabularyAlias {
     this.timeHorizon,
     this.energyLevel,
     this.priorityLevel,
+    this.suggestedQuadrant,
     this.enabled = true,
     this.createdAt,
     this.updatedAt,
@@ -33,6 +35,7 @@ class VocabularyAlias {
   final TimeHorizon? timeHorizon;
   final EnergyLevel? energyLevel;
   final PriorityLevel? priorityLevel;
+  final Quadrant? suggestedQuadrant;
   final bool enabled;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -58,6 +61,7 @@ class VocabularyAlias {
     TimeHorizon? timeHorizon,
     EnergyLevel? energyLevel,
     PriorityLevel? priorityLevel,
+    Quadrant? suggestedQuadrant,
     bool? enabled,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -73,6 +77,7 @@ class VocabularyAlias {
       timeHorizon: timeHorizon ?? this.timeHorizon,
       energyLevel: energyLevel ?? this.energyLevel,
       priorityLevel: priorityLevel ?? this.priorityLevel,
+      suggestedQuadrant: suggestedQuadrant ?? this.suggestedQuadrant,
       enabled: enabled ?? this.enabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

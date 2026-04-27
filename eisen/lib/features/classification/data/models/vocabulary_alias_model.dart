@@ -5,6 +5,7 @@ import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/enums/priority_level.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 
 class VocabularyAliasModel extends VocabularyAlias {
   const VocabularyAliasModel({
@@ -18,6 +19,7 @@ class VocabularyAliasModel extends VocabularyAlias {
     super.timeHorizon,
     super.energyLevel,
     super.priorityLevel,
+    super.suggestedQuadrant,
     super.enabled,
     super.createdAt,
     super.updatedAt,
@@ -35,6 +37,7 @@ class VocabularyAliasModel extends VocabularyAlias {
       timeHorizon: entity.timeHorizon,
       energyLevel: entity.energyLevel,
       priorityLevel: entity.priorityLevel,
+      suggestedQuadrant: entity.suggestedQuadrant,
       enabled: entity.enabled,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
@@ -78,6 +81,11 @@ class VocabularyAliasModel extends VocabularyAlias {
         json['priorityLevel'] as String?,
         null,
       ),
+      suggestedQuadrant: enumFromName(
+        Quadrant.values,
+        json['suggestedQuadrant'] as String?,
+        null,
+      ),
       enabled: json['enabled'] as bool? ?? json['isEnabled'] as bool? ?? true,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'] as String)
@@ -99,6 +107,7 @@ class VocabularyAliasModel extends VocabularyAlias {
         'timeHorizon': timeHorizon?.name,
         'energyLevel': energyLevel?.name,
         'priorityLevel': priorityLevel?.name,
+        'suggestedQuadrant': suggestedQuadrant?.name,
         'enabled': enabled,
         'createdAt': createdAt?.toIso8601String(),
         'updatedAt': updatedAt?.toIso8601String(),

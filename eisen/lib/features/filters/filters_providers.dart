@@ -1,49 +1,42 @@
 import 'dart:async';
-import 'dart:convert';
 
+import 'package:eisen/core/services/storage_prefs.dart';
 import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
 import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-// ---------------------------------------------------------------------------
-// Persistence helpers
-// ---------------------------------------------------------------------------
+const _kCategoryFiltersKey = 'filters.categories';
+const _kKindFiltersKey = 'filters.kinds';
+const _kHorizonFiltersKey = 'filters.horizons';
+const _kEnergyFiltersKey = 'filters.energies';
+const _kConfidenceFiltersKey = 'filters.confidences';
 
-const _kCategoryFiltersKey = 'eisen.filters.categories.v1';
-const _kKindFiltersKey = 'eisen.filters.kinds.v1';
-const _kHorizonFiltersKey = 'eisen.filters.horizons.v1';
-const _kEnergyFiltersKey = 'eisen.filters.energies.v1';
-const _kConfidenceFiltersKey = 'eisen.filters.confidences.v1';
+final filtersStorageProvider = Provider<StoragePrefs>((ref) => StoragePrefs());
 
-Future<List<String>> _loadStringList(String key) async {
-  final prefs = await SharedPreferences.getInstance();
-  final raw = prefs.getString(key);
-  if (raw == null) return const <String>[];
-  try {
-    final decoded = jsonDecode(raw);
-    if (decoded is List) return decoded.cast<String>();
-  } catch (_) {}
-  return const <String>[];
+final activeCategoryFiltersProvider =
+    NotifierProvider<ActiveCategoryFilters, List<String>>(
+  ActiveCategoryFilters.new,
+);
+
+final showArchivedProvider = NotifierProvider<ShowArchived, bool>(
+  ShowArchived.new,
+);
+
+class ShowArchived extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void update(bool value) {
+    state = value;
+  }
 }
-
-Future<void> _saveStringList(String key, List<String> values) async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setString(key, jsonEncode(values));
-}
-
-// ---------------------------------------------------------------------------
-// Category filters
-// ---------------------------------------------------------------------------
-
-/// Active category filters selected by the user in the UI.
-/// Persisted between sessions via SharedPreferences.
-final activeCategoryFiltersProvider = NotifierProvider<ActiveCategoryFilters, List<String>>(ActiveCategoryFilters.new);
 
 class ActiveCategoryFilters extends Notifier<List<String>> {
+  late final StoragePrefs _storage = ref.read(filtersStorageProvider);
+
   @override
   List<String> build() {
     unawaited(_loadAsync());
@@ -51,25 +44,26 @@ class ActiveCategoryFilters extends Notifier<List<String>> {
   }
 
   Future<void> _loadAsync() async {
-    final loaded = await _loadStringList(_kCategoryFiltersKey);
-    if (loaded.isNotEmpty) state = loaded;
+    final loaded = await _storage.loadStringListField(_kCategoryFiltersKey);
+    if (ref.mounted) {
+      state = loaded;
+    }
   }
 
-  void update(List<String> newFilters) {
+  Future<void> update(List<String> newFilters) async {
     state = newFilters;
-    unawaited(_saveStringList(_kCategoryFiltersKey, newFilters));
+    await _storage.saveStringListField(_kCategoryFiltersKey, newFilters);
   }
 }
 
-// ---------------------------------------------------------------------------
-// Kind filters
-// ---------------------------------------------------------------------------
-
-final activeKindFiltersProvider = NotifierProvider<ActiveKindFilters, List<EntryKind>>(
+final activeKindFiltersProvider =
+    NotifierProvider<ActiveKindFilters, List<EntryKind>>(
   ActiveKindFilters.new,
 );
 
 class ActiveKindFilters extends Notifier<List<EntryKind>> {
+  late final StoragePrefs _storage = ref.read(filtersStorageProvider);
+
   @override
   List<EntryKind> build() {
     unawaited(_loadAsync());
@@ -77,30 +71,30 @@ class ActiveKindFilters extends Notifier<List<EntryKind>> {
   }
 
   Future<void> _loadAsync() async {
-    final names = await _loadStringList(_kKindFiltersKey);
-    if (names.isEmpty) return;
-    final parsed =
-        names.map((n) => EntryKind.values.where((e) => e.name == n).firstOrNull).whereType<EntryKind>().toList();
-    if (parsed.isNotEmpty) state = parsed;
+    final names = await _storage.loadStringListField(_kKindFiltersKey);
+    if (!ref.mounted) {
+      return;
+    }
+    state = _parseEnumList(names, EntryKind.values);
   }
 
-  void update(List<EntryKind> newFilters) {
+  Future<void> update(List<EntryKind> newFilters) async {
     state = newFilters;
-    unawaited(
-      _saveStringList(_kKindFiltersKey, newFilters.map((e) => e.name).toList()),
+    await _storage.saveStringListField(
+      _kKindFiltersKey,
+      newFilters.map((item) => item.name).toList(growable: false),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Horizon filters
-// ---------------------------------------------------------------------------
-
-final activeHorizonFiltersProvider = NotifierProvider<ActiveHorizonFilters, List<TimeHorizon>>(
+final activeHorizonFiltersProvider =
+    NotifierProvider<ActiveHorizonFilters, List<TimeHorizon>>(
   ActiveHorizonFilters.new,
 );
 
 class ActiveHorizonFilters extends Notifier<List<TimeHorizon>> {
+  late final StoragePrefs _storage = ref.read(filtersStorageProvider);
+
   @override
   List<TimeHorizon> build() {
     unawaited(_loadAsync());
@@ -108,30 +102,30 @@ class ActiveHorizonFilters extends Notifier<List<TimeHorizon>> {
   }
 
   Future<void> _loadAsync() async {
-    final names = await _loadStringList(_kHorizonFiltersKey);
-    if (names.isEmpty) return;
-    final parsed =
-        names.map((n) => TimeHorizon.values.where((e) => e.name == n).firstOrNull).whereType<TimeHorizon>().toList();
-    if (parsed.isNotEmpty) state = parsed;
+    final names = await _storage.loadStringListField(_kHorizonFiltersKey);
+    if (!ref.mounted) {
+      return;
+    }
+    state = _parseEnumList(names, TimeHorizon.values);
   }
 
-  void update(List<TimeHorizon> newFilters) {
+  Future<void> update(List<TimeHorizon> newFilters) async {
     state = newFilters;
-    unawaited(
-      _saveStringList(_kHorizonFiltersKey, newFilters.map((e) => e.name).toList()),
+    await _storage.saveStringListField(
+      _kHorizonFiltersKey,
+      newFilters.map((item) => item.name).toList(growable: false),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Energy filters
-// ---------------------------------------------------------------------------
-
-final activeEnergyFiltersProvider = NotifierProvider<ActiveEnergyFilters, List<EnergyLevel>>(
+final activeEnergyFiltersProvider =
+    NotifierProvider<ActiveEnergyFilters, List<EnergyLevel>>(
   ActiveEnergyFilters.new,
 );
 
 class ActiveEnergyFilters extends Notifier<List<EnergyLevel>> {
+  late final StoragePrefs _storage = ref.read(filtersStorageProvider);
+
   @override
   List<EnergyLevel> build() {
     unawaited(_loadAsync());
@@ -139,30 +133,30 @@ class ActiveEnergyFilters extends Notifier<List<EnergyLevel>> {
   }
 
   Future<void> _loadAsync() async {
-    final names = await _loadStringList(_kEnergyFiltersKey);
-    if (names.isEmpty) return;
-    final parsed =
-        names.map((n) => EnergyLevel.values.where((e) => e.name == n).firstOrNull).whereType<EnergyLevel>().toList();
-    if (parsed.isNotEmpty) state = parsed;
+    final names = await _storage.loadStringListField(_kEnergyFiltersKey);
+    if (!ref.mounted) {
+      return;
+    }
+    state = _parseEnumList(names, EnergyLevel.values);
   }
 
-  void update(List<EnergyLevel> newFilters) {
+  Future<void> update(List<EnergyLevel> newFilters) async {
     state = newFilters;
-    unawaited(
-      _saveStringList(_kEnergyFiltersKey, newFilters.map((e) => e.name).toList()),
+    await _storage.saveStringListField(
+      _kEnergyFiltersKey,
+      newFilters.map((item) => item.name).toList(growable: false),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Confidence filters
-// ---------------------------------------------------------------------------
-
-final activeConfidenceFiltersProvider = NotifierProvider<ActiveConfidenceFilters, List<ConfidenceLevel>>(
+final activeConfidenceFiltersProvider =
+    NotifierProvider<ActiveConfidenceFilters, List<ConfidenceLevel>>(
   ActiveConfidenceFilters.new,
 );
 
 class ActiveConfidenceFilters extends Notifier<List<ConfidenceLevel>> {
+  late final StoragePrefs _storage = ref.read(filtersStorageProvider);
+
   @override
   List<ConfidenceLevel> build() {
     unawaited(_loadAsync());
@@ -170,21 +164,18 @@ class ActiveConfidenceFilters extends Notifier<List<ConfidenceLevel>> {
   }
 
   Future<void> _loadAsync() async {
-    final names = await _loadStringList(_kConfidenceFiltersKey);
-    if (names.isEmpty) return;
-    final parsed = names
-        .map(
-          (n) => ConfidenceLevel.values.where((e) => e.name == n).firstOrNull,
-        )
-        .whereType<ConfidenceLevel>()
-        .toList();
-    if (parsed.isNotEmpty) state = parsed;
+    final names = await _storage.loadStringListField(_kConfidenceFiltersKey);
+    if (!ref.mounted) {
+      return;
+    }
+    state = _parseEnumList(names, ConfidenceLevel.values);
   }
 
-  void update(List<ConfidenceLevel> newFilters) {
+  Future<void> update(List<ConfidenceLevel> newFilters) async {
     state = newFilters;
-    unawaited(
-      _saveStringList(_kConfidenceFiltersKey, newFilters.map((e) => e.name).toList()),
+    await _storage.saveStringListField(
+      _kConfidenceFiltersKey,
+      newFilters.map((item) => item.name).toList(growable: false),
     );
   }
 }
@@ -199,7 +190,8 @@ bool matchesTaskClassificationFilters({
 }) {
   if (categoryIds.isNotEmpty) {
     final taskCategory = _normalizedCategory(task);
-    final selected = categoryIds.map((item) => item.trim().toLowerCase()).toSet();
+    final selected =
+        categoryIds.map((item) => item.trim().toLowerCase()).toSet();
     if (taskCategory == null || !selected.contains(taskCategory)) {
       return false;
     }
@@ -208,24 +200,47 @@ bool matchesTaskClassificationFilters({
   if (kinds.isNotEmpty && !kinds.contains(task.kind)) {
     return false;
   }
-  if (horizons.isNotEmpty && (task.horizon == null || !horizons.contains(task.horizon))) {
+  if (horizons.isNotEmpty &&
+      (task.horizon == null || !horizons.contains(task.horizon))) {
     return false;
   }
-  if (energies.isNotEmpty && (task.energy == null || !energies.contains(task.energy))) {
+  if (energies.isNotEmpty &&
+      (task.energy == null || !energies.contains(task.energy))) {
     return false;
   }
   if (confidences.isNotEmpty &&
-      (task.classificationConfidence == null || !confidences.contains(task.classificationConfidence))) {
+      (task.classificationConfidence == null ||
+          !confidences.contains(task.classificationConfidence))) {
     return false;
   }
 
   return true;
 }
 
+List<T> _parseEnumList<T extends Enum>(
+  List<String> names,
+  List<T> values,
+) {
+  final parsed = <T>[];
+  for (final name in names) {
+    for (final value in values) {
+      if (value.name == name) {
+        parsed.add(value);
+        break;
+      }
+    }
+  }
+  return parsed;
+}
+
 String? _normalizedCategory(Task task) {
   final categoryId = task.categoryId?.trim().toLowerCase();
-  if (categoryId != null && categoryId.isNotEmpty) return categoryId;
+  if (categoryId != null && categoryId.isNotEmpty) {
+    return categoryId;
+  }
   final category = task.category?.trim().toLowerCase();
-  if (category != null && category.isNotEmpty) return category;
+  if (category != null && category.isNotEmpty) {
+    return category;
+  }
   return null;
 }

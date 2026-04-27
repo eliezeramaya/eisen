@@ -13,7 +13,7 @@ import 'package:equatable/equatable.dart';
 /// - [q1]: Urgent & Important (Do first)
 /// - [q2]: Not urgent & Important (Schedule)
 /// - [q3]: Urgent & Not important (Delegate)
-/// - [q4]: Not urgent & Not important (Eliminate)
+/// - [q4]: Not urgent & Not important (Archive)
 enum Quadrant { q1, q2, q3, q4 }
 
 /// Task status for detailed workflow tracking
@@ -134,6 +134,8 @@ class Task extends Equatable {
     this.classificationConfidence,
     this.autoTags = const [],
     this.classificationMetadata,
+    this.isArchived = false,
+    this.archivedAt,
   });
   final String id;
   final String title;
@@ -186,6 +188,8 @@ class Task extends Equatable {
   final ConfidenceLevel? classificationConfidence;
   final List<String> autoTags;
   final ClassificationMetadata? classificationMetadata;
+  final bool isArchived;
+  final DateTime? archivedAt;
 
   Task copyWith({
     String? title,
@@ -229,6 +233,9 @@ class Task extends Equatable {
     ConfidenceLevel? classificationConfidence,
     List<String>? autoTags,
     ClassificationMetadata? classificationMetadata,
+    bool? isArchived,
+    DateTime? archivedAt,
+    bool clearArchivedAt = false,
   }) {
     return Task(
       id: id,
@@ -275,6 +282,8 @@ class Task extends Equatable {
       autoTags: autoTags ?? this.autoTags,
       classificationMetadata:
           classificationMetadata ?? this.classificationMetadata,
+      isArchived: isArchived ?? this.isArchived,
+      archivedAt: clearArchivedAt ? null : (archivedAt ?? this.archivedAt),
     );
   }
 
@@ -364,73 +373,65 @@ class Task extends Equatable {
         classificationConfidence,
         autoTags,
         classificationMetadata,
+        isArchived,
+        archivedAt,
       ];
 }
 
-/// Computes the visual weight for a task used by the treemap layout.
+/// Computes the visual weight for treemap layout.
 ///
-/// **Formula:**
-/// ```
-/// weight = priority^α × minutes^β × urgencyBoost × dueBoost × freshnessDecay
-/// ```
-///
-/// **Parameters:**
-/// - `α = 1.2`: Priority exponent (emphasizes high-priority tasks)
-/// - `β = 0.8`: Minutes exponent (sub-linear to avoid extreme dominance)
-/// - `urgencyBoost = 1.15` if urgent (Q1/Q3), else `1.0`
-/// - `dueBoost = 1.0 + 0.25 × exp(-0.7 × daysToDue)`: Exponentially increases as due approaches
-/// - `freshnessDecay = 0.75 + 0.25 × exp(-0.15 × daysSinceLastTouch)`: Slight decay for stale tasks
-///
-/// **Input Ranges (clamped internally):**
-/// - `priority`: [1, 10] (user input clamped)
-/// - `minutes`: [5, 240] (user input clamped)
-/// - `daysToDue`: [0, ∞) (null due dates treated as ∞)
-/// - `daysSinceLastTouch`: [0, ∞)
-///
-/// **Output Range:**
-/// - Minimum: ~3.78 (priority=1, minutes=5, no boosts, max decay)
-/// - Maximum: ~318.2 (priority=10, minutes=240, urgent, due today, fresh)
-/// - Typical range: [10, 150] for most tasks
-///
-/// **Monotonicity Guarantees:**
-/// 1. **Due date proximity:** For two otherwise-identical tasks A and B,
-///    if A.due is earlier than B.due, then weight(A) >= weight(B).
-/// 2. **Priority:** Higher priority always increases weight.
-/// 3. **Minutes:** More minutes always increases weight (sub-linearly).
-///
-/// **Edge Cases:**
-/// - No due date (`null`): `dueBoost = 1.0` (base weight)
-/// - Due in past: `daysToDue` clamped to 0, `dueBoost = 1.25` (maximum urgency)
-/// - Invalid values (NaN/infinite): Returns `0.0` safely
-///
-/// **Testing:** See `test/unit/domain/weight_monotonicity_test.dart` for
-/// property-based tests verifying monotonicity and range bounds.
+/// Kept as the public API for existing layout, worker and test call sites.
 double weight(Task t) {
-  const alpha = 1.2; // priority exponent
-  const beta = 0.8; // minutes exponent
-  final urgBoost = t.isUrgent ? 1.15 : 1.0;
+  final basePriority = t.priority.clamp(1, 10).toDouble();
+  final minutesFactor =
+      math.pow(t.minutes.clamp(5, 240).toDouble(), 0.65).toDouble();
+  final raw = basePriority *
+      minutesFactor *
+      _quadrantBoost(t.quadrant) *
+      _confidenceFactor(t.classificationConfidence) *
+      _horizonFactor(t.horizon) *
+      _dueFactor(t.due) *
+      _freshnessFactor(t);
+  return raw.isFinite && !raw.isNaN ? math.max(0.0, raw) : 0.0;
+}
 
-  // Clipping to avoid outliers and instability
-  final p = t.priority.clamp(1, 10).toDouble();
-  final m = t.minutes.clamp(5, 240).toDouble();
+double _quadrantBoost(Quadrant quadrant) {
+  return switch (quadrant) {
+    Quadrant.q1 => 1.30,
+    Quadrant.q2 => 1.18,
+    Quadrant.q3 => 0.92,
+    Quadrant.q4 => 0.65,
+  };
+}
 
-  // 0..1: a menor distancia a due, mayor
+double _confidenceFactor(ConfidenceLevel? confidence) {
+  return switch (confidence) {
+    ConfidenceLevel.high => 1.00,
+    ConfidenceLevel.medium => 0.92,
+    ConfidenceLevel.low => 0.82,
+    null => 0.90,
+  };
+}
+
+double _horizonFactor(TimeHorizon? horizon) {
+  return switch (horizon) {
+    TimeHorizon.today => 1.18,
+    TimeHorizon.thisWeek => 1.00,
+    TimeHorizon.thisMonth => 0.85,
+    TimeHorizon.someday => 0.65,
+    null => 0.90,
+  };
+}
+
+double _dueFactor(DateTime? due) {
+  if (due == null) return 1.0;
+  final daysToDue = due.difference(DateTime.now()).inHours / 24.0;
+  return 1.0 + 0.18 * math.exp(-0.7 * math.max(0.0, daysToDue));
+}
+
+double _freshnessFactor(Task task) {
   final now = DateTime.now();
-  final daysToDue =
-      t.due == null ? double.infinity : t.due!.difference(now).inHours / 24.0;
-  final dl = daysToDue.isFinite ? math.max(0.0, daysToDue) : double.infinity;
-  final deadlineSoon = dl.isFinite ? math.exp(-0.7 * dl) : 0.0; // [0..1]
-  final dueBoost = 1.0 + 0.25 * deadlineSoon; // monotone w.r.t. due proximity
-
-  // Decaimiento por “frescura” (última edición o creación)
-  final lastTouch = t.updatedAt ?? t.createdAt ?? now;
-  final lastDays = now.difference(lastTouch).inDays.toDouble();
-  final freshness = math.exp(-0.15 * math.max(0.0, lastDays));
-
-  final base = (math.pow(p, alpha) as double) * (math.pow(m, beta) as double);
-  final raw = base * urgBoost * dueBoost * (0.75 + 0.25 * freshness);
-  final safe = raw.isFinite && !raw.isNaN ? raw : 0.0;
-  assert(safe >= 0, 'Negative weight');
-  assert(safe.isFinite && !safe.isNaN, 'Invalid weight result');
-  return safe;
+  final lastTouch = task.updatedAt ?? task.createdAt ?? now;
+  final days = math.max(0.0, now.difference(lastTouch).inDays.toDouble());
+  return 0.82 + 0.18 * math.exp(-0.15 * days);
 }

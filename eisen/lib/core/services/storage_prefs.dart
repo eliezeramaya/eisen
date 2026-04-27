@@ -20,6 +20,20 @@ class StoragePrefs {
     return (map is Map<String, dynamic>) ? map : <String, Object?>{};
   }
 
+  Future<List<String>> loadStringListField(String fieldKey) async {
+    final json = await loadJson();
+    return (json[fieldKey] as List?)?.cast<String>() ?? const <String>[];
+  }
+
+  Future<void> saveStringListField(
+    String fieldKey,
+    List<String> values,
+  ) async {
+    final json = await loadJson();
+    json[fieldKey] = values;
+    await saveJson(json);
+  }
+
   /// Load telemetry consent status. Returns null if never set (first launch).
   Future<bool?> getTelemetryConsent() async {
     final prefs = await SharedPreferences.getInstance();
@@ -39,11 +53,10 @@ class StoragePrefs {
     var salt = prefs.getString(_telemetrySaltKey);
     if (salt == null) {
       // Generate new salt (random string)
-      salt = DateTime.now().millisecondsSinceEpoch.toString() + 
-             DateTime.now().microsecondsSinceEpoch.toString();
+      salt = DateTime.now().millisecondsSinceEpoch.toString() +
+          DateTime.now().microsecondsSinceEpoch.toString();
       await prefs.setString(_telemetrySaltKey, salt);
     }
     return salt;
   }
 }
-

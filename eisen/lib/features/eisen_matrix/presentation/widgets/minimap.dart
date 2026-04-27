@@ -1,6 +1,5 @@
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
-import 'package:eisen/l10n/app_localizations.dart';
-import 'package:eisen/l10n/app_localizations_en.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:flutter/material.dart';
 
 class Minimap extends StatelessWidget {
@@ -12,22 +11,17 @@ class Minimap extends StatelessWidget {
     this.onFullView,
     this.minimal = false,
     this.tasks,
+    this.quadrantLabelStyle = QuadrantLabelStyle.professional,
   });
   final Quadrant? zoom;
   final void Function(Quadrant q)? onSelectQuadrant;
   final VoidCallback? onFullView;
   final bool minimal;
   final List<Task>? tasks;
+  final QuadrantLabelStyle quadrantLabelStyle;
 
   @override
   Widget build(BuildContext context) {
-    final l10n =
-        Localizations.of<AppLocalizations>(context, AppLocalizations) ??
-            AppLocalizationsEn();
-    final doLabel = l10n.minimapDo;
-    final decideLabel = l10n.minimapDecide;
-    final delegateLabel = l10n.minimapDelegate;
-    final deleteLabel = l10n.minimapDelete;
     return GestureDetector(
       onTapDown: (details) {
         final local = details.localPosition;
@@ -67,10 +61,10 @@ class Minimap extends StatelessWidget {
           size: const Size(80, 80),
           painter: _MinimapPainter(
             zoom,
-            doLabel,
-            decideLabel,
-            delegateLabel,
-            deleteLabel,
+            getQuadrantLabel(Quadrant.q1, quadrantLabelStyle).shortLabel,
+            getQuadrantLabel(Quadrant.q2, quadrantLabelStyle).shortLabel,
+            getQuadrantLabel(Quadrant.q3, quadrantLabelStyle).shortLabel,
+            getQuadrantLabel(Quadrant.q4, quadrantLabelStyle).shortLabel,
             minimal: minimal,
             tasks: tasks,
           ),

@@ -5,6 +5,7 @@ import 'package:eisen/features/classification/domain/repositories/classification
 import 'package:eisen/features/classification/domain/services/classification_engine.dart';
 import 'package:eisen/features/classification/domain/services/confidence_scorer.dart';
 import 'package:eisen/features/classification/domain/services/heuristic_classifier.dart';
+import 'package:eisen/features/classification/domain/services/quadrant_learning_engine.dart';
 import 'package:eisen/features/classification/domain/services/suggestion_engine.dart';
 import 'package:eisen/features/classification/domain/services/user_rule_resolver.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,4 +52,11 @@ final classificationRepositoryProvider = Provider<ClassificationRepository>(
 final classificationSuggestionsProvider =
     FutureProvider<List<RuleSuggestion>>((ref) {
   return ref.read(classificationRepositoryProvider).suggestRules();
+});
+
+final quadrantLearningProfileProvider =
+    FutureProvider<QuadrantLearningProfile>((ref) async {
+  final corrections =
+      await ref.read(classificationRepositoryProvider).loadCorrections();
+  return const QuadrantLearningEngine().learnFromCorrections(corrections);
 });

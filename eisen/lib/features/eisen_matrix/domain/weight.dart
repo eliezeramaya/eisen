@@ -1,9 +1,26 @@
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/task_visual_weight.dart';
 
 export 'entities.dart' show Quadrant, Task;
 
-double taskWeight(Task t) => weight(t);
+double taskWeight(
+  Task t, {
+  Map<Quadrant, double> quadrantLearningAdjustments =
+      const <Quadrant, double>{},
+}) =>
+    computeTaskVisualWeight(
+      t,
+      quadrantLearningAdjustments: quadrantLearningAdjustments,
+    );
 
-/// Centralized importance weight. Currently delegates to [weight] from
-/// entities.dart but allows future evolution without touching call sites.
-double importanceWeight(Task t, {DateTime? now}) => weight(t);
+/// Centralized importance weight for matrix visualization.
+double importanceWeight(
+  Task t, {
+  DateTime? now,
+  Map<Quadrant, double> quadrantLearningAdjustments =
+      const <Quadrant, double>{},
+}) =>
+    computeTaskVisualWeight(
+      t,
+      quadrantLearningAdjustments: quadrantLearningAdjustments,
+    );

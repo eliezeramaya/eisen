@@ -4,6 +4,7 @@ import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/enums/priority_level.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:flutter/foundation.dart';
 
 @immutable
@@ -28,6 +29,10 @@ class ClassificationMetadata {
     this.suggestedCategoryId,
     this.confidenceReason = '',
     this.reasons = const <String>[],
+    this.suggestedQuadrant,
+    this.urgencyScore = 0.0,
+    this.importanceScore = 0.0,
+    this.quadrantReason = '',
     this.isAutoClassified = true,
     this.wasUserCorrected = false,
     this.isUserConfirmed = false,
@@ -57,6 +62,10 @@ class ClassificationMetadata {
   final String? suggestedCategoryId;
   final String confidenceReason;
   final List<String> reasons;
+  final Quadrant? suggestedQuadrant;
+  final double urgencyScore;
+  final double importanceScore;
+  final String quadrantReason;
   final bool isAutoClassified;
   final bool wasUserCorrected;
   final bool isUserConfirmed;
@@ -88,6 +97,11 @@ class ClassificationMetadata {
     String? suggestedCategoryId,
     String? confidenceReason,
     List<String>? reasons,
+    Quadrant? suggestedQuadrant,
+    bool clearSuggestedQuadrant = false,
+    double? urgencyScore,
+    double? importanceScore,
+    String? quadrantReason,
     bool? isAutoClassified,
     bool? wasUserCorrected,
     bool? isUserConfirmed,
@@ -115,6 +129,12 @@ class ClassificationMetadata {
       suggestedCategoryId: suggestedCategoryId ?? this.suggestedCategoryId,
       confidenceReason: confidenceReason ?? this.confidenceReason,
       reasons: reasons ?? this.reasons,
+      suggestedQuadrant: clearSuggestedQuadrant
+          ? null
+          : (suggestedQuadrant ?? this.suggestedQuadrant),
+      urgencyScore: urgencyScore ?? this.urgencyScore,
+      importanceScore: importanceScore ?? this.importanceScore,
+      quadrantReason: quadrantReason ?? this.quadrantReason,
       isAutoClassified: isAutoClassified ?? this.isAutoClassified,
       wasUserCorrected: wasUserCorrected ?? this.wasUserCorrected,
       isUserConfirmed: isUserConfirmed ?? this.isUserConfirmed,

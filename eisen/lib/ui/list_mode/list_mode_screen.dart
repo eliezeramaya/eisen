@@ -8,6 +8,7 @@ import 'package:eisen/features/classification/presentation/controllers/classific
 import 'package:eisen/features/classification/presentation/widgets/classification_grouping_bar.dart';
 import 'package:eisen/features/eisen_matrix/domain/category_colors.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/filters/presentation/widgets/category_filters_bar.dart';
 import 'package:flutter/material.dart';
@@ -474,16 +475,8 @@ class ListModeScreen extends ConsumerWidget {
   }
 
   String _getQuadrantLabel(Quadrant q) {
-    switch (q) {
-      case Quadrant.q1:
-        return 'Q1 · Urgente e Importante';
-      case Quadrant.q2:
-        return 'Q2 · No Urgente e Importante';
-      case Quadrant.q3:
-        return 'Q3 · Urgente y No Importante';
-      case Quadrant.q4:
-        return 'Q4 · Ni Urgente ni Importante';
-    }
+    final label = getQuadrantLabel(q, QuadrantLabelStyle.professional);
+    return '${label.title} · ${label.subtitle}';
   }
 
   String _formatDueDate(DateTime due) {

@@ -16,20 +16,21 @@ class ZoomIndicator extends ConsumerWidget {
     final viewport = ref.watch(treemapViewportControllerProvider);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final labels = const <TreemapZoomLevel, String>{
-      TreemapZoomLevel.global: 'Global',
-      TreemapZoomLevel.category: 'Categorias',
-      TreemapZoomLevel.subcategory: 'Subcategorias',
-      TreemapZoomLevel.group: 'Grupos',
-      TreemapZoomLevel.task: 'Tareas',
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final labels = <TreemapZoomLevel, String>{
+      TreemapZoomLevel.global: isEs ? 'Global' : 'Global',
+      TreemapZoomLevel.category: isEs ? 'Categorías' : 'Categories',
+      TreemapZoomLevel.subcategory: isEs ? 'Subcategorías' : 'Subcategories',
+      TreemapZoomLevel.group: isEs ? 'Grupos' : 'Groups',
+      TreemapZoomLevel.task: isEs ? 'Tareas' : 'Tasks',
     };
     final activeLevel = viewport.zoomLevel;
     final semanticMode = activeLevel != TreemapZoomLevel.global;
     final fallbackLabel = zoomScale <= 1.1
         ? 'Global'
         : zoomScale <= 2.0
-            ? 'Cuadrante'
-            : 'Detalle';
+            ? (isEs ? 'Cuadrante' : 'Quadrant')
+            : (isEs ? 'Detalle' : 'Detail');
     final qLabel = zoomQuadrant != null && !semanticMode
         ? ' · ${zoomQuadrant.name.toUpperCase()}'
         : '';

@@ -199,21 +199,28 @@ class ClassificationRepositoryImpl implements ClassificationRepository {
   ) async {
     final corrected = event.correctedClassification;
     final correctedCategoryId = event.correctedCategoryId;
+    final correctedQuadrant =
+        event.correctedQuadrant ?? corrected?.suggestedQuadrant;
     final token =
         event.detectedKeyword ?? _extractLearnableToken(event.rawText);
-    if (correctedCategoryId == null || token == null) return;
+    if ((correctedCategoryId == null && correctedQuadrant == null) ||
+        token == null) {
+      return;
+    }
 
     final aliases = await _localDatasource.loadAliases();
     final exists = aliases.any(
       (item) =>
           item.mappedCategoryId == correctedCategoryId &&
+          item.suggestedQuadrant == correctedQuadrant &&
           item.searchTerms.contains(token),
     );
     if (exists) return;
 
+    final idPart = correctedCategoryId ?? correctedQuadrant!.name;
     aliases.add(
       VocabularyAliasModel(
-        id: 'learned-$correctedCategoryId-$token',
+        id: 'learned-$idPart-$token',
         term: token,
         normalizedTerm: token,
         type: AliasType.category,
@@ -223,6 +230,7 @@ class ClassificationRepositoryImpl implements ClassificationRepository {
         timeHorizon: corrected?.timeHorizon,
         energyLevel: corrected?.energyLevel,
         priorityLevel: corrected?.priorityLevel,
+        suggestedQuadrant: correctedQuadrant,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),

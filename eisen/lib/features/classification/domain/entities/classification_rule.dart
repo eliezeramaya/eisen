@@ -4,6 +4,7 @@ import 'package:eisen/features/classification/domain/enums/priority_level.dart';
 import 'package:eisen/features/classification/domain/enums/rule_match_type.dart';
 import 'package:eisen/features/classification/domain/enums/rule_priority.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:flutter/foundation.dart';
 
 @immutable
@@ -18,6 +19,7 @@ class ClassificationRule {
     this.targetHorizon,
     this.targetEnergy,
     this.targetPriority,
+    this.targetQuadrant,
     this.targetTags = const <String>[],
     this.description,
     this.priority = RulePriority.normal,
@@ -37,6 +39,7 @@ class ClassificationRule {
   final TimeHorizon? targetHorizon;
   final EnergyLevel? targetEnergy;
   final PriorityLevel? targetPriority;
+  final Quadrant? targetQuadrant;
   final List<String> targetTags;
   final String? description;
   final RulePriority priority;
@@ -52,6 +55,7 @@ class ClassificationRule {
   TimeHorizon? get timeHorizon => targetHorizon;
   EnergyLevel? get energyLevel => targetEnergy;
   PriorityLevel? get priorityLevel => targetPriority;
+  Quadrant? get suggestedQuadrant => targetQuadrant;
   bool get isEnabled => enabled;
 
   ClassificationRule copyWith({
@@ -64,6 +68,7 @@ class ClassificationRule {
     TimeHorizon? targetHorizon,
     EnergyLevel? targetEnergy,
     PriorityLevel? targetPriority,
+    Quadrant? targetQuadrant,
     List<String>? targetTags,
     String? description,
     RulePriority? priority,
@@ -83,6 +88,7 @@ class ClassificationRule {
       targetHorizon: targetHorizon ?? this.targetHorizon,
       targetEnergy: targetEnergy ?? this.targetEnergy,
       targetPriority: targetPriority ?? this.targetPriority,
+      targetQuadrant: targetQuadrant ?? this.targetQuadrant,
       targetTags: targetTags ?? this.targetTags,
       description: description ?? this.description,
       priority: priority ?? this.priority,

@@ -3,6 +3,7 @@ import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/enums/priority_level.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:flutter/foundation.dart';
 
 @immutable
@@ -17,6 +18,10 @@ class ClassificationResult {
     required this.autoTags,
     required this.matchedKeywords,
     required this.confidenceReason,
+    this.suggestedQuadrant,
+    this.urgencyScore = 0.0,
+    this.importanceScore = 0.0,
+    this.quadrantReason = '',
   });
 
   final EntryKind kind;
@@ -28,4 +33,8 @@ class ClassificationResult {
   final List<String> autoTags;
   final List<String> matchedKeywords;
   final String confidenceReason;
+  final Quadrant? suggestedQuadrant;
+  final double urgencyScore;
+  final double importanceScore;
+  final String quadrantReason;
 }

@@ -8,6 +8,7 @@ import 'package:eisen/core/sync/remote_tasks_service.dart';
 import 'package:eisen/core/sync/remote_tasks_service_noop.dart';
 import 'package:eisen/core/workers/task_sort_worker.dart';
 import 'package:eisen/core/workers/worker_models.dart';
+import 'package:eisen/features/classification/presentation/providers/classification_providers.dart';
 import 'package:eisen/features/demo/demo_tasks.dart';
 import 'package:eisen/features/eisen_matrix/data/local_repo.dart';
 import 'package:eisen/features/eisen_matrix/domain/bandit_service.dart';
@@ -173,6 +174,8 @@ class MatrixController extends Notifier<MatrixState> {
   final BanditService _bandit = BanditService();
   Set<String> _suggested = {};
   LayoutConfig? _lastDynamicCfg;
+  Map<Quadrant, double> _quadrantLearningAdjustments =
+      const <Quadrant, double>{};
   static const _customTaskLimitKey = 'customTaskLimit';
   static const _viewModeKey = 'matrixViewMode';
   Timer? _searchDebounce;
@@ -189,8 +192,12 @@ class MatrixController extends Notifier<MatrixState> {
     _updateTaskUseCase = UpdateTaskUseCase();
     _deleteTaskUseCase = DeleteTaskUseCase();
     final cfg = ref.read(layoutConfigProvider);
-    _computeLayoutUseCase =
-        ComputeLayoutUseCase(cache: _cache, bandit: _bandit, hybridConfig: cfg);
+    _computeLayoutUseCase = ComputeLayoutUseCase(
+      cache: _cache,
+      bandit: _bandit,
+      hybridConfig: cfg,
+      quadrantLearningAdjustments: _quadrantLearningAdjustments,
+    );
 
     // Listen to UI prefs for layout-related changes and bump layoutVersion + reconfigure
     ref.listen<UiPrefsData>(uiPrefsProvider, (prev, next) {
@@ -204,12 +211,32 @@ class MatrixController extends Notifier<MatrixState> {
       if (changed) {
         final newCfg = ref.read(layoutConfigProvider);
         _computeLayoutUseCase = ComputeLayoutUseCase(
-            cache: _cache, bandit: _bandit, hybridConfig: newCfg);
+          cache: _cache,
+          bandit: _bandit,
+          hybridConfig: newCfg,
+          quadrantLearningAdjustments: _quadrantLearningAdjustments,
+        );
         // Invalidate all quadrants to ensure fresh layout with new config
         _computeLayoutUseCase.invalidate();
         // Bump layout version to notify UI
         state = state.copyWith(layoutVersion: state.layoutVersion + 1);
       }
+    });
+    ref.listen(quadrantLearningProfileProvider, (prev, next) {
+      final nextAdjustments = next.asData?.value.visualWeightAdjustments ??
+          const <Quadrant, double>{};
+      if (mapEquals(_quadrantLearningAdjustments, nextAdjustments)) return;
+
+      _quadrantLearningAdjustments = nextAdjustments;
+      final cfg = _lastDynamicCfg ?? ref.read(layoutConfigProvider);
+      _computeLayoutUseCase = ComputeLayoutUseCase(
+        cache: _cache,
+        bandit: _bandit,
+        hybridConfig: cfg,
+        quadrantLearningAdjustments: _quadrantLearningAdjustments,
+      );
+      _computeLayoutUseCase.invalidate();
+      state = state.copyWith(layoutVersion: state.layoutVersion + 1);
     });
     _suggestTopSpotsUseCase = SuggestTopSpotsUseCase(_bandit);
     _computeReorderDeltaUseCase = ComputeReorderDeltaUseCase(_cache);
@@ -221,7 +248,8 @@ class MatrixController extends Notifier<MatrixState> {
     state = state.copyWith(isLoading: true);
     final loaded = await _repo.load();
     // Check if there are any active (non-completed) tasks
-    final activeTasks = loaded.where((t) => t.completedAt == null).toList();
+    final activeTasks =
+        loaded.where((t) => t.completedAt == null && !t.isArchived).toList();
 
     if (activeTasks.isEmpty) {
       // No active tasks - load demo data
@@ -633,6 +661,26 @@ class MatrixController extends Notifier<MatrixState> {
     unawaited(persist());
   }
 
+  void archiveTask(String id) {
+    updateTask(
+      id,
+      (task) => task.copyWith(
+        isArchived: true,
+        archivedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  void restoreTask(String id) {
+    updateTask(
+      id,
+      (task) => task.copyWith(
+        isArchived: false,
+        clearArchivedAt: true,
+      ),
+    );
+  }
+
   void moveTaskToQuadrant(String id, Quadrant q) =>
       updateTask(id, (t) => t.copyWith(quadrant: q));
 
@@ -812,9 +860,12 @@ class MatrixController extends Notifier<MatrixState> {
     final horizonFilters = ref.read(activeHorizonFiltersProvider);
     final energyFilters = ref.read(activeEnergyFiltersProvider);
     final confidenceFilters = ref.read(activeConfidenceFiltersProvider);
+    final showArchived = ref.read(showArchivedProvider);
     final q = _normalizeSearchText(state.searchQuery.trim());
 
-    final filtered = state.tasks.where((t) => t.completedAt == null).where((t) {
+    final filtered = state.tasks
+        .where((t) => t.completedAt == null && (showArchived || !t.isArchived))
+        .where((t) {
       final matchesSearch = q.isEmpty || taskMatchesSearchQuery(t, q);
       final matchesFilters = matchesTaskClassificationFilters(
         task: t,
@@ -846,6 +897,7 @@ class MatrixController extends Notifier<MatrixState> {
           cache: _cache,
           bandit: _bandit,
           hybridConfig: dynCfg,
+          quadrantLearningAdjustments: _quadrantLearningAdjustments,
         );
         _computeLayoutUseCase.invalidate();
         if (mutateState) {
@@ -928,10 +980,12 @@ final visibleMatrixTasksProvider = Provider<List<Task>>((ref) {
   final horizonFilters = ref.watch(activeHorizonFiltersProvider);
   final energyFilters = ref.watch(activeEnergyFiltersProvider);
   final confidenceFilters = ref.watch(activeConfidenceFiltersProvider);
+  final showArchived = ref.watch(showArchivedProvider);
   final normalizedQuery = normalizeMatrixSearchText(searchQuery.trim());
 
   return tasks.where((task) {
     if (task.completedAt != null) return false;
+    if (task.isArchived && !showArchived) return false;
     final matchesSearch = normalizedQuery.isEmpty ||
         taskMatchesSearchQuery(task, normalizedQuery);
     final matchesFilters = matchesTaskClassificationFilters(

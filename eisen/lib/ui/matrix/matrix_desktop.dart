@@ -1,4 +1,5 @@
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/eisen_quadrant_drop_area.dart';
 import 'package:eisen/theme/density.dart';
 import 'package:eisen/ui/lists/quadrant_list.dart';
@@ -61,25 +62,45 @@ class MatrixDesktop extends StatelessWidget {
             context,
             Quadrant.q1,
             q1,
-            buildHeader('Q1', q1.length, t.colorScheme.error),
+            buildHeader(
+              getQuadrantLabel(Quadrant.q1, QuadrantLabelStyle.professional)
+                  .shortLabel,
+              q1.length,
+              t.colorScheme.error,
+            ),
           ),
           _cell(
             context,
             Quadrant.q2,
             q2,
-            buildHeader('Q2', q2.length, t.colorScheme.primary),
+            buildHeader(
+              getQuadrantLabel(Quadrant.q2, QuadrantLabelStyle.professional)
+                  .shortLabel,
+              q2.length,
+              t.colorScheme.primary,
+            ),
           ),
           _cell(
             context,
             Quadrant.q3,
             q3,
-            buildHeader('Q3', q3.length, t.colorScheme.tertiary),
+            buildHeader(
+              getQuadrantLabel(Quadrant.q3, QuadrantLabelStyle.professional)
+                  .shortLabel,
+              q3.length,
+              t.colorScheme.tertiary,
+            ),
           ),
           _cell(
             context,
             Quadrant.q4,
             q4,
-            buildHeader('Q4', q4.length, t.colorScheme.secondary),
+            buildHeader(
+              getQuadrantLabel(Quadrant.q4, QuadrantLabelStyle.professional)
+                  .shortLabel,
+              q4.length,
+              t.colorScheme.secondary,
+            ),
           ),
         ],
       ),

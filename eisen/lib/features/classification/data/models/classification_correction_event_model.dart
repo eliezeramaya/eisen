@@ -6,6 +6,7 @@ import 'package:eisen/features/classification/domain/enums/correction_source.dar
 import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
+import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 
 class ClassificationCorrectionEventModel extends ClassificationCorrectionEvent {
   const ClassificationCorrectionEventModel({
@@ -19,11 +20,15 @@ class ClassificationCorrectionEventModel extends ClassificationCorrectionEvent {
     required super.correctedHorizon,
     required super.originalEnergy,
     required super.correctedEnergy,
+    super.originalQuadrant,
+    super.correctedQuadrant,
     required super.confidenceBefore,
     required super.createdAt,
     super.source,
     super.taskId,
     super.detectedKeyword,
+    super.extractedKeywords,
+    super.dominantKeyword,
     super.originalClassification,
     super.correctedClassification,
     super.correctionNote,
@@ -44,9 +49,13 @@ class ClassificationCorrectionEventModel extends ClassificationCorrectionEvent {
       correctedHorizon: entity.correctedHorizon,
       originalEnergy: entity.originalEnergy,
       correctedEnergy: entity.correctedEnergy,
+      originalQuadrant: entity.originalQuadrant,
+      correctedQuadrant: entity.correctedQuadrant,
       confidenceBefore: entity.confidenceBefore,
       source: entity.source,
       detectedKeyword: entity.detectedKeyword,
+      extractedKeywords: entity.extractedKeywords,
+      dominantKeyword: entity.dominantKeyword,
       originalClassification: entity.originalClassification,
       correctedClassification: entity.correctedClassification,
       createdAt: entity.createdAt,
@@ -93,6 +102,16 @@ class ClassificationCorrectionEventModel extends ClassificationCorrectionEvent {
         json['correctedEnergy'] as String?,
         null,
       ),
+      originalQuadrant: enumFromName(
+        Quadrant.values,
+        json['originalQuadrant'] as String?,
+        null,
+      ),
+      correctedQuadrant: enumFromName(
+        Quadrant.values,
+        json['correctedQuadrant'] as String?,
+        null,
+      ),
       confidenceBefore: enumFromName(
             ConfidenceLevel.values,
             json['confidenceBefore'] as String?,
@@ -106,6 +125,9 @@ class ClassificationCorrectionEventModel extends ClassificationCorrectionEvent {
           ) ??
           CorrectionSource.reviewCenter,
       detectedKeyword: json['detectedKeyword'] as String?,
+      extractedKeywords:
+          (json['extractedKeywords'] as List?)?.cast<String>() ?? const [],
+      dominantKeyword: json['dominantKeyword'] as String?,
       originalClassification: json['originalClassification'] is Map
           ? ClassificationMetadataModel.fromJson(
               (json['originalClassification'] as Map).cast<String, Object?>(),
@@ -138,9 +160,13 @@ class ClassificationCorrectionEventModel extends ClassificationCorrectionEvent {
         'correctedHorizon': correctedHorizon?.name,
         'originalEnergy': originalEnergy?.name,
         'correctedEnergy': correctedEnergy?.name,
+        'originalQuadrant': originalQuadrant?.name,
+        'correctedQuadrant': correctedQuadrant?.name,
         'confidenceBefore': confidenceBefore.name,
         'source': source.name,
         'detectedKeyword': detectedKeyword,
+        'extractedKeywords': extractedKeywords,
+        'dominantKeyword': dominantKeyword,
         'originalClassification': originalClassification == null
             ? null
             : ClassificationMetadataModel.fromEntity(originalClassification!)
