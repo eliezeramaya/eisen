@@ -23,8 +23,6 @@ import 'package:eisen/features/classification/presentation/widgets/quick_reclass
 import 'package:eisen/features/demo/demo_tasks.dart';
 import 'package:eisen/features/eisen_matrix/application/semantic_treemap_builder.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
-import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
-import 'package:eisen/features/eisen_matrix/domain/quadrant_recommendations.dart';
 import 'package:eisen/features/eisen_matrix/domain/treemap_viewport_state.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/treemap_viewport_controller.dart';
@@ -159,7 +157,6 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         showAxisLegends && zoom == null && screenWidth >= 600;
     // AppTextScale applied
     final prefsUi = ref.watch(uiPrefsProvider);
-    final quadrantLabelStyle = prefsUi.quadrantLabelStyle;
     final uiTsf = AppTextScale.of(context, prefsUi);
     final isExtremeScale = AppTextScale.isExtreme(context, prefsUi);
     // Slightly increased to avoid 1px overflow in the axis header row on mobile.
@@ -494,9 +491,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                         final task =
                                             semanticScene.exactTaskMatch!;
                                         final qLabel = _quadrantLabel(
-                                          task.quadrant,
-                                          quadrantLabelStyle,
-                                        );
+                                            context, task.quadrant);
                                         semanticViewportCtrl.enterQuadrant(
                                           task.quadrant,
                                           label: qLabel,
@@ -853,8 +848,6 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                                       .presentQuadrant,
                                                               textScale:
                                                                   tileTsf,
-                                                              quadrantLabelStyle:
-                                                                  quadrantLabelStyle,
                                                               minTileSizePx: ref
                                                                   .watch(
                                                                     uiPrefsProvider,
@@ -1007,8 +1000,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                                   q,
                                                                   label:
                                                                       _quadrantLabel(
+                                                                    context,
                                                                     q,
-                                                                    quadrantLabelStyle,
                                                                   ),
                                                                 );
                                                                 ctrl.setZoom(q);
@@ -1121,15 +1114,11 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                       width: size.width / 2,
                                                       height: size.height / 2,
                                                       child:
-                                                          QuadrantEmptyPlaceholder(
-                                                        title: _quadrantTitle(
-                                                          Quadrant.q1,
-                                                          quadrantLabelStyle,
-                                                        ),
-                                                        hint: _quadrantHint(
-                                                          Quadrant.q1,
-                                                          quadrantLabelStyle,
-                                                        ),
+                                                          const QuadrantEmptyPlaceholder(
+                                                        title:
+                                                            'Q1 · Urgente e Importante',
+                                                        hint:
+                                                            'No tienes tareas aquí. Usa “Entrada”.',
                                                       ),
                                                     ),
                                                     Positioned(
@@ -1138,15 +1127,11 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                       width: size.width / 2,
                                                       height: size.height / 2,
                                                       child:
-                                                          QuadrantEmptyPlaceholder(
-                                                        title: _quadrantTitle(
-                                                          Quadrant.q2,
-                                                          quadrantLabelStyle,
-                                                        ),
-                                                        hint: _quadrantHint(
-                                                          Quadrant.q2,
-                                                          quadrantLabelStyle,
-                                                        ),
+                                                          const QuadrantEmptyPlaceholder(
+                                                        title:
+                                                            'Q2 · No Urgente e Importante',
+                                                        hint:
+                                                            'Planifica aquí objetivos clave.',
                                                       ),
                                                     ),
                                                     Positioned(
@@ -1155,15 +1140,11 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                       width: size.width / 2,
                                                       height: size.height / 2,
                                                       child:
-                                                          QuadrantEmptyPlaceholder(
-                                                        title: _quadrantTitle(
-                                                          Quadrant.q3,
-                                                          quadrantLabelStyle,
-                                                        ),
-                                                        hint: _quadrantHint(
-                                                          Quadrant.q3,
-                                                          quadrantLabelStyle,
-                                                        ),
+                                                          const QuadrantEmptyPlaceholder(
+                                                        title:
+                                                            'Q3 · Urgente y No Importante',
+                                                        hint:
+                                                            'Delegables o de baja prioridad.',
                                                       ),
                                                     ),
                                                     Positioned(
@@ -1172,15 +1153,11 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                       width: size.width / 2,
                                                       height: size.height / 2,
                                                       child:
-                                                          QuadrantEmptyPlaceholder(
-                                                        title: _quadrantTitle(
-                                                          Quadrant.q4,
-                                                          quadrantLabelStyle,
-                                                        ),
-                                                        hint: _quadrantHint(
-                                                          Quadrant.q4,
-                                                          quadrantLabelStyle,
-                                                        ),
+                                                          const QuadrantEmptyPlaceholder(
+                                                        title:
+                                                            'Q4 · No Urgente y No Importante',
+                                                        hint:
+                                                            'Evita o elimina distracciones.',
                                                       ),
                                                     ),
                                                   ],
@@ -1189,7 +1166,6 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                           .isNotEmpty) ...[
                                                     if (!tasks.any((t) =>
                                                         t.completedAt == null &&
-                                                        !t.isArchived &&
                                                         t.quadrant ==
                                                             Quadrant.q1))
                                                       Positioned(
@@ -1198,20 +1174,15 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                         width: size.width / 2,
                                                         height: size.height / 2,
                                                         child:
-                                                            QuadrantEmptyPlaceholder(
-                                                          title: _quadrantTitle(
-                                                            Quadrant.q1,
-                                                            quadrantLabelStyle,
-                                                          ),
-                                                          hint: _quadrantHint(
-                                                            Quadrant.q1,
-                                                            quadrantLabelStyle,
-                                                          ),
+                                                            const QuadrantEmptyPlaceholder(
+                                                          title:
+                                                              'Q1 · Urgente e Importante',
+                                                          hint:
+                                                              'No tienes tareas aquí. Usa “Entrada”.',
                                                         ),
                                                       ),
                                                     if (!tasks.any((t) =>
                                                         t.completedAt == null &&
-                                                        !t.isArchived &&
                                                         t.quadrant ==
                                                             Quadrant.q2))
                                                       Positioned(
@@ -1220,20 +1191,15 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                         width: size.width / 2,
                                                         height: size.height / 2,
                                                         child:
-                                                            QuadrantEmptyPlaceholder(
-                                                          title: _quadrantTitle(
-                                                            Quadrant.q2,
-                                                            quadrantLabelStyle,
-                                                          ),
-                                                          hint: _quadrantHint(
-                                                            Quadrant.q2,
-                                                            quadrantLabelStyle,
-                                                          ),
+                                                            const QuadrantEmptyPlaceholder(
+                                                          title:
+                                                              'Q2 · No Urgente e Importante',
+                                                          hint:
+                                                              'Planifica aquí objetivos clave.',
                                                         ),
                                                       ),
                                                     if (!tasks.any((t) =>
                                                         t.completedAt == null &&
-                                                        !t.isArchived &&
                                                         t.quadrant ==
                                                             Quadrant.q3))
                                                       Positioned(
@@ -1242,20 +1208,15 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                         width: size.width / 2,
                                                         height: size.height / 2,
                                                         child:
-                                                            QuadrantEmptyPlaceholder(
-                                                          title: _quadrantTitle(
-                                                            Quadrant.q3,
-                                                            quadrantLabelStyle,
-                                                          ),
-                                                          hint: _quadrantHint(
-                                                            Quadrant.q3,
-                                                            quadrantLabelStyle,
-                                                          ),
+                                                            const QuadrantEmptyPlaceholder(
+                                                          title:
+                                                              'Q3 · Urgente y No Importante',
+                                                          hint:
+                                                              'Delegables o de baja prioridad.',
                                                         ),
                                                       ),
                                                     if (!tasks.any((t) =>
                                                         t.completedAt == null &&
-                                                        !t.isArchived &&
                                                         t.quadrant ==
                                                             Quadrant.q4))
                                                       Positioned(
@@ -1264,15 +1225,11 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                         width: size.width / 2,
                                                         height: size.height / 2,
                                                         child:
-                                                            QuadrantEmptyPlaceholder(
-                                                          title: _quadrantTitle(
-                                                            Quadrant.q4,
-                                                            quadrantLabelStyle,
-                                                          ),
-                                                          hint: _quadrantHint(
-                                                            Quadrant.q4,
-                                                            quadrantLabelStyle,
-                                                          ),
+                                                            const QuadrantEmptyPlaceholder(
+                                                          title:
+                                                              'Q4 · No Urgente y No Importante',
+                                                          hint:
+                                                              'Evita o elimina distracciones.',
                                                         ),
                                                       ),
                                                   ],
@@ -1302,19 +1259,6 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                 task: selectedTask,
                 onChanged: (t) => ctrl.updateTask(t.id, (_) => t),
                 onDelete: () => ctrl.deleteTask(selectedTask.id),
-                onArchive: () {
-                  ctrl.archiveTask(selectedTask.id);
-                  Navigator.of(context).maybePop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Tarea archivada'),
-                      action: SnackBarAction(
-                        label: 'Deshacer',
-                        onPressed: () => ctrl.restoreTask(selectedTask.id),
-                      ),
-                    ),
-                  );
-                },
                 onComplete: () {
                   ctrl.markTaskDone(selectedTask.id);
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -1336,11 +1280,10 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                     minimap: Minimap(
                       zoom: zoom,
                       tasks: tasks,
-                      quadrantLabelStyle: quadrantLabelStyle,
                       onSelectQuadrant: (q) {
                         semanticViewportCtrl.enterQuadrant(
                           q,
-                          label: _quadrantLabel(q, quadrantLabelStyle),
+                          label: _quadrantLabel(context, q),
                         );
                         ctrl.setZoom(q);
                         ctrl.setPresentQuadrant(q);
@@ -2133,22 +2076,22 @@ void _openSemanticNode({
   }
 }
 
-String _quadrantLabel(Quadrant quadrant, QuadrantLabelStyle style) {
-  return getQuadrantLabel(
-    quadrant,
-    style,
-  ).shortLabel;
-}
-
-String _quadrantTitle(Quadrant quadrant, QuadrantLabelStyle style) {
-  final label = getQuadrantLabel(quadrant, style);
-  return '${label.title} · ${label.subtitle}';
-}
-
-String _quadrantHint(Quadrant quadrant, QuadrantLabelStyle style) {
-  final label = getQuadrantLabel(quadrant, style);
-  if (style == QuadrantLabelStyle.classic) return label.subtitle;
-  return getQuadrantRecommendation(quadrant);
+String _quadrantLabel(BuildContext context, Quadrant quadrant) {
+  final isEs = Localizations.localeOf(context).languageCode == 'es';
+  if (!isEs) {
+    return switch (quadrant) {
+      Quadrant.q1 => 'Q1 · Do',
+      Quadrant.q2 => 'Q2 · Decide',
+      Quadrant.q3 => 'Q3 · Delegate',
+      Quadrant.q4 => 'Q4 · Eliminate',
+    };
+  }
+  return switch (quadrant) {
+    Quadrant.q1 => 'Q1 · Hacer',
+    Quadrant.q2 => 'Q2 · Planificar',
+    Quadrant.q3 => 'Q3 · Delegar',
+    Quadrant.q4 => 'Q4 · Eliminar',
+  };
 }
 
 class _SemanticTreemapHeader extends StatelessWidget {

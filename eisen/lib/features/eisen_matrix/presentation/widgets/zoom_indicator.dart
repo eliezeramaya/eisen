@@ -1,6 +1,6 @@
+import 'package:eisen/features/eisen_matrix/domain/treemap_viewport_state.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/treemap_viewport_controller.dart';
-import 'package:eisen/features/eisen_matrix/domain/treemap_viewport_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

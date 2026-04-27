@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:eisen/core/services/storage_prefs.dart';
+import 'package:eisen/core/storage/local_storage_keys.dart';
 import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
 import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
@@ -8,11 +9,11 @@ import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-const _kCategoryFiltersKey = 'filters.categories';
-const _kKindFiltersKey = 'filters.kinds';
-const _kHorizonFiltersKey = 'filters.horizons';
-const _kEnergyFiltersKey = 'filters.energies';
-const _kConfidenceFiltersKey = 'filters.confidences';
+const _kCategoryFiltersKey = LocalStorageKeys.filtersCategories;
+const _kKindFiltersKey = LocalStorageKeys.filtersKinds;
+const _kHorizonFiltersKey = LocalStorageKeys.filtersHorizons;
+const _kEnergyFiltersKey = LocalStorageKeys.filtersEnergies;
+const _kConfidenceFiltersKey = LocalStorageKeys.filtersConfidences;
 
 final filtersStorageProvider = Provider<StoragePrefs>((ref) => StoragePrefs());
 
