@@ -1,9 +1,14 @@
+import 'package:eisen/features/classification/domain/services/task_classification_mapper.dart';
+import 'package:eisen/features/classification/presentation/category_color_service_factory.dart';
+import 'package:eisen/features/classification/presentation/controllers/category_config_controller.dart';
+import 'package:eisen/features/classification/presentation/controllers/classification_settings_controller.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/widgets/eisen_task_draggable.dart';
 import 'package:eisen/ui/task/task_row.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class QuadrantList extends StatelessWidget {
+class QuadrantList extends ConsumerWidget {
   const QuadrantList({
     super.key,
     required this.tasks,
@@ -17,7 +22,14 @@ class QuadrantList extends StatelessWidget {
   final void Function(Task task)? onOpen;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Resolve classification settings once per list rebuild — not per row.
+    final settings = ref.watch(classificationSettingsControllerProvider);
+    final categories = ref.watch(categoryConfigControllerProvider);
+    final categoryColors = buildClassificationCategoryColorService(
+      categories: categories,
+    );
+
     const prototype = TaskRow(
       task: Task(
         id: '_',
@@ -48,6 +60,10 @@ class QuadrantList extends StatelessWidget {
             delegate: SliverChildBuilderDelegate(
               (ctx, i) {
                 final task = tasks[i];
+                final category = categoryForTask(categories, task);
+                final accent = settings.colorByCategory && category != null
+                    ? categoryColors.getColorForCategory(category.name)
+                    : null;
                 return EisenTaskDraggable(
                   key: ValueKey(task.id),
                   task: task,
@@ -55,6 +71,22 @@ class QuadrantList extends StatelessWidget {
                     task: task,
                     onToggle: onToggle == null ? null : () => onToggle!(task),
                     onOpen: onOpen == null ? null : () => onOpen!(task),
+                    categoryAccent: accent,
+                    categoryName: settings.colorByCategory && category != null ? category.name : null,
+                    categoryNameLightBg: category != null
+                        ? categoryColors.getLightVariant(
+                            category.name,
+                            opacity: 0.18,
+                          )
+                        : null,
+                    categoryNameBorder: category != null
+                        ? categoryColors.getDarkVariant(
+                            category.name,
+                            opacity: 0.55,
+                          )
+                        : null,
+                    showConfidenceIndicators: settings.showConfidenceIndicators,
+                    showAutoTags: settings.showAutoTags,
                   ),
                 );
               },

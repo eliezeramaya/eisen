@@ -1,6 +1,7 @@
 import 'package:eisen/features/settings/application/settings_controller.dart';
 import 'package:eisen/features/settings/presentation/sections/appearance_mobile_panel.dart';
 import 'package:eisen/features/settings/presentation/sections/general_panel.dart';
+import 'package:eisen/features/settings/presentation/sections/layout_mobile_panel.dart';
 import 'package:eisen/features/settings/presentation/settings_content.dart';
 import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +47,11 @@ class _SettingsMobileScaffoldState
       (label: 'Appearance', icon: Icons.palette_outlined, id: 'appearance'),
       (label: 'Layout', icon: Icons.grid_view_rounded, id: 'layout'),
       (label: 'Calendar/Gantt', icon: Icons.view_timeline, id: 'calendar'),
+      (
+        label: 'Smart Classification',
+        icon: Icons.auto_awesome_outlined,
+        id: 'classification'
+      ),
       (
         label: 'Notifications',
         icon: Icons.notifications_none,
@@ -133,6 +139,8 @@ String _pathFor(String id, String label) {
       return '/settings/language';
     case 'accessibility':
       return '/settings/accessibility';
+    case 'classification':
+      return '/classification-settings';
     default:
       final encoded = Uri.encodeComponent(_sectionLabel(id, label));
       return '/settings?section=$encoded';
@@ -145,6 +153,8 @@ String _sectionLabel(String id, String label) {
       return 'Layout';
     case 'calendar':
       return 'Calendar/Gantt';
+    case 'classification':
+      return 'Smart Classification';
     case 'privacy':
       return 'Data & Privacy';
     case 'about':
@@ -163,6 +173,8 @@ String _sectionToId(String section) {
       return 'layout';
     case 'calendar/gantt':
       return 'calendar';
+    case 'smart classification':
+      return 'classification';
     case 'notifications':
       return 'notifications';
     case 'language':
@@ -202,6 +214,9 @@ class SettingsCategoryPage extends ConsumerWidget {
         break;
       case 'appearance':
         body = const AppearanceMobilePanel();
+        break;
+      case 'layout':
+        body = const LayoutMobilePanel();
         break;
       case 'notifications':
         body = const NotificationsPanel();

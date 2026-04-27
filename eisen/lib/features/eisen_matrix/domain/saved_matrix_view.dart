@@ -50,4 +50,3 @@ class SavedMatrixView extends Equatable {
         onlyCompleted,
       ];
 }
-

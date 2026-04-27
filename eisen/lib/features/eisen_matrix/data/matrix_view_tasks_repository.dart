@@ -37,7 +37,7 @@ class MatrixViewTasksRepository {
     if (categoryId != null && categoryId.trim().isNotEmpty) {
       final needle = categoryId.trim().toLowerCase();
       tasks = tasks.where((t) {
-        final cat = t.category;
+        final cat = t.categoryId ?? t.category;
         return cat != null && cat.trim().toLowerCase() == needle;
       });
     }
@@ -72,4 +72,3 @@ class MatrixViewTasksRepository {
     return tasks.toList(growable: false);
   }
 }
-

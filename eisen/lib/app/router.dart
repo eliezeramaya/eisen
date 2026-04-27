@@ -1,4 +1,6 @@
 import 'package:eisen/features/calendar_gantt/presentation/pages/workflow_plan_page.dart';
+import 'package:eisen/features/classification/presentation/screens/classification_review_screen.dart';
+import 'package:eisen/features/classification/presentation/screens/classification_settings_screen.dart';
 import 'package:eisen/features/completed_tasks/presentation/pages/completed_matrix_page.dart';
 import 'package:eisen/features/eisen_matrix/presentation/pages/matrix_page.dart';
 import 'package:eisen/features/focus/presentation/pages/focus_dashboard_page.dart';
@@ -122,6 +124,22 @@ final GoRouter _router = GoRouter(
       pageBuilder: (context, state) => _fadeSlidePage(
         state,
         const ContextAwareTasksPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/classification-settings',
+      name: 'classification-settings',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        state,
+        const ClassificationSettingsScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/classification-review',
+      name: 'classification-review',
+      pageBuilder: (context, state) => _fadeSlidePage(
+        state,
+        const ClassificationReviewScreen(),
       ),
     ),
     GoRoute(

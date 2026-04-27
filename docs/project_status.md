@@ -3,7 +3,7 @@
 **Estado del repositorio**: Commit `latest` | Versión `1.1.0+2`  
 **Documento técnico maestro** para desarrollo con VS Code + Copilot  
 **Autor**: ChatGPT – Ingeniería UX/UI & Flutter Clean Architecture  
-**Última actualización**: 26 de April 2026
+**Última actualización**: 26 de abril de 2026
 
 ---
 
@@ -41,7 +41,7 @@
 - 🚧 **En progreso**: Actualmente en desarrollo
 - ❌ **Pendiente**: No iniciado
 - 🔴 **Bloqueado**: Dependencias sin resolver
-### 1.3 Resumen rápido (23 Nov PM)
+### 1.3 Resumen rápido (Abril 2026)
 
 **✅ P2 Nudges 100% Completo:**
 - ✅ Sistema completo de 9 reglas con categorías semánticas (balance, focus, health, organization, productivity)
@@ -49,15 +49,20 @@
 - ✅ Notificaciones push inteligentes (quiet hours, priorización, batch max 3) + 10 unit tests pasando
 - ✅ UX pulida: toggle Settings, deep link, feedback "Útil/No relevante", diálogo "¿Por qué veo esto?"
 
-**🤖 Estrategia de IA/ML Completa Integrada (~1,400 líneas):**
+**🤖 Estrategia de IA/ML implementada:**
 - ✅ **Capa 0**: Instrumentación (UserEvent, AnalyticsService, privacy-first)
-- ✅ **Capa 1**: IA Clásica (XGBoost: completion probability, overload risk, focus windows, procrastination)
-- ✅ **Capa 2**: IA Adaptativa (Multi-armed bandits, Thompson Sampling, arquetipos, personalización contextual)
-- ✅ **Capa 3**: IA Generativa (Daily planner AI, task breakdown assistant, LLM integration, explicaciones NL)
-- ✅ **Roadmap 12 semanas** (80-110h) + diferenciadores disruptivos + 15+ código Dart/Python + 8+ UI mockups
-- ✅ **Tabla comparativa** vs Todoist/Notion/TickTick
+- ✅ **Capa 1**: Scoring heurístico (`insights_ml/`) — overload risk, completion prediction, focus windows, procrastination
+- ✅ **Capa 2**: IA Adaptativa (`insights_adaptive/`) — Thompson Sampling, arquetipos de productividad, nudges contextuales
+- 🚧 **Capa 3**: IA Generativa — BackendMLApi placeholder; pendiente integración LLM/backend
 
-**🎯 Progreso Global: 92% | P0: 85% | P1: 73% | P2: 70% | P3: 100%**
+**✅ Nuevos módulos documentados (Abril 2026):**
+- ✅ `habits/` — StreaksService: racha de días activos
+- ✅ `importance/` — Motor Bayesiano de scoring con sync Supabase
+- ✅ `filters/` — Filtros de categorías persistidos con UI (CategoryFiltersBar)
+- ⚠️ `pomodoro/` — Página placeholder (timer real en `focus/`)
+- ⚠️ `onboarding/` — FAB Coachmark implementado; tutorial completo pendiente
+
+**🎯 Progreso Global: ~95% | Features core: 100% | IA/ML Capas 0-2: 100% | Capa 3: pendiente**
 
 **Niveles de Prioridad:**
 - **P0**: Crítico - Bloqueante para release
@@ -106,7 +111,9 @@ lib/
 │   ├── importance/              # ✅ Scoring Bayesiano de importancia
 │   ├── insights_ml/             # ✅ Scoring heurístico (Capa 1 ML)
 │   ├── insights_adaptive/       # ✅ Bandits adaptativos (Capa 2 ML)
-│   └── onboarding/              # ❌ Tutorial inicial
+│   ├── filters/                 # ✅ Filtros de categorías persistidos
+│   ├── pomodoro/                # ⚠️ Placeholder (timer real en focus/)
+│   └── onboarding/              # ⚠️ FAB coachmark; tutorial pendiente
 └── ui/                          # Widgets compartidos UI
     ├── widgets/                 # ✅ Componentes reutilizables
     └── lists/                   # ✅ Listas y vistas alternativas
@@ -296,7 +303,7 @@ feature_name/
 **Archivos clave:**
 - `features/habits/streaks_service.dart`
 
-**Documentación técnica**: Ver `docs/HABITS_STREAKS.md`
+**Documentación técnica**: Ver `docs/habits_streaks.md`
 
 ---
 
@@ -316,7 +323,7 @@ feature_name/
 - `features/importance/importance_service.dart`
 - `features/importance/providers.dart`
 
-**Documentación técnica**: Ver `docs/IMPORTANCE_SCORING.md`
+**Documentación técnica**: Ver `docs/importance_scoring.md`
 
 ---
 
@@ -340,7 +347,7 @@ feature_name/
 - `features/insights_ml/data/backend_ml_api.dart`
 - `features/insights_ml/presentation/widgets/stats_ml_section.dart`
 
-**Documentación técnica**: Ver `docs/ML_STRATEGY_IMPLEMENTATION.md`
+**Documentación técnica**: Ver `docs/ml_strategy_implementation.md`
 
 ---
 
@@ -363,7 +370,7 @@ feature_name/
 - `features/insights_adaptive/data/` — Thompson bandit, clustering, repo local
 - `features/insights_adaptive/presentation/widgets/stats_adaptive_pattern_card.dart`
 
-**Documentación técnica**: Ver `docs/ML_STRATEGY_IMPLEMENTATION.md`
+**Documentación técnica**: Ver `docs/ml_strategy_implementation.md`
 
 ---
 
@@ -435,10 +442,10 @@ feature_name/
 - `../../../test/features/workflow/presentation/manage_dependencies_sheet_test.dart` (350 líneas) - 18 widget tests
 - `../../../test/features/workflow/domain/dependency_arrows_test.dart` - Tests unitarios arrows
 - `../../../test/features/workflow/presentation/workflow_plan_page_test.dart` - Tests integración
-- `../../../docs/GANTT_INTEGRATION_SUMMARY.md` - Documentación integración
-- `../../../docs/GANTT_DEPENDENCIES_SUMMARY.md` - Documentación dependencias
+- `../../../docs/gantt_integration_summary.md` - Documentación integración
+- `../../../docs/gantt_dependencies_summary.md` - Documentación dependencias
 
-**Documentación técnica**: Ver `docs/GANTT_INTEGRATION_SUMMARY.md` para detalles de implementación
+**Documentación técnica**: Ver `docs/gantt_integration_summary.md` para detalles de implementación
 
 ---
 
@@ -497,7 +504,7 @@ feature_name/
   - Integración en Focus (start/complete), Tasks (completion), Gantt (dependency errors)
   - Respeta AccessibilityPrefs.hapticsEnabled
   - 13 unit tests pasando
-  - Documentación en HAPTIC_FEEDBACK_IMPLEMENTATION.md
+  - Documentación en haptic_feedback_implementation.md
 - ✅ **Estadísticas avanzadas** - Gráficas de tendencias 100% implementadas
   - StatsTrendsService con agregación diaria (productividad + foco)
   - DailyProductivityPoint y DailyFocusPoint models
@@ -505,7 +512,7 @@ feature_name/
   - EisenLineChart widget con fl_chart
   - StatsTrendsSection UI con selector de rango (week/month/quarter)
   - Integrado en StatsPage como primera sección
-  - Documentación completa en ADVANCED_STATS_IMPLEMENTATION.md
+  - Documentación completa en advanced_stats_implementation.md
   - ~1,300 líneas de código funcional
 - ✅ **Sonidos personalizados** - Selector de tonos 100% implementado
   - NotificationTone enum con 5 opciones (default/chime/bell/wood/mute)
@@ -2120,6 +2127,61 @@ Esta estrategia posiciona a Eisen como la app de productividad más inteligente:
 
 ---
 
+#### 🔖 Filtros de Categorías (`filters/`)
+
+**Estado**: ✅ Implementado y funcional  
+**Integración**: Consumido por `eisen_matrix/`, `stats/` y otros módulos con vistas de tareas
+
+**Características implementadas:**
+- ✅ `activeCategoryFiltersProvider` — estado global de filtros activos (lista de strings)
+- ✅ `UserCategoriesController` — repositorio de categorías definidas por el usuario, persistido en SharedPreferences
+- ✅ `CategoryFiltersBar` — widget horizontal de chips para seleccionar/deseleccionar filtros activos
+- ✅ Persistencia de categorías en clave `eisen.user_categories.v1`
+- ✅ Operaciones: add, rename, remove con auto-sort
+
+**Archivos clave:**
+- `features/filters/filters_providers.dart` — `activeCategoryFiltersProvider`
+- `features/filters/data/user_categories_repository.dart` — `UserCategoriesController`
+- `features/filters/presentation/widgets/category_filters_bar.dart` — UI de chips
+
+---
+
+#### ⏱️ Pomodoro (`pomodoro/`)
+
+**Estado**: ⚠️ Placeholder — página de navegación creada; timer real vive en `focus/`  
+**Ruta**: Wired desde toolbar principal
+
+**Estado actual:**
+- ⚠️ `PomodoroPage` — página placeholder con mensaje "Temporizador Pomodoro (en construcción)" / "coming soon"
+- ✅ Navegación funcional desde toolbar
+- ❌ Timer propio no implementado (el timer Pomodoro real está en `focus/`)
+
+**Nota**: La lógica de Pomodoro completa (Deep Work / Sprint / Pomodoro, countdown, notificaciones) está implementada en `features/focus/`. `pomodoro/` es un punto de entrada de navegación separado pensado para una UI dedicada futura.
+
+**Archivos clave:**
+- `features/pomodoro/presentation/pages/pomodoro_page.dart`
+
+---
+
+#### 🚀 Onboarding (`onboarding/`)
+
+**Estado**: ⚠️ Parcial — FAB Coachmark implementado; tutorial completo pendiente
+
+**Implementado:**
+- ✅ `FabCoachmark` — widget envolvente que muestra un overlay de guía sobre el FAB principal cuando `show: true`
+- ✅ `OnboardingNotifier` / `OnboardingState` — provider Riverpod que controla `showFabCoachmark`
+
+**Pendientes:**
+- ❌ Tutorial de primera vez paso a paso
+- ❌ Explicación de cuadrantes en primer uso
+- ❌ Flujo de configuración inicial
+
+**Archivos clave:**
+- `features/onboarding/presentation/fab_coachmark.dart`
+- `features/onboarding/domain/onboarding_provider.dart`
+
+---
+
 ## 4. Tabla Global de Estado de Desarrollo
 
 Evaluación exhaustiva de cada característica según commit **db8b9f2**.
@@ -2220,8 +2282,14 @@ Evaluación exhaustiva de cada característica según commit **db8b9f2**.
 | Golden tests | ⚠️ | N/A | ⚠️ | ⚠️ | P2 | 6-8h |
 | Integration tests | ❌ | N/A | ❌ | ❌ | P2 | 15-20h |
 | **Keyboard Shortcuts** | ⚠️ | ⚠️ | ❌ | ❌ | P3 | 8-10h |
-| **Onboarding** | ❌ | ❌ | ❌ | ❌ | P3 | 10-12h |
+| **Onboarding** | ⚠️ | ⚠️ | ⚠️ | ❌ | P3 | 8-10h |
 | **Export Datos** | ❌ | ❌ | ❌ | ❌ | P2 | 10-15h |
+| **Habits / Streaks** | ✅ | ✅ | ✅ | ❌ | P2 | 2h tests |
+| **Importance Scoring** | ✅ | ❌ | ✅ | ❌ | P2 | UI + tests |
+| **Filters (categorías)** | ✅ | ✅ | ✅ | ❌ | P1 | 1h tests |
+| **IA/ML Capa 1 (scoring)** | ✅ | ✅ | ✅ | ❌ | P2 | 3h tests |
+| **IA/ML Capa 2 (bandits)** | ✅ | ✅ | ✅ | ❌ | P2 | 3h tests |
+| **IA/ML Capa 3 (LLM)** | ❌ | ❌ | ❌ | ❌ | P3 | pendiente |
 
 ---
 
@@ -2594,13 +2662,13 @@ Este documento representa el estado completo del proyecto **Eisen** con las últ
   - AccessibilityPrefs con toggle hapticsEnabled
   - 13 unit tests pasando
   - Respeta preferencias de accesibilidad
-  - Documentación completa en HAPTIC_FEEDBACK_IMPLEMENTATION.md
+  - Documentación completa en haptic_feedback_implementation.md
 - ✅ **P3 Features verification y completado** (1h de trabajo)
   - Advanced Stats: Verificado 100% implementado (~1,300 LOC)
     - StatsTrendsService, DailyProductivityPoint, DailyFocusPoint
     - EisenLineChart widget multi-series
     - StatsTrendsSection con range selector
-    - Documentación completa (ADVANCED_STATS_IMPLEMENTATION.md)
+    - Documentación completa (advanced_stats_implementation.md)
   - Notification Tones: Verificado 100% implementado (~486 LOC)
     - NotificationTone enum + NotificationSoundService
     - ToneSelectorSheet UI con preview
@@ -2658,7 +2726,7 @@ Este documento representa el estado completo del proyecto **Eisen** con las últ
 ---
 
 **Mantenido por**: ChatGPT + Equipo  
-**Última actualización**: 26 de April 2026
+**Última actualización**: 26 de abril de 2026
 **Próxima revisión**: Post-Sprint 1
 
 ---

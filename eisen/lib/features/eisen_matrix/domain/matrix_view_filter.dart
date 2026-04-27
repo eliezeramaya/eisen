@@ -110,4 +110,3 @@ class MatrixViewFilter extends Equatable {
         onlyCompleted,
       ];
 }
-

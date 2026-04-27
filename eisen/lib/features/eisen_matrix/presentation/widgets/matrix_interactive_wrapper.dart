@@ -1,4 +1,3 @@
-
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:flutter/gestures.dart';
@@ -15,9 +14,11 @@ class MatrixInteractiveWrapper extends ConsumerStatefulWidget {
   const MatrixInteractiveWrapper({
     super.key,
     required this.child,
+    this.enabled = true,
   });
 
   final Widget child;
+  final bool enabled;
 
   @override
   ConsumerState<MatrixInteractiveWrapper> createState() =>
@@ -32,6 +33,9 @@ class _MatrixInteractiveWrapperState
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.enabled) {
+      return widget.child;
+    }
     final state = ref.watch(matrixControllerProvider);
     final controller = ref.read(matrixControllerProvider.notifier);
 
@@ -66,8 +70,7 @@ class _MatrixInteractiveWrapperState
             }
             // Pan when zoomed in
             if (state.zoomScale > 1.1) {
-              controller
-                  .setZoomOffset(_startOffset + details.focalPointDelta);
+              controller.setZoomOffset(_startOffset + details.focalPointDelta);
             }
           },
           onDoubleTapDown: (details) {
@@ -123,4 +126,3 @@ class _MatrixInteractiveWrapperState
     return Quadrant.q4;
   }
 }
-

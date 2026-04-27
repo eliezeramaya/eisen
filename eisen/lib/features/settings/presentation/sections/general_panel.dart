@@ -9,6 +9,7 @@ import 'package:eisen/features/settings/domain/notification_tone.dart';
 import 'package:eisen/features/settings/presentation/widgets/tone_selector_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class GeneralPanel extends ConsumerWidget {
   const GeneralPanel({super.key});
@@ -48,11 +49,38 @@ class GeneralPanel extends ConsumerWidget {
         _WorkflowCard(prefs: prefs),
         const SizedBox(height: 24),
         const EisenSectionHeader(
+          title: 'Smart Classification',
+          subtitle:
+              'Configura cómo Eisen interpreta y clasifica entradas libres',
+        ),
+        const _SmartClassificationCard(),
+        const SizedBox(height: 24),
+        const EisenSectionHeader(
           title: 'IA y personalización',
           subtitle: 'Control de insights avanzados y privacidad',
         ),
         _AiCard(prefs: prefs),
       ],
+    );
+  }
+}
+
+class _SmartClassificationCard extends StatelessWidget {
+  const _SmartClassificationCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return EisenCard(
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: const Icon(Icons.auto_awesome_outlined),
+        title: const Text('Clasificación inteligente'),
+        subtitle: const Text(
+          'Automatización, reglas, vocabulario, revisión y aprendizaje.',
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push('/classification-settings'),
+      ),
     );
   }
 }

@@ -1,4 +1,6 @@
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/features/eisen_matrix/presentation/controllers/treemap_viewport_controller.dart';
+import 'package:eisen/features/eisen_matrix/domain/treemap_viewport_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,40 +9,30 @@ class ZoomIndicator extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final zoomScale = ref.watch(
-      matrixControllerProvider.select((s) => s.zoomScale),
-    );
-    final zoomQuadrant = ref.watch(
-      matrixControllerProvider.select((s) => s.zoomQuadrant),
-    );
+    final zoomScale =
+        ref.watch(matrixControllerProvider.select((s) => s.zoomScale));
+    final zoomQuadrant =
+        ref.watch(matrixControllerProvider.select((s) => s.zoomQuadrant));
+    final viewport = ref.watch(treemapViewportControllerProvider);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isEs = Localizations.localeOf(context).languageCode == 'es';
-
-    double globalOpacity;
-    double quadrantOpacity;
-    double detailOpacity;
-    String label;
-
-    if (zoomScale <= 1.1) {
-      globalOpacity = 1.0;
-      quadrantOpacity = 0.3;
-      detailOpacity = 0.15;
-      label = isEs ? 'Global' : 'Global';
-    } else if (zoomScale <= 2.0) {
-      globalOpacity = 0.3;
-      quadrantOpacity = 1.0;
-      detailOpacity = 0.4;
-      label = isEs ? 'Cuadrante' : 'Quadrant';
-    } else {
-      globalOpacity = 0.15;
-      quadrantOpacity = 0.5;
-      detailOpacity = 1.0;
-      label = isEs ? 'Detalle' : 'Detail';
-    }
-
-    final qLabel =
-        zoomQuadrant != null ? ' · ${zoomQuadrant.name.toUpperCase()}' : '';
+    final labels = const <TreemapZoomLevel, String>{
+      TreemapZoomLevel.global: 'Global',
+      TreemapZoomLevel.category: 'Categorias',
+      TreemapZoomLevel.subcategory: 'Subcategorias',
+      TreemapZoomLevel.group: 'Grupos',
+      TreemapZoomLevel.task: 'Tareas',
+    };
+    final activeLevel = viewport.zoomLevel;
+    final semanticMode = activeLevel != TreemapZoomLevel.global;
+    final fallbackLabel = zoomScale <= 1.1
+        ? 'Global'
+        : zoomScale <= 2.0
+            ? 'Cuadrante'
+            : 'Detalle';
+    final qLabel = zoomQuadrant != null && !semanticMode
+        ? ' · ${zoomQuadrant.name.toUpperCase()}'
+        : '';
 
     return Align(
       alignment: Alignment.centerRight,
@@ -63,14 +55,27 @@ class ZoomIndicator extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _dot(cs.primary, globalOpacity),
-                const SizedBox(width: 4),
-                _dot(cs.primary, quadrantOpacity),
-                const SizedBox(width: 4),
-                _dot(cs.primary, detailOpacity),
+                if (semanticMode) ...[
+                  for (final level in TreemapZoomLevel.values) ...[
+                    _pill(
+                      context,
+                      labels[level]!,
+                      active: level == activeLevel,
+                    ),
+                    if (level != TreemapZoomLevel.values.last)
+                      const SizedBox(width: 4),
+                  ],
+                ] else ...[
+                  _dot(cs.primary, zoomScale <= 1.1 ? 1 : 0.3),
+                  const SizedBox(width: 4),
+                  _dot(cs.primary,
+                      zoomScale > 1.1 && zoomScale <= 2.0 ? 1 : 0.3),
+                  const SizedBox(width: 4),
+                  _dot(cs.primary, zoomScale > 2.0 ? 1 : 0.2),
+                ],
                 const SizedBox(width: 8),
                 Text(
-                  '$label$qLabel',
+                  '${semanticMode ? labels[activeLevel] : fallbackLabel}$qLabel',
                   style:
                       theme.textTheme.labelSmall?.copyWith(color: cs.onSurface),
                 ),
@@ -92,6 +97,26 @@ class ZoomIndicator extends ConsumerWidget {
           color: color,
           shape: BoxShape.circle,
         ),
+      ),
+    );
+  }
+
+  Widget _pill(BuildContext context, String label, {required bool active}) {
+    final cs = Theme.of(context).colorScheme;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: active ? cs.primary.withValues(alpha: 0.14) : Colors.transparent,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: active ? cs.primary : cs.onSurfaceVariant,
+              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            ),
       ),
     );
   }

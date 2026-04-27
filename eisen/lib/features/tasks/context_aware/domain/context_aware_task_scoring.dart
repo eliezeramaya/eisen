@@ -113,6 +113,25 @@ double _inferLocationFromMetadata(Task task, String contextTag) {
         'estrategia',
       ],
     'errands' => const ['recados', 'compra', 'compras', 'llamada', 'gestión'],
+    'study' => const [
+        'study',
+        'estudio',
+        'aprendiz',
+        'learn',
+        'curso',
+        'leer',
+        'research',
+        'doc',
+      ],
+    'wellness' => const [
+        'wellness',
+        'salud',
+        'health',
+        'yoga',
+        'medita',
+        'cardio',
+        'descanso',
+      ],
     _ => const <String>[],
   };
 

@@ -6,8 +6,8 @@ enum ContextPermissionState { unknown, granted, denied }
 class ContextLocationPreset {
   const ContextLocationPreset({
     required this.tag,
-    required this.latitude,
-    required this.longitude,
+    this.latitude,
+    this.longitude,
     required this.labelEs,
     required this.labelEn,
     required this.subtitleEs,
@@ -15,8 +15,8 @@ class ContextLocationPreset {
   });
 
   final String tag;
-  final double latitude;
-  final double longitude;
+  final double? latitude;
+  final double? longitude;
   final String labelEs;
   final String labelEn;
   final String subtitleEs;
@@ -33,8 +33,6 @@ class ContextLocationPreset {
 
 const unknownContextPreset = ContextLocationPreset(
   tag: 'unknown',
-  latitude: 0,
-  longitude: 0,
   labelEs: 'Sin contexto',
   labelEn: 'No context',
   subtitleEs: 'Ubicación no disponible',
@@ -71,10 +69,28 @@ const errandsContextPreset = ContextLocationPreset(
   subtitleEn: 'Calls, shopping and quick errands',
 );
 
+const studyContextPreset = ContextLocationPreset(
+  tag: 'study',
+  labelEs: 'Estudio',
+  labelEn: 'Study',
+  subtitleEs: 'Lectura, aprendizaje y trabajo intelectual tranquilo',
+  subtitleEn: 'Reading, learning and calm knowledge work',
+);
+
+const wellnessContextPreset = ContextLocationPreset(
+  tag: 'wellness',
+  labelEs: 'Bienestar',
+  labelEn: 'Wellness',
+  subtitleEs: 'Salud, descanso, movimiento y energía personal',
+  subtitleEn: 'Health, rest, movement and personal energy',
+);
+
 const contextLocationPresets = <ContextLocationPreset>[
   homeContextPreset,
   officeContextPreset,
   errandsContextPreset,
+  studyContextPreset,
+  wellnessContextPreset,
 ];
 
 ContextLocationPreset contextPresetForTag(String? tag) {

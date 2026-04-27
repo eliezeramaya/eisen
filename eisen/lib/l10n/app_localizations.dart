@@ -215,7 +215,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsResetDemoSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Replace all tasks with examples'**
+  /// **'Replace all tasks with a rich sample dataset'**
   String get settingsResetDemoSubtitle;
 
   /// No description provided for @settingsResetDemoDialogTitle.
@@ -227,7 +227,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsResetDemoDialogContent.
   ///
   /// In en, this message translates to:
-  /// **'This will delete all your current tasks and replace them with 20 example tasks.'**
+  /// **'This will delete all your current tasks and replace them with 100 example tasks with richer metadata.'**
   String get settingsResetDemoDialogContent;
 
   /// No description provided for @settingsCancel.

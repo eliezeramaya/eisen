@@ -1,4 +1,5 @@
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/features/eisen_matrix/presentation/controllers/treemap_viewport_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,25 +14,41 @@ class AppLogoHomeButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () {
-        // Ensure matrix returns to the initial full‑matrix view.
-        ref.read(matrixControllerProvider.notifier).resetHomeView();
-        // Navigate to the matrix home route.
-        GoRouter.of(context).go('/matrix');
-      },
-      child: Container(
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Icon(
-          Icons.grid_view_rounded,
-          size: 18,
-          color: theme.colorScheme.primary,
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final label = isEs ? 'Inicio' : 'Home';
+
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        label: label,
+        child: SizedBox.expand(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () {
+                ref.read(matrixControllerProvider.notifier).resetHomeView();
+                ref.read(treemapViewportControllerProvider.notifier).reset();
+                GoRouter.of(context).go('/matrix');
+              },
+              child: Center(
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.grid_view_rounded,
+                    size: 20,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

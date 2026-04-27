@@ -45,15 +45,15 @@ class MatrixViewFilterController extends Notifier<MatrixViewFilter> {
     final next = switch (state.timeFilter) {
       MatrixTimeFilterType.all => current,
       MatrixTimeFilterType.year => DateTime(
-        current.year + 1,
-        current.month,
-        current.day,
-      ),
+          current.year + 1,
+          current.month,
+          current.day,
+        ),
       MatrixTimeFilterType.month => DateTime(
-        current.year,
-        current.month + 1,
-        current.day,
-      ),
+          current.year,
+          current.month + 1,
+          current.day,
+        ),
       MatrixTimeFilterType.week => current.add(const Duration(days: 7)),
       MatrixTimeFilterType.today => current.add(const Duration(days: 1)),
     };
@@ -65,15 +65,15 @@ class MatrixViewFilterController extends Notifier<MatrixViewFilter> {
     final prev = switch (state.timeFilter) {
       MatrixTimeFilterType.all => current,
       MatrixTimeFilterType.year => DateTime(
-        current.year - 1,
-        current.month,
-        current.day,
-      ),
+          current.year - 1,
+          current.month,
+          current.day,
+        ),
       MatrixTimeFilterType.month => DateTime(
-        current.year,
-        current.month - 1,
-        current.day,
-      ),
+          current.year,
+          current.month - 1,
+          current.day,
+        ),
       MatrixTimeFilterType.week => current.subtract(const Duration(days: 7)),
       MatrixTimeFilterType.today => current.subtract(const Duration(days: 1)),
     };
@@ -84,8 +84,8 @@ class MatrixViewFilterController extends Notifier<MatrixViewFilter> {
 /// Provider for the active matrix view filter state.
 final matrixViewFilterProvider =
     NotifierProvider<MatrixViewFilterController, MatrixViewFilter>(
-      MatrixViewFilterController.new,
-    );
+  MatrixViewFilterController.new,
+);
 
 /// Internal provider for the tasks view repository that applies space + time
 /// filters over the main task list.

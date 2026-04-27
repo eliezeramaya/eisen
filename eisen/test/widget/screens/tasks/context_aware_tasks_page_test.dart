@@ -2,6 +2,8 @@ import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/tasks/context_aware/application/context_aware_tasks_controller.dart';
 import 'package:eisen/features/tasks/context_aware/presentation/pages/context_aware_tasks_page.dart';
+import 'package:eisen/features/tasks/context_aware/presentation/widgets/context_aware_task_card.dart';
+import 'package:eisen/features/tasks/context_aware/presentation/widgets/contextual_treemap_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,8 +16,13 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  testWidgets('renderiza contexto manual y tarea mas relevante',
+  testWidgets('renders contextual treemap focused on manual office context',
       (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(430, 900);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
@@ -66,7 +73,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SwitchListTile), findsOneWidget);
-    expect(find.text('Preparar brief'), findsOneWidget);
+    expect(find.byType(ContextualTreemapView), findsOneWidget);
+    expect(find.byType(ContextAwareTaskCard), findsOneWidget);
+    expect(find.text('Preparar brief'), findsWidgets);
     expect(find.text('Lavar ropa'), findsNothing);
   });
 }

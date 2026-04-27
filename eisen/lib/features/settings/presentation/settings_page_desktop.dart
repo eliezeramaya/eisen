@@ -1,4 +1,5 @@
 import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/features/eisen_matrix/domain/layout/treemap_density_resolver.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/settings/application/appearance_preview_controller.dart';
 import 'package:eisen/features/settings/application/settings_controller.dart';
@@ -8,6 +9,7 @@ import 'package:eisen/features/settings/presentation/settings_content.dart';
 import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsPageDesktop extends ConsumerStatefulWidget {
   const SettingsPageDesktop({super.key, this.initialSection = 'General'});
@@ -31,7 +33,9 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
   double _stagedGamma = 1.0;
   double _stagedMinArea = 0.00004;
   double _stagedPadding = 0.012;
+  double _stagedMinTileSize = 44.0;
   String _stagedDensity = 'auto'; // 'auto' | 'comfy' | 'compact' | 'ultra'
+  String _stagedTreemapDensityProfile = 'balanced';
   // Staged Gantt values
   String _stagedGanttScale = 'weeks';
   bool _stagedGanttBadges = true;
@@ -48,7 +52,9 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
   double? _origGamma;
   double? _origMinArea;
   double? _origPadding;
+  double? _origMinTileSize;
   String? _origDensity;
+  String? _origTreemapDensityProfile;
 
   @override
   void initState() {
@@ -70,7 +76,9 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       _stagedGamma = ui.gamma;
       _stagedMinArea = ui.minAreaNormalized;
       _stagedPadding = ui.quadrantPadding;
+      _stagedMinTileSize = ui.minTileSizePx;
       _stagedDensity = ui.densityPreset;
+      _stagedTreemapDensityProfile = ui.treemapDensityProfile;
       // Gantt prefs
       _stagedGanttScale = ui.ganttTimeScale;
       _stagedGanttBadges = ui.ganttShowBadges;
@@ -86,7 +94,9 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       _origGamma = _stagedGamma;
       _origMinArea = _stagedMinArea;
       _origPadding = _stagedPadding;
+      _origMinTileSize = _stagedMinTileSize;
       _origDensity = _stagedDensity;
+      _origTreemapDensityProfile = _stagedTreemapDensityProfile;
       _dirty = false;
     });
   }
@@ -163,10 +173,13 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
                         width: 320,
                         child: LivePreviewPane(
                           enabled: _previewEnabled,
+                          screenSize: size,
+                          treemapDensityProfile: _stagedTreemapDensityProfile,
                           topK: _stagedTopK,
                           gamma: _stagedGamma,
                           minArea: _stagedMinArea,
                           qPad: _stagedPadding,
+                          minTileSizePx: _stagedMinTileSize,
                         ),
                       ),
                     ],
@@ -223,6 +236,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       'Appearance',
       'Layout',
       'Calendar/Gantt',
+      'Smart Classification',
       'Notifications',
       'Language',
       'Accessibility',
@@ -258,6 +272,9 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
           gamma: _stagedGamma,
           minAreaNormalized: _stagedMinArea,
           quadrantPadding: _stagedPadding,
+          minTileSizePx: _stagedMinTileSize,
+          treemapDensityProfile: _stagedTreemapDensityProfile,
+          isDesktop: MediaQuery.sizeOf(context).width >= 900,
         )
         .then((_) => uiCtl.setDensityPreset(_stagedDensity))
         .then((_) => uiCtl.applyGanttPrefs(
@@ -282,7 +299,9 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
         _origGamma = _stagedGamma;
         _origMinArea = _stagedMinArea;
         _origPadding = _stagedPadding;
+        _origMinTileSize = _stagedMinTileSize;
         _origDensity = _stagedDensity;
+        _origTreemapDensityProfile = _stagedTreemapDensityProfile;
         // No originals stored for Gantt yet; not used in Cancel
       });
       messenger.showSnackBar(
@@ -302,7 +321,9 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       _stagedGamma = _origGamma ?? 1.0;
       _stagedMinArea = _origMinArea ?? 0.00004;
       _stagedPadding = _origPadding ?? 0.012;
+      _stagedMinTileSize = _origMinTileSize ?? 44.0;
       _stagedDensity = _origDensity ?? 'auto';
+      _stagedTreemapDensityProfile = _origTreemapDensityProfile ?? 'balanced';
       _dirty = false;
     });
     // Re-synchronize settings preview and domain controller with persisted prefs.
@@ -322,7 +343,9 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       _stagedGamma = defaults.gamma;
       _stagedMinArea = defaults.minAreaNormalized;
       _stagedPadding = defaults.quadrantPadding;
+      _stagedMinTileSize = defaults.minTileSizePx;
       _stagedDensity = defaults.densityPreset;
+      _stagedTreemapDensityProfile = defaults.treemapDensityProfile;
       _dirty = true;
     });
   }
@@ -362,6 +385,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       minimal: _stagedMinimal,
       showAxisLegends: _stagedAxis,
       densityPreset: _stagedDensity,
+      treemapDensityProfile: _stagedTreemapDensityProfile,
       onThemeChanged: (m) => setState(() => _stagedTheme = m),
       onCompactChanged: (v) => setState(() => _stagedCompact = v),
       onMinimalChanged: (v) => setState(() => _stagedMinimal = v),
@@ -371,10 +395,33 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
       gamma: _stagedGamma,
       minAreaNormalized: _stagedMinArea,
       quadrantPadding: _stagedPadding,
+      minTileSizePx: _stagedMinTileSize,
       onTopKChanged: (v) => setState(() => _stagedTopK = v),
       onGammaChanged: (v) => setState(() => _stagedGamma = v),
       onMinAreaChanged: (v) => setState(() => _stagedMinArea = v),
       onPaddingChanged: (v) => setState(() => _stagedPadding = v),
+      onTreemapDensityProfileChanged: (v) => setState(() {
+        _stagedTreemapDensityProfile = v;
+        if (v != 'custom') {
+          final simulated = ref.read(uiPrefsProvider).copyWith(
+                topKPerQuadrant: _stagedTopK,
+                gamma: _stagedGamma,
+                minAreaNormalized: _stagedMinArea,
+                quadrantPadding: _stagedPadding,
+                minTileSizePx: _stagedMinTileSize,
+                treemapDensityProfile: v,
+              );
+          final resolvedForSelection = TreemapDensityResolver.resolve(
+            prefs: simulated,
+            screenSize: MediaQuery.sizeOf(context),
+          );
+          _stagedTopK = resolvedForSelection.topKPerQuadrant;
+          _stagedMinArea = resolvedForSelection.minAreaNormalized;
+          _stagedPadding = resolvedForSelection.quadrantPadding;
+          _stagedMinTileSize = resolvedForSelection.minTileSizePx;
+        }
+      }),
+      onMinTileSizeChanged: (v) => setState(() => _stagedMinTileSize = v),
       previewEnabled: _previewEnabled,
       onPreviewChanged: (v) => setState(() => _previewEnabled = v),
       // Gantt staged
@@ -407,6 +454,7 @@ class _SettingsSidebar extends StatelessWidget {
       ('Language', Icons.language),
       ('Layout', Icons.grid_view_rounded),
       ('Calendar/Gantt', Icons.view_timeline),
+      ('Smart Classification', Icons.auto_awesome_outlined),
       ('Accessibility', Icons.accessibility_new),
       ('Keyboard', Icons.keyboard_alt_outlined),
       ('Data & Privacy', Icons.privacy_tip_outlined),
@@ -423,7 +471,13 @@ class _SettingsSidebar extends StatelessWidget {
           selected: sel,
           selectedTileColor:
               Theme.of(context).colorScheme.surfaceContainerHighest,
-          onTap: () => onSelect(label),
+          onTap: () {
+            if (label == 'Smart Classification') {
+              GoRouter.of(context).push('/classification-settings');
+              return;
+            }
+            onSelect(label);
+          },
         );
       },
       separatorBuilder: (_, __) => const SizedBox(height: 4),

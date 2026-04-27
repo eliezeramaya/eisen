@@ -67,14 +67,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsResetDemoSubtitle =>
-      'Reemplazar todas las tareas con ejemplos';
+      'Reemplazar todas las tareas con un set rico de ejemplo';
 
   @override
   String get settingsResetDemoDialogTitle => '¿Restaurar tareas demo?';
 
   @override
   String get settingsResetDemoDialogContent =>
-      'Esto eliminará todas tus tareas actuales y las reemplazará con 20 tareas de ejemplo.';
+      'Esto eliminará todas tus tareas actuales y las reemplazará con 100 tareas de ejemplo con más metadatos.';
 
   @override
   String get settingsCancel => 'Cancelar';

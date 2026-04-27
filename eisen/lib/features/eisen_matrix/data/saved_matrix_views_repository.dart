@@ -17,9 +17,9 @@ abstract class SavedMatrixViewsRepository {
 /// Local implementation backed by [SharedPreferences].
 class LocalSavedMatrixViewsRepository implements SavedMatrixViewsRepository {
   LocalSavedMatrixViewsRepository({SharedPreferences? prefs})
-    : _prefsFuture = prefs != null
-          ? Future.value(prefs)
-          : SharedPreferences.getInstance();
+      : _prefsFuture = prefs != null
+            ? Future.value(prefs)
+            : SharedPreferences.getInstance();
 
   static const _storageKey = 'eisen.saved_matrix_views.v1';
 
@@ -46,10 +46,8 @@ class LocalSavedMatrixViewsRepository implements SavedMatrixViewsRepository {
       try {
         final decoded = jsonDecode(raw);
         if (decoded is List) {
-          _current = decoded
-              .whereType<Map<String, dynamic>>()
-              .map(_fromJson)
-              .toList();
+          _current =
+              decoded.whereType<Map<String, dynamic>>().map(_fromJson).toList();
         }
       } catch (_) {
         _current = const [];
@@ -103,19 +101,19 @@ class LocalSavedMatrixViewsRepository implements SavedMatrixViewsRepository {
       timeFilter: _timeFilterFromJson(json['timeFilter'] as String?),
       referenceDate:
           DateTime.tryParse(json['referenceDate'] as String? ?? '') ??
-          DateTime.now(),
+              DateTime.now(),
       onlyCompleted: json['onlyCompleted'] as bool? ?? false,
     );
   }
 
   Map<String, Object?> _toJson(SavedMatrixView view) => {
-    'id': view.id,
-    'name': view.name,
-    'focusSpaceId': view.focusSpaceId,
-    'timeFilter': view.timeFilter.name,
-    'referenceDate': view.referenceDate.toIso8601String(),
-    'onlyCompleted': view.onlyCompleted,
-  };
+        'id': view.id,
+        'name': view.name,
+        'focusSpaceId': view.focusSpaceId,
+        'timeFilter': view.timeFilter.name,
+        'referenceDate': view.referenceDate.toIso8601String(),
+        'onlyCompleted': view.onlyCompleted,
+      };
 
   MatrixTimeFilterType _timeFilterFromJson(String? value) {
     if (value == null) return MatrixTimeFilterType.all;

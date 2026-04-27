@@ -6,6 +6,7 @@ import 'package:eisen/features/completed_tasks/presentation/widgets/completed_ma
 import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// Completed tasks matrix page.
 ///
@@ -41,14 +42,15 @@ class _CompletedMatrixPageState extends ConsumerState<CompletedMatrixPage> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        leadingWidth: 180,
-        leading: const Padding(
-          padding: EdgeInsets.only(left: 12),
+        leadingWidth: context.canPop() ? 224 : 180,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
           child: Row(
             children: [
-              AppLogoHomeButton(),
-              SizedBox(width: 8),
-              Text('Tareas Completadas'),
+              if (context.canPop()) BackButton(onPressed: () => context.pop()),
+              const AppLogoHomeButton(),
+              const SizedBox(width: 8),
+              const Text('Tareas Completadas'),
             ],
           ),
         ),

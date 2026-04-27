@@ -6,6 +6,7 @@ import 'package:eisen/features/insights_ml/presentation/widgets/stats_ml_section
 import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../application/stats_controller.dart';
 import '../../data/stats_exporter.dart';
@@ -26,7 +27,8 @@ class StatsPage extends ConsumerStatefulWidget {
 }
 
 class _StatsPageState extends ConsumerState<StatsPage> {
-  final Debouncer _debounce = Debouncer(delay: const Duration(milliseconds: 200));
+  final Debouncer _debounce =
+      Debouncer(delay: const Duration(milliseconds: 200));
 
   @override
   void dispose() {
@@ -53,14 +55,14 @@ class _StatsPageState extends ConsumerState<StatsPage> {
         data: (v) => v, loading: () => null, error: (_, __) => null);
     final trends = trendsAsync.when<List<TrendPoint>?>(
         data: (v) => v, loading: () => null, error: (_, __) => null);
-    final showBack = Navigator.of(context).canPop();
+    final showBack = context.canPop();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Estadísticas'),
         leading: showBack
             ? BackButton(
-                onPressed: () => Navigator.of(context).maybePop(),
+                onPressed: () => context.pop(),
               )
             : null,
         actions: [
@@ -117,8 +119,8 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                         selected: range == r,
                         onSelected: (value) {
                           if (!value) return;
-                          _debounce.run(
-                              () => ref.read(statsRangeProvider.notifier).set(r));
+                          _debounce.run(() =>
+                              ref.read(statsRangeProvider.notifier).set(r));
                         },
                       );
                     }).toList(),
@@ -140,8 +142,8 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                         .toList(),
                     onChanged: (value) {
                       if (value == null) return;
-                      _debounce.run(
-                          () => ref.read(statsProjectProvider.notifier).set(value));
+                      _debounce.run(() =>
+                          ref.read(statsProjectProvider.notifier).set(value));
                     },
                   ),
                 ),

@@ -22,8 +22,7 @@ class EisenQuadrantDropArea extends ConsumerStatefulWidget {
       _EisenQuadrantDropAreaState();
 }
 
-class _EisenQuadrantDropAreaState
-    extends ConsumerState<EisenQuadrantDropArea> {
+class _EisenQuadrantDropAreaState extends ConsumerState<EisenQuadrantDropArea> {
   bool _hovered = false;
 
   @override
