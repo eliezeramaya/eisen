@@ -4,17 +4,17 @@ enum AutomationMode {
   automatic;
 
   String get label => switch (this) {
-        AutomationMode.manualOnly => 'Asistido',
-        AutomationMode.assisted => 'Equilibrado',
-        AutomationMode.automatic => 'Avanzado',
+        AutomationMode.manualOnly => 'Manual',
+        AutomationMode.assisted => 'Asistido',
+        AutomationMode.automatic => 'Automático',
       };
 
   String get description => switch (this) {
         AutomationMode.manualOnly =>
-          'Muestra la sugerencia antes de guardar y deja la clasificación claramente editable.',
+          'Muestra la sugerencia antes de guardar y deja la clasificación manual y claramente editable.',
         AutomationMode.assisted =>
-          'Guarda automático cuando clasifica y deja una corrección rápida a mano.',
+          'Clasifica con ayuda y guarda automáticamente, dejando una corrección rápida a mano.',
         AutomationMode.automatic =>
-          'Clasifica y aplica comportamiento visual y agrupaciones sin preguntar.',
+          'Clasifica y aplica comportamiento visual y agrupaciones automáticamente, sin preguntar.',
       };
 }

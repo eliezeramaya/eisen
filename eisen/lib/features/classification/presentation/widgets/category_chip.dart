@@ -37,6 +37,7 @@ IconData iconForCategoryKey(String iconName) {
     'rocket' => Icons.rocket_launch_outlined,
     'inventory' => Icons.inventory_2_outlined,
     'palette' => Icons.palette_outlined,
+    'inbox' => Icons.inbox_outlined,
     _ => Icons.label_outline,
   };
 }

@@ -144,10 +144,13 @@ class ComputeLayoutUseCase {
             'ComputeLayoutUseCase.execute: tasks=${tasks.length} zoom=${zoom?.name} viewport=${viewport?.width}x${viewport?.height}');
       } catch (_) {}
     }
-    // Compute hash to detect changes
+    // Compute hash to detect changes; include a day-bucket so that
+    // time-dependent visual weights (due/freshness) invalidate the cache daily.
+    final dayBucket = DateTime.now().millisecondsSinceEpoch ~/ 86400000;
     int hash = Object.hashAllUnordered(tasks.map((t) => t.id)) ^
         tasks.length ^
-        (zoom?.index ?? -1);
+        (zoom?.index ?? -1) ^
+        dayBucket;
     hash ^= Object.hashAll(
       Quadrant.values.map(
         (quadrant) =>

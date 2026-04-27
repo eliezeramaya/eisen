@@ -79,6 +79,9 @@ class LocalPrefsMatrixRepository implements MatrixRepository {
             rawMetadata?.confidenceLevel ??
             ConfidenceLevel.low);
     final now = DateTime.now();
+    // Only stamp updatedAt when data actually needs migration (correction
+    // applied or categoryId was missing from older storage format).
+    final needsMigration = wasCorrected || rawMetadata?.categoryId == null;
     final migratedMetadata = rawMetadata?.copyWith(
           categoryId: rawMetadata.categoryId ?? parsedCategoryId,
           entryKind: rawMetadata.entryKind,
@@ -91,7 +94,7 @@ class LocalPrefsMatrixRepository implements MatrixRepository {
           source: wasCorrected
               ? ClassificationSource.userCorrection
               : rawMetadata.source,
-          updatedAt: now,
+          updatedAt: needsMigration ? now : rawMetadata.updatedAt,
         ) ??
         ClassificationMetadataModel(
           inputText: j['title'] as String? ?? '',

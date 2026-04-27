@@ -18,7 +18,7 @@
   "settingsMinimalMode": "Modo minimalista",
   "settingsLanguage": "Idioma",
   "settingsResetDemo": "Restaurar tareas demo",
-  "settingsResetDemoSubtitle": "Reemplazar todas las tareas con un set rico de ejemplo",
+  "settingsResetDemoSubtitle": "Reemplazar todas las tareas con un conjunto completo de ejemplos",
   "settingsResetDemoDialogTitle": "¿Restaurar tareas demo?",
   "settingsResetDemoDialogContent": "Esto eliminará todas tus tareas actuales y las reemplazará con 100 tareas de ejemplo con más metadatos.",
   "settingsCancel": "Cancelar",
