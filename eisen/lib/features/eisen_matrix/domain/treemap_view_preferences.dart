@@ -20,6 +20,34 @@ class TreemapViewPreferences {
     this.updatedAt,
   });
 
+  factory TreemapViewPreferences.fromJson(Map<String, Object?> json) {
+    return TreemapViewPreferences(
+      colorByCategory: json['colorByCategory'] as bool? ?? true,
+      showConfidenceIndicators:
+          json['showConfidenceIndicators'] as bool? ?? true,
+      showAutoTags: json['showAutoTags'] as bool? ?? true,
+      defaultGrouping: _groupingFromName(
+        json['defaultGrouping'] as String?,
+      ),
+      defaultZoomLevel: _zoomLevelFromName(
+        json['defaultZoomLevel'] as String?,
+      ),
+      visualDensity: _densityFromName(
+        json['visualDensity'] as String?,
+      ),
+      showBreadcrumbs: json['showBreadcrumbs'] as bool? ?? true,
+      enableSemanticZoom: json['enableSemanticZoom'] as bool? ?? true,
+      enablePinchZoom: json['enablePinchZoom'] as bool? ?? true,
+      enableDoubleTapZoom: json['enableDoubleTapZoom'] as bool? ?? true,
+      showMinimap: json['showMinimap'] as bool? ?? false,
+      showTaskCountInGroups: json['showTaskCountInGroups'] as bool? ?? true,
+      showEstimatedMinutes: json['showEstimatedMinutes'] as bool? ?? true,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'] as String)
+          : null,
+    );
+  }
+
   final bool colorByCategory;
   final bool showConfidenceIndicators;
   final bool showAutoTags;
@@ -68,34 +96,6 @@ class TreemapViewPreferences {
           showTaskCountInGroups ?? this.showTaskCountInGroups,
       showEstimatedMinutes: showEstimatedMinutes ?? this.showEstimatedMinutes,
       updatedAt: updatedAt ?? this.updatedAt,
-    );
-  }
-
-  factory TreemapViewPreferences.fromJson(Map<String, Object?> json) {
-    return TreemapViewPreferences(
-      colorByCategory: json['colorByCategory'] as bool? ?? true,
-      showConfidenceIndicators:
-          json['showConfidenceIndicators'] as bool? ?? true,
-      showAutoTags: json['showAutoTags'] as bool? ?? true,
-      defaultGrouping: _groupingFromName(
-        json['defaultGrouping'] as String?,
-      ),
-      defaultZoomLevel: _zoomLevelFromName(
-        json['defaultZoomLevel'] as String?,
-      ),
-      visualDensity: _densityFromName(
-        json['visualDensity'] as String?,
-      ),
-      showBreadcrumbs: json['showBreadcrumbs'] as bool? ?? true,
-      enableSemanticZoom: json['enableSemanticZoom'] as bool? ?? true,
-      enablePinchZoom: json['enablePinchZoom'] as bool? ?? true,
-      enableDoubleTapZoom: json['enableDoubleTapZoom'] as bool? ?? true,
-      showMinimap: json['showMinimap'] as bool? ?? false,
-      showTaskCountInGroups: json['showTaskCountInGroups'] as bool? ?? true,
-      showEstimatedMinutes: json['showEstimatedMinutes'] as bool? ?? true,
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.tryParse(json['updatedAt'] as String)
-          : null,
     );
   }
 

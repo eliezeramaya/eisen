@@ -1,11 +1,12 @@
 import 'dart:convert';
 
+import 'package:eisen/core/storage/local_storage_keys.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StoragePrefs {
-  static const _key = 'eisen.tasks.v1';
-  static const _telemetryConsentKey = 'eisen.telemetry.consent.v1';
-  static const _telemetrySaltKey = 'eisen.telemetry.salt.v1';
+  static const _key = LocalStorageKeys.tasksPayload;
+  static const _telemetryConsentKey = LocalStorageKeys.telemetryConsent;
+  static const _telemetrySaltKey = LocalStorageKeys.telemetrySalt;
 
   Future<void> saveJson(Map<String, Object?> json) async {
     final prefs = await SharedPreferences.getInstance();

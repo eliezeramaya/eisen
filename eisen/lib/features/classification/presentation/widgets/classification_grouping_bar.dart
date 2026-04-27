@@ -24,7 +24,8 @@ class ClassificationGroupingBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groups = <_GroupSummary>[
-      if (settings.allowGroupingByCategory) ..._categoryGroups(tasks, categories),
+      if (settings.allowGroupingByCategory)
+        ..._categoryGroups(tasks, categories),
       if (settings.allowGroupingByKind)
         ..._enumGroups(
           'Tipo',
@@ -44,7 +45,9 @@ class ClassificationGroupingBar extends ConsumerWidget {
           (task) => task.energy?.label ?? 'Sin energía',
         ),
     ];
-    final lowConfidenceCount = tasks.where((task) => task.classificationConfidence == ConfidenceLevel.low).length;
+    final lowConfidenceCount = tasks
+        .where((task) => task.classificationConfidence == ConfidenceLevel.low)
+        .length;
 
     if (groups.isEmpty && lowConfidenceCount == 0) {
       return const SizedBox.shrink();
@@ -64,7 +67,9 @@ class ClassificationGroupingBar extends ConsumerWidget {
                 final next = current.contains(ConfidenceLevel.low)
                     ? current.where((item) => item != ConfidenceLevel.low)
                     : <ConfidenceLevel>{...current, ConfidenceLevel.low};
-                ref.read(activeConfidenceFiltersProvider.notifier).update(next.toList());
+                ref
+                    .read(activeConfidenceFiltersProvider.notifier)
+                    .update(next.toList());
               },
             ),
             const SizedBox(width: 8),
@@ -82,20 +87,29 @@ class ClassificationGroupingBar extends ConsumerWidget {
                       children: [
                         Text(
                           '${group.dimension}: ',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                         ),
                         Text(
                           group.label,
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const Spacer(),
                         Text(
                           '${group.count}',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                         ),
                       ],
                     ),
@@ -103,50 +117,6 @@ class ClassificationGroupingBar extends ConsumerWidget {
               ],
               child: _GroupSummaryPill(groups: groups.take(16).toList()),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GroupChip extends StatelessWidget {
-  const _GroupChip({required this.group});
-
-  final _GroupSummary group;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.55)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            group.dimension,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            group.label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            '${group.count}',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
-          ),
         ],
       ),
     );

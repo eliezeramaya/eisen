@@ -54,6 +54,27 @@ class TreemapViewportState {
     this.updatedAt,
   });
 
+  factory TreemapViewportState.fromJson(Map<String, Object?> json) {
+    return TreemapViewportState(
+      zoomLevel: _zoomLevelFromName(json['zoomLevel'] as String?),
+      selectedQuadrant: _quadrantFromJson(json['selectedQuadrant']),
+      selectedCategoryId: json['selectedCategoryId'] as String?,
+      selectedSubcategoryId: json['selectedSubcategoryId'] as String?,
+      selectedGroupId: json['selectedGroupId'] as String?,
+      selectedTaskId: json['selectedTaskId'] as String?,
+      selectedNodeId: json['selectedNodeId'] as String?,
+      grouping: _groupingFromName(json['grouping'] as String?),
+      density: _densityFromName(json['density'] as String?),
+      breadcrumbPath:
+          (json['breadcrumbPath'] as List?)?.cast<String>() ?? const ['Todo'],
+      quickFilter: _quickFilterFromName(json['quickFilter'] as String?),
+      activeSearchQuery: json['activeSearchQuery'] as String?,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'] as String)
+          : null,
+    );
+  }
+
   final TreemapZoomLevel zoomLevel;
   final Quadrant? selectedQuadrant;
   final String? selectedCategoryId;
@@ -118,27 +139,6 @@ class TreemapViewportState {
           ? this.activeSearchQuery
           : activeSearchQuery as String?,
       updatedAt: updatedAt ?? this.updatedAt,
-    );
-  }
-
-  factory TreemapViewportState.fromJson(Map<String, Object?> json) {
-    return TreemapViewportState(
-      zoomLevel: _zoomLevelFromName(json['zoomLevel'] as String?),
-      selectedQuadrant: _quadrantFromJson(json['selectedQuadrant']),
-      selectedCategoryId: json['selectedCategoryId'] as String?,
-      selectedSubcategoryId: json['selectedSubcategoryId'] as String?,
-      selectedGroupId: json['selectedGroupId'] as String?,
-      selectedTaskId: json['selectedTaskId'] as String?,
-      selectedNodeId: json['selectedNodeId'] as String?,
-      grouping: _groupingFromName(json['grouping'] as String?),
-      density: _densityFromName(json['density'] as String?),
-      breadcrumbPath:
-          (json['breadcrumbPath'] as List?)?.cast<String>() ?? const ['Todo'],
-      quickFilter: _quickFilterFromName(json['quickFilter'] as String?),
-      activeSearchQuery: json['activeSearchQuery'] as String?,
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.tryParse(json['updatedAt'] as String)
-          : null,
     );
   }
 

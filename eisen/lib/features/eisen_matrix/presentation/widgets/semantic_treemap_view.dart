@@ -869,7 +869,7 @@ List<Rect> _computeRects(List<TreemapSemanticNode> nodes) {
   final items = [
     for (final node in normalized)
       _LayoutItem(
-        area: (math.max(node.totalWeight, 0.0001) / total),
+        area: math.max(node.totalWeight, 0.0001) / total,
         node: node,
       ),
   ];
