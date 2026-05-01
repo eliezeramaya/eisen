@@ -18,6 +18,8 @@ class LocalStorageKeys {
   static const filtersEnergies = '${filtersPrefix}energies';
   static const filtersConfidences = '${filtersPrefix}confidences';
 
+  static const taskViewMode = '${settingsPrefix}task_view_mode';
+
   static const localSchemaVersion = '${localSchemaPrefix}version';
   static const localSchemaLastMigratedAt =
       '${localSchemaPrefix}last_migrated_at';
