@@ -15,7 +15,7 @@
 - **Custom Squarified Treemap** - No external treemap packages, optimized for Eisenhower layout
 - **High Performance** - Path caching, incremental updates, sub-16ms layouts
 - **Liquid-Glass Theme** - Material 3 with custom tokens and WCAG AA accessibility
-- **Well Tested** - 40+ unit/widget tests, golden tests, CI/CD integration
+- **Well Tested** - 500+ unit/widget tests, CI/CD integration
 - **i18n Ready** - English/Spanish with ARB validation
 - **Privacy-First** - Opt-in telemetry with SHA-256 ID anonymization
 - **Accessible** - WCAG 2.1 Level AA, keyboard shortcuts, screen reader support
@@ -71,7 +71,6 @@ flutter run -d web-server
 flutter test                      # All tests
 flutter test test/unit/           # Unit tests only
 flutter test test/widget/         # Widget tests only
-flutter test test/golden/         # Golden tests only
 
 # Analysis
 flutter analyze                   # Lint & static analysis
@@ -103,20 +102,19 @@ Notas:
 - En desktop, la navegación por teclado asume foco en el canvas/área de matriz.
 - En móvil, prioriza gestos: tap para seleccionar, doble tap para zoom.
 
-## Breakpoints (xs/sm/md/lg/xl)
+## Breakpoints (DeviceClass)
 
-| Nombre | Ancho | Densidad recomendada | TextScale recomendada | Uso |
-|---|---|---|---|---|
-| xs | <600 px | Cómoda (por defecto) | 1.0–1.3 (accesibilidad 1.6) | móvil chico |
-| sm | 600–904 px | Cómoda | 1.0–1.3 (accesibilidad 1.6) | móvil grande / tablet chica |
-| md | 905–1239 px | Cómoda | 1.0–1.3 (accesibilidad 1.6) | tablet |
-| lg | 1240–1439 px | Compacta | 1.0–1.3 | desktop común |
-| xl | ≥1440 px | Compacta | 1.0–1.3 | desktop amplio |
+| Nombre | Ancho | Layout | Uso |
+|---|---|---|---|
+| compact | < 600 px | Bottom NavigationBar | móvil |
+| medium | 600–904 px | Bottom NavigationBar | tablet chica |
+| expanded | 905–1239 px | NavigationRail | tablet / escritorio chico |
+| large | ≥ 1240 px | Sidebar permanente | escritorio |
 
-Referencias: lib/core/responsive/app_breakpoints.dart y docs/RESPONSIVE_GUIDE.md.
+Referencias: `lib/core/responsive/app_breakpoints.dart` y `docs/RESPONSIVE_GUIDE.md`.
 Recomendaciones:
 - Targets táctiles mínimos: 48×48 px (móvil), ≥40×40 px (desktop).
-- En pantallas lg/xl, activar “Compact” si se muestran muchas tareas.
+- En pantallas `large`, activar "Compact" si se muestran muchas tareas.
 
 ## Testing
 
