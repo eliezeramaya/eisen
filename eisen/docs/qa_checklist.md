@@ -21,9 +21,6 @@
 - [ ] Ajustar sliders de layout (topK, gamma, padding) sin errores.
 - [ ] Cambiar tono de notificación y guardado en prefs.
 
-## Goldens visuales (manual)
-- [ ] Revisar diffs de goldens si CI reporta fallos; aceptar o regenerar según diseño.
-
 ## Dispositivos
 - [ ] Probar en un dispositivo físico Android.
 - [ ] Probar en Web (desktop) con viewport representativo.

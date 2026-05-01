@@ -2,15 +2,23 @@
 
 This document summarizes the responsive system adopted by the app.
 
-## Breakpoints
+## Breakpoints (DeviceClass)
 
-- xs: < 600
-- sm: 600–904
-- md: 905–1239
-- lg: 1240–1439
-- xl: ≥ 1440
+| Nombre | Ancho | Uso |
+|---|---|---|
+| compact | < 600 px | móvil |
+| medium | 600–904 px | tablet chica / móvil landscape |
+| expanded | 905–1239 px | tablet / escritorio chico |
+| large | ≥ 1240 px | escritorio |
 
-See `lib/core/responsive/app_breakpoints.dart` and `responsive_extensions.dart`.
+Ver `lib/core/responsive/app_breakpoints.dart` y `responsive_extensions.dart`.
+
+```dart
+// Leer el DeviceClass actual
+final dc = context.deviceClass;
+if (dc.isCompact) { /* móvil */ }
+if (dc.isExpandedUp) { /* tablet o mayor */ }
+```
 
 ## Layout Tokens
 
@@ -18,25 +26,16 @@ See `lib/core/responsive/app_breakpoints.dart` and `responsive_extensions.dart`.
 - Radius: 8, 12, 20
 - Touch targets: 48x48 (mobile), ≥40x40 (desktop)
 
-See `lib/core/responsive/layout_tokens.dart`.
+Ver `lib/core/responsive/layout_tokens.dart`.
 
-## Adaptive Scaffold
+## Adaptive Scaffold (AppShell)
 
-Use `ResponsiveScaffold` for screens with app-wide navigation:
+La navegación global vive en `AppShell` (`lib/app/app_shell.dart`), que usa `ResponsiveScaffold` internamente:
 
-- xs/sm: Bottom NavigationBar
-- md: NavigationRail
-- lg/xl: Sidebar (NavigationDrawer) + AppBar
+- **compact / medium**: Bottom NavigationBar
+- **expanded**: NavigationRail
+- **large**: Sidebar permanente (NavigationDrawer)
 
-File: `lib/core/responsive/responsive_scaffold.dart`.
+Las páginas principales (`MatrixPage`, `FocusDashboardPage`, `StatsPage`, `SettingsScreen`) reciben `useShellNavigation: true` cuando son hospedadas por `AppShell`, suprimiendo sus propias acciones de navegación.
 
-## Testing
-
-Golden tests exercise five breakpoints and three text scales (1.0, 1.3, 1.6).
-
-Run:
-
-- flutter test
-- flutter test --update-goldens (to refresh)
-
-File: `test/golden/responsive_matrix_page_golden_test.dart`.
+Ver `lib/core/responsive/responsive_scaffold.dart` y `lib/app/app_shell.dart`.
