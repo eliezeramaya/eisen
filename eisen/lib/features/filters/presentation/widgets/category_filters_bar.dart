@@ -46,7 +46,8 @@ class CategoryFiltersBar extends ConsumerWidget {
 
     final smartCount = activeKinds.length + activeHorizons.length + activeEnergies.length + activeConfidences.length;
 
-    return Padding(
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       padding: padding,
       child: Row(
         mainAxisSize: MainAxisSize.min,

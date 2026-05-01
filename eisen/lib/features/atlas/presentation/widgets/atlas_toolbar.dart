@@ -1,3 +1,4 @@
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/features/atlas/application/atlas_providers.dart';
 import 'package:eisen/features/atlas/domain/atlas_grouping.dart';
 import 'package:eisen/features/filters/filters_providers.dart';
@@ -12,7 +13,7 @@ class AtlasToolbar extends ConsumerWidget {
     final grouping = ref.watch(atlasGroupingProvider);
     final hasFilters = ref.watch(atlasHasActiveFiltersProvider);
     final showArchived = ref.watch(showArchivedProvider);
-    final isCompact = MediaQuery.sizeOf(context).width < 700;
+    final isNarrow = !deviceClassFromContext(context).isExpandedUp;
     final theme = Theme.of(context);
 
     return Padding(
@@ -23,7 +24,7 @@ class AtlasToolbar extends ConsumerWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           SizedBox(
-            width: isCompact ? double.infinity : 260,
+            width: isNarrow ? double.infinity : 260,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

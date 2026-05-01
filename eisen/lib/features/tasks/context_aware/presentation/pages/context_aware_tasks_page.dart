@@ -1,4 +1,5 @@
 import 'package:eisen/core/design_system/eisen_tokens.dart';
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/tasks/context_aware/application/context_aware_tasks_controller.dart';
 import 'package:eisen/features/tasks/context_aware/application/contextual_treemap_layout.dart';
@@ -46,8 +47,7 @@ class _ContextAwareTasksPageState extends ConsumerState<ContextAwareTasksPage> {
         ? rankedTasks
         : rankedTasks.where((task) => task.score >= 0.28).take(12).toList();
     final hasNoTasks = rankedTasks.isEmpty;
-    final width = MediaQuery.sizeOf(context).width;
-    final isCompact = width < 760;
+    final isCompact = !deviceClassFromContext(context).isExpandedUp;
     final sections = buildContextTreemapSections(
       rankedTasks: filteredTasks,
       context: contextState,

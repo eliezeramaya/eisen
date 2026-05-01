@@ -10,12 +10,3 @@ MediaQuery clampTreemapTSF(BuildContext context, {required Widget child}) {
   return MediaQuery(
       data: mq.copyWith(textScaler: TextScaler.linear(clamped)), child: child);
 }
-
-// Responsive screen classes for matrix tuning
-enum ScreenClass { compact, medium, wide }
-
-ScreenClass classifyScreen(Size size) {
-  if (size.width < 600) return ScreenClass.compact;
-  if (size.width < 1280) return ScreenClass.medium;
-  return ScreenClass.wide;
-}

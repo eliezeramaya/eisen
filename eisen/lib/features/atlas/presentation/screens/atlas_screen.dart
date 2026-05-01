@@ -1,3 +1,4 @@
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/features/atlas/application/atlas_providers.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_breadcrumb.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_canvas.dart';
@@ -33,7 +34,8 @@ class AtlasScreen extends ConsumerWidget {
     final hasFilters = ref.watch(atlasHasActiveFiltersProvider);
     final path = ref.watch(atlasResolvedDrilldownPathProvider);
     final width = MediaQuery.sizeOf(context).width;
-    final isDesktop = width >= 900;
+    final deviceClass = deviceClassOf(width);
+    final showDetailPanel = deviceClass.isExpandedUp;
     final emptyKind = _emptyKind(
       allTasks: allTasks,
       atlasTasks: atlasTasks,
@@ -100,7 +102,7 @@ class AtlasScreen extends ConsumerWidget {
     void selectTask(Task task) {
       ref.read(atlasSelectedTaskProvider.notifier).select(task);
       ref.read(matrixControllerProvider.notifier).select(task.id);
-      if (!isDesktop) {
+      if (!showDetailPanel) {
         showModalBottomSheet<void>(
           context: context,
           showDragHandle: true,
@@ -199,7 +201,7 @@ class AtlasScreen extends ConsumerWidget {
           },
         ),
         Expanded(
-          child: isDesktop
+          child: showDetailPanel
               ? Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -207,7 +209,7 @@ class AtlasScreen extends ConsumerWidget {
                     if (selectedTask != null) ...[
                       const SizedBox(width: 12),
                       SizedBox(
-                        width: width >= 1200 ? 340 : 300,
+                        width: deviceClass.isLarge ? 340 : 300,
                         child: AtlasDetailPanel(
                           task: selectedTask,
                           onClose: () {

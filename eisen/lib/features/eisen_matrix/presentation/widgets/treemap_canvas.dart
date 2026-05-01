@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui show lerpDouble;
 
 import 'package:eisen/core/constants/layout_constants.dart';
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/core/services/telemetry.dart';
 import 'package:eisen/core/theme/animation_tokens.dart';
 import 'package:eisen/core/theme/app_theme.dart';
@@ -276,8 +277,8 @@ class _TreemapCanvasState extends State<TreemapCanvas>
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
 
-        // Check if we're on desktop (for hover tooltip)
-        final isDesktop = constraints.maxWidth >= 1240;
+        // Check if we're on large layouts (for hover tooltip).
+        final isDesktop = deviceClassOf(constraints.maxWidth).isLarge;
 
         // Provide a safe fallback for theme tokens so tests that don't install the app theme don't crash
         final glassTokens = Theme.of(context).extension<GlassTokens>() ??

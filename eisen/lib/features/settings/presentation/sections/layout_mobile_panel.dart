@@ -1,3 +1,4 @@
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/settings/presentation/live_preview_pane.dart';
@@ -19,6 +20,7 @@ class _LayoutMobilePanelState extends ConsumerState<LayoutMobilePanel> {
   Widget build(BuildContext context) {
     final prefs = ref.watch(uiPrefsProvider);
     final size = MediaQuery.sizeOf(context);
+    final deviceClass = deviceClassOf(size.width);
     final uiPrefs = ref.read(uiPrefsControllerProvider.notifier);
     final matrix = ref.read(matrixControllerProvider.notifier);
 
@@ -37,7 +39,7 @@ class _LayoutMobilePanelState extends ConsumerState<LayoutMobilePanel> {
         quadrantPadding: padding ?? prefs.quadrantPadding,
         minTileSizePx: minTileSizePx ?? prefs.minTileSizePx,
         treemapDensityProfile: profile ?? prefs.treemapDensityProfile,
-        isDesktop: size.width >= 900,
+        isDesktop: deviceClass.isExpandedUp,
       );
       matrix.notifyLayoutRecompute();
     }

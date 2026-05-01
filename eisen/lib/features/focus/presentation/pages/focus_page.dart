@@ -2,6 +2,7 @@ import 'package:eisen/core/design_system/eisen_tokens.dart';
 import 'package:eisen/core/design_system/widgets/eisen_button.dart';
 import 'package:eisen/core/design_system/widgets/eisen_card.dart';
 import 'package:eisen/core/design_system/widgets/eisen_section_header.dart';
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
 import 'package:eisen/features/focus/data/focus_repository.dart';
@@ -28,9 +29,8 @@ class _FocusPageState extends ConsumerState<FocusPage> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
     final cs = Theme.of(context).colorScheme;
-    final showBack = width < 720;
+    final showBack = !deviceClassFromContext(context).isExpandedUp;
 
     final focusState = ref.watch(focusControllerProvider);
     final accessibilityPrefs = ref.watch(accessibilityControllerProvider);

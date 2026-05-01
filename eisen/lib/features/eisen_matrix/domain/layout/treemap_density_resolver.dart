@@ -1,3 +1,4 @@
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -66,7 +67,6 @@ class TreemapDensityResolver {
   static const double _maxMinTileSizePx = 44.0;
   static const double _desktopMinTileFloor = 30.0;
   static const double _mobileMinTileFloor = 40.0;
-  static const double _desktopCutoffWidth = 900.0;
   static const Size fallbackScreenSize = Size(720, 900);
 
   static ResolvedTreemapDensity resolve({
@@ -107,7 +107,7 @@ class TreemapDensityResolver {
   }
 
   static bool usesDesktopProfile(Size screenSize) =>
-      screenSize.width >= _desktopCutoffWidth;
+      deviceClassOf(screenSize.width).isExpandedUp;
 
   static String descriptionForProfile(String profile) {
     return switch (TreemapDensityProfiles.sanitize(profile)) {

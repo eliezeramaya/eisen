@@ -1,3 +1,4 @@
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/features/atlas/domain/atlas_color_resolver.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +15,7 @@ class _AtlasLegendState extends State<AtlasLegend> {
 
   @override
   Widget build(BuildContext context) {
-    final isCompact = MediaQuery.sizeOf(context).width < 700;
+    final isNarrow = !deviceClassFromContext(context).isExpandedUp;
     final theme = Theme.of(context);
     final body = Wrap(
       spacing: 12,
@@ -44,7 +45,7 @@ class _AtlasLegendState extends State<AtlasLegend> {
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: isCompact
+          child: isNarrow
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

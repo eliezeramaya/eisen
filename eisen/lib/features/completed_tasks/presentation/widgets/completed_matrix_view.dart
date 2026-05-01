@@ -1,3 +1,4 @@
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:flutter/material.dart';
@@ -37,10 +38,10 @@ class CompletedMatrixView extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth;
+        final deviceClass = deviceClassOf(constraints.maxWidth);
 
         // Responsive: Use single column on narrow screens
-        if (width < 600) {
+        if (deviceClass.isCompact) {
           return _SingleColumnLayout(
             q1Tasks: q1Tasks,
             q2Tasks: q2Tasks,

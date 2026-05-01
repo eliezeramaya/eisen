@@ -1,3 +1,4 @@
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/utils/debounce.dart';
 import 'package:eisen/features/completed_tasks/domain/project_category.dart';
@@ -20,7 +21,13 @@ import '../widgets/weekly_summary_section.dart';
 
 /// StatsPage — UX/UI dashboard for motivation with calm visuals.
 class StatsPage extends ConsumerStatefulWidget {
-  const StatsPage({super.key});
+  const StatsPage({
+    super.key,
+    this.useShellNavigation = false,
+  });
+
+  /// True when this page is hosted by AppShell, which owns global navigation.
+  final bool useShellNavigation;
 
   @override
   ConsumerState<StatsPage> createState() => _StatsPageState();
@@ -38,8 +45,7 @@ class _StatsPageState extends ConsumerState<StatsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final isMobile = width < 600;
+    final isMobile = deviceClassFromContext(context).isCompact;
     final isEs = Localizations.localeOf(context).languageCode == 'es';
     final range = ref.watch(statsRangeProvider);
     final project = ref.watch(statsProjectProvider);
@@ -55,7 +61,7 @@ class _StatsPageState extends ConsumerState<StatsPage> {
         data: (v) => v, loading: () => null, error: (_, __) => null);
     final trends = trendsAsync.when<List<TrendPoint>?>(
         data: (v) => v, loading: () => null, error: (_, __) => null);
-    final showBack = context.canPop();
+    final showBack = !widget.useShellNavigation && context.canPop();
 
     return Scaffold(
       appBar: AppBar(
@@ -71,10 +77,11 @@ class _StatsPageState extends ConsumerState<StatsPage> {
             icon: const Icon(Icons.ios_share),
             onPressed: () => _showExportSheet(context, ref),
           ),
-          const Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: AppLogoHomeButton(),
-          ),
+          if (!widget.useShellNavigation)
+            const Padding(
+              padding: EdgeInsets.only(right: 12),
+              child: AppLogoHomeButton(),
+            ),
         ],
       ),
       body: SafeArea(

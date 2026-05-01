@@ -2,22 +2,21 @@ import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:flutter/widgets.dart';
 
 class ResponsiveData {
-  ResponsiveData(this.bp, this.width);
-  final BreakpointSize bp;
+  ResponsiveData(this.deviceClass, this.width);
+  final DeviceClass deviceClass;
   final double width;
 
-  bool get isMobile => bp == BreakpointSize.xs;
-  bool get isTablet => bp == BreakpointSize.sm || bp == BreakpointSize.md;
-  bool get isDesktop => bp == BreakpointSize.lg || bp == BreakpointSize.xl;
-  bool get isUltraWide => bp == BreakpointSize.xl && width >= AppBreakpoints.xl;
+  bool get isMobile => deviceClass.isCompact;
+  bool get isTablet => deviceClass.isMedium;
+  bool get isDesktop => deviceClass.isExpandedUp;
+  bool get isUltraWide => width >= _ultraWideWidth;
 
-  double get spacingScale => switch (bp) {
-    BreakpointSize.xs => 1.0,
-    BreakpointSize.sm => 1.0,
-    BreakpointSize.md => 1.1,
-    BreakpointSize.lg => 1.15,
-    BreakpointSize.xl => 1.2,
-  };
+  double get spacingScale => switch (deviceClass) {
+        DeviceClass.compact => 1.0,
+        DeviceClass.medium => 1.0,
+        DeviceClass.expanded => 1.1,
+        DeviceClass.large => 1.15,
+      };
 
   double get paddingScale => spacingScale;
 }
@@ -32,10 +31,13 @@ class Responsive extends InheritedWidget {
     final inherited = context.dependOnInheritedWidgetOfExactType<Responsive>();
     if (inherited != null) return inherited.data;
     final w = MediaQuery.sizeOf(context).width;
-    return ResponsiveData(breakpointOf(w), w);
+    return ResponsiveData(deviceClassOf(w), w);
   }
 
   @override
   bool updateShouldNotify(covariant Responsive oldWidget) =>
-      oldWidget.data.bp != data.bp || oldWidget.data.width != data.width;
+      oldWidget.data.deviceClass != data.deviceClass ||
+      oldWidget.data.width != data.width;
 }
+
+const double _ultraWideWidth = 1600;

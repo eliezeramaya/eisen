@@ -2,6 +2,7 @@ import 'package:device_preview/device_preview.dart';
 import 'package:eisen/core/intents/open_settings_intent.dart';
 import 'package:eisen/core/notifications/notifications_service.dart';
 import 'package:eisen/core/platform/platform_utils.dart';
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/ui/text_scaling.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
@@ -9,7 +10,6 @@ import 'package:eisen/features/settings/domain/accessibility_controller.dart';
 import 'package:eisen/features/settings/domain/language_controller.dart';
 import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/theme/density.dart';
-import 'package:eisen/utils/breakpoints.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,8 +70,8 @@ class EisenApp extends ConsumerWidget {
             return DensityPreset.comfy;
         }
       }
-      if (logicalWidth >= bpWidescreen) return DensityPreset.ultra;
-      if (logicalWidth >= bpDesktop) return DensityPreset.compact;
+      if (logicalWidth >= _ultraDensityMinWidth) return DensityPreset.ultra;
+      if (deviceClassOf(logicalWidth).isLarge) return DensityPreset.compact;
       return DensityPreset.comfy;
     }();
 
@@ -220,8 +220,10 @@ double _logicalWidthForDensity(BuildContext context) {
     return implicitView.physicalSize.width / implicitView.devicePixelRatio;
   }
 
-  return bpDesktop;
+  return AppBreakpoints.large;
 }
+
+const double _ultraDensityMinWidth = 1600;
 
 Locale? _resolveLocale(UiPrefsData prefs) {
   if (prefs.languageCode == 'system') return null;
