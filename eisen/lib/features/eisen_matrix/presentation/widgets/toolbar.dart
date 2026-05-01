@@ -22,6 +22,7 @@ class AppToolbar extends StatefulWidget {
     this.onOpenSpaces,
     this.onOpenFocus,
     this.onToggleViewMode,
+    this.taskViewModeSwitch,
     this.viewMode = 'treemap',
     this.showViewModeToggle = false,
     this.minimal = false,
@@ -44,6 +45,7 @@ class AppToolbar extends StatefulWidget {
   final VoidCallback? onOpenSpaces;
   final VoidCallback? onOpenFocus;
   final VoidCallback? onToggleViewMode;
+  final Widget? taskViewModeSwitch;
   final String viewMode; // 'treemap' | 'list'
   final bool showViewModeToggle; // Show toggle on desktop (≥1240px)
   final bool minimal;
@@ -288,6 +290,11 @@ class _AppToolbarState extends State<AppToolbar> {
                               ? contextLabel
                               : searchLabel,
                         ),
+                        if (widget.taskViewModeSwitch != null)
+                          SizedBox(
+                            width: 190,
+                            child: Center(child: widget.taskViewModeSwitch),
+                          ),
                         if (widget.onOpenProfile != null)
                           mobileCenteredAction(
                             onPressed: widget.onOpenProfile,
@@ -359,6 +366,11 @@ class _AppToolbarState extends State<AppToolbar> {
                             onPressed: widget.onToggleViewMode,
                             icon: viewIcon,
                             label: viewLabel,
+                          ),
+                        if (widget.taskViewModeSwitch != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: widget.taskViewModeSwitch,
                           ),
                         // Search button (advanced search) moved al final
                         actionButton(

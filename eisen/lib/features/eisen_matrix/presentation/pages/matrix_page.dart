@@ -8,6 +8,10 @@ import 'package:eisen/core/theme/app_theme.dart';
 import 'package:eisen/core/theme/colors.dart';
 import 'package:eisen/core/ui/app_text_scale.dart';
 import 'package:eisen/core/ui/ui_breakpoints.dart';
+import 'package:eisen/features/atlas/application/atlas_providers.dart';
+import 'package:eisen/features/atlas/domain/task_view_mode.dart';
+import 'package:eisen/features/atlas/presentation/screens/atlas_screen.dart';
+import 'package:eisen/features/atlas/presentation/widgets/task_view_mode_switch.dart';
 import 'package:eisen/features/classification/domain/entities/classification_metadata.dart';
 import 'package:eisen/features/classification/domain/enums/confidence_level.dart';
 import 'package:eisen/features/classification/domain/enums/energy_level.dart';
@@ -162,6 +166,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
     // Slightly increased to avoid 1px overflow in the axis header row on mobile.
     final axisHeaderHeight = isExtremeScale ? 52.0 : 42.0;
     final viewMode = ref.watch(uiPrefsProvider).viewMode; // 'treemap' | 'list'
+    final taskViewMode = ref.watch(taskViewModeProvider);
     final isDesktopGrid = screenWidth >= bpDesktop && viewMode == 'list';
     final workflowPlanEnabled =
         ref.watch(uiPrefsProvider.select((p) => p.workflowPlanEnabled));
@@ -262,6 +267,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
               isSearchOpen: isSearchOpen,
               searchQuery: searchQuery,
               onToggleSearch: ctrl.toggleSearch,
+              taskViewModeSwitch: const TaskViewModeSwitch(),
               viewMode: viewMode,
               showViewModeToggle: screenWidth >= bpDesktop,
               onToggleViewMode: () {
@@ -385,240 +391,478 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                 16,
                 screenWidth < 600 ? 8 : 16,
               ),
-              child: isDesktopGrid
-                  ? _buildDesktopGrid(context, tokens, tasks)
-                  : Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (legendsVisible)
-                          // AppTextScale applied: isolated + scaled legends
-                          RepaintBoundary(
-                            child: _LeftAxisLegends(
-                              minimal: minimal,
-                              textScale: uiTsf,
-                              headerHeight: axisHeaderHeight,
-                            ),
-                          ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 200),
-                                transitionBuilder: (child, animation) {
-                                  final curved = CurvedAnimation(
-                                      parent: animation,
-                                      curve: Curves.easeOutCubic);
-                                  return SlideTransition(
-                                    position: Tween<Offset>(
-                                      begin: const Offset(0, -0.05),
-                                      end: Offset.zero,
-                                    ).animate(curved),
-                                    child: FadeTransition(
-                                      opacity: curved,
-                                      child: child,
-                                    ),
-                                  );
-                                },
-                                child: _buildBanner(
-                                  context: context,
-                                  scoreAsync: scoreAsync,
-                                  tasks: tasks,
-                                  nudge: firstNudge,
-                                  overloadRisk: overloadRisk,
-                                  profileAsync: adaptiveProfileAsync,
-                                  onDismissNudge: () {
-                                    if (firstNudge != null) {
-                                      nudgeCtrl.dismissNudge(firstNudge);
-                                    }
-                                  },
-                                  onOpenStats: () => context.push('/stats'),
-                                  onOpenQ2Picker: () =>
-                                      _openQ2Picker(context, tasks),
+              child: taskViewMode == TaskViewMode.atlas
+                  ? const AtlasScreen()
+                  : isDesktopGrid
+                      ? _buildDesktopGrid(context, tokens, tasks)
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (legendsVisible)
+                              // AppTextScale applied: isolated + scaled legends
+                              RepaintBoundary(
+                                child: _LeftAxisLegends(
+                                  minimal: minimal,
+                                  textScale: uiTsf,
+                                  headerHeight: axisHeaderHeight,
                                 ),
                               ),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 200),
-                                child: isLoading
-                                    ? const SizedBox(
-                                        height: 2,
-                                        child: LinearProgressIndicator(
-                                          minHeight: 2,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    transitionBuilder: (child, animation) {
+                                      final curved = CurvedAnimation(
+                                          parent: animation,
+                                          curve: Curves.easeOutCubic);
+                                      return SlideTransition(
+                                        position: Tween<Offset>(
+                                          begin: const Offset(0, -0.05),
+                                          end: Offset.zero,
+                                        ).animate(curved),
+                                        child: FadeTransition(
+                                          opacity: curved,
+                                          child: child,
                                         ),
-                                      )
-                                    : const SizedBox(height: 2),
-                              ),
-                              const CategoryFiltersBar(
-                                padding: EdgeInsets.only(bottom: 12),
-                              ),
-                              ClassificationGroupingBar(
-                                tasks: visibleTasks,
-                                categories: categoryConfigs,
-                                settings: classificationSettings,
-                              ),
-                              _SemanticTreemapHeader(
-                                viewport: semanticViewport,
-                                scene: semanticScene,
-                                onJumpToLevel: (level) {
-                                  semanticViewportCtrl.jumpToLevel(level);
-                                  if (level == TreemapZoomLevel.global) {
-                                    ctrl.resetHomeView();
-                                  }
-                                },
-                                onSelectGrouping:
-                                    semanticViewportCtrl.setGrouping,
-                                onSelectQuickFilter: (filter) {
-                                  semanticViewportCtrl.setQuickFilter(
-                                    semanticViewport.quickFilter == filter
-                                        ? null
-                                        : filter,
-                                  );
-                                },
-                                onViewAll: () {
-                                  semanticViewportCtrl.reset(
-                                    grouping: semanticViewport.grouping,
-                                    density: semanticViewport.density,
-                                  );
-                                  ctrl.resetHomeView();
-                                },
-                                onOpenReviewCenter: () =>
-                                    context.push('/classification-review'),
-                                onFocusExactTask: semanticScene
-                                            .exactTaskMatch ==
-                                        null
-                                    ? null
-                                    : () {
-                                        final task =
-                                            semanticScene.exactTaskMatch!;
-                                        final qLabel = _quadrantLabel(
-                                            context, task.quadrant);
-                                        semanticViewportCtrl.enterQuadrant(
-                                          task.quadrant,
-                                          label: qLabel,
-                                        );
-                                        semanticViewportCtrl.openCategory(
-                                          categoryId: task.categoryId ??
-                                              (task.category ?? 'sin-categoria')
-                                                  .trim()
-                                                  .toLowerCase()
-                                                  .replaceAll(' ', '-'),
-                                          categoryLabel: task.category ??
-                                              task.categoryId ??
-                                              'Sin categoria',
-                                        );
-                                        semanticViewportCtrl.focusTask(task);
-                                        ctrl.setZoom(task.quadrant);
-                                        ctrl.setPresentQuadrant(task.quadrant);
+                                      );
+                                    },
+                                    child: _buildBanner(
+                                      context: context,
+                                      scoreAsync: scoreAsync,
+                                      tasks: tasks,
+                                      nudge: firstNudge,
+                                      overloadRisk: overloadRisk,
+                                      profileAsync: adaptiveProfileAsync,
+                                      onDismissNudge: () {
+                                        if (firstNudge != null) {
+                                          nudgeCtrl.dismissNudge(firstNudge);
+                                        }
                                       },
-                              ),
-                              if (legendsVisible)
-                                // AppTextScale applied: isolated + scaled legends
-                                RepaintBoundary(
-                                  child: _TopAxisLegends(
-                                    minimal: minimal,
-                                    textScale: uiTsf,
-                                    headerHeight: axisHeaderHeight,
+                                      onOpenStats: () => context.push('/stats'),
+                                      onOpenQ2Picker: () =>
+                                          _openQ2Picker(context, tasks),
+                                    ),
                                   ),
-                                ),
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius:
-                                      BorderRadius.circular(tokens.radius),
-                                  child: Stack(
-                                    children: [
-                                      // Removed Beta banner
-                                      Positioned.fill(
-                                        child: minimal
-                                            ? const SizedBox.expand()
-                                            : BackdropFilter(
-                                                filter: ImageFilter.blur(
-                                                    sigmaX: tokens.blur,
-                                                    sigmaY: tokens.blur),
-                                                child: const SizedBox.expand(),
-                                              ),
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    child: isLoading
+                                        ? const SizedBox(
+                                            height: 2,
+                                            child: LinearProgressIndicator(
+                                              minHeight: 2,
+                                            ),
+                                          )
+                                        : const SizedBox(height: 2),
+                                  ),
+                                  const CategoryFiltersBar(
+                                    padding: EdgeInsets.only(bottom: 12),
+                                  ),
+                                  ClassificationGroupingBar(
+                                    tasks: visibleTasks,
+                                    categories: categoryConfigs,
+                                    settings: classificationSettings,
+                                  ),
+                                  _SemanticTreemapHeader(
+                                    viewport: semanticViewport,
+                                    scene: semanticScene,
+                                    onJumpToLevel: (level) {
+                                      semanticViewportCtrl.jumpToLevel(level);
+                                      if (level == TreemapZoomLevel.global) {
+                                        ctrl.resetHomeView();
+                                      }
+                                    },
+                                    onSelectGrouping:
+                                        semanticViewportCtrl.setGrouping,
+                                    onSelectQuickFilter: (filter) {
+                                      semanticViewportCtrl.setQuickFilter(
+                                        semanticViewport.quickFilter == filter
+                                            ? null
+                                            : filter,
+                                      );
+                                    },
+                                    onViewAll: () {
+                                      semanticViewportCtrl.reset(
+                                        grouping: semanticViewport.grouping,
+                                        density: semanticViewport.density,
+                                      );
+                                      ctrl.resetHomeView();
+                                    },
+                                    onOpenReviewCenter: () =>
+                                        context.push('/classification-review'),
+                                    onFocusExactTask: semanticScene
+                                                .exactTaskMatch ==
+                                            null
+                                        ? null
+                                        : () {
+                                            final task =
+                                                semanticScene.exactTaskMatch!;
+                                            final qLabel = _quadrantLabel(
+                                                context, task.quadrant);
+                                            semanticViewportCtrl.enterQuadrant(
+                                              task.quadrant,
+                                              label: qLabel,
+                                            );
+                                            semanticViewportCtrl.openCategory(
+                                              categoryId: task.categoryId ??
+                                                  (task.category ??
+                                                          'sin-categoria')
+                                                      .trim()
+                                                      .toLowerCase()
+                                                      .replaceAll(' ', '-'),
+                                              categoryLabel: task.category ??
+                                                  task.categoryId ??
+                                                  'Sin categoria',
+                                            );
+                                            semanticViewportCtrl
+                                                .focusTask(task);
+                                            ctrl.setZoom(task.quadrant);
+                                            ctrl.setPresentQuadrant(
+                                                task.quadrant);
+                                          },
+                                  ),
+                                  if (legendsVisible)
+                                    // AppTextScale applied: isolated + scaled legends
+                                    RepaintBoundary(
+                                      child: _TopAxisLegends(
+                                        minimal: minimal,
+                                        textScale: uiTsf,
+                                        headerHeight: axisHeaderHeight,
                                       ),
-                                      DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          color: minimal
-                                              ? Colors.transparent
-                                              : tokens
-                                                  .glassBg, // TEMP: transparent to see tiles
-                                          borderRadius: BorderRadius.circular(
-                                              tokens.radius),
-                                          border: minimal
-                                              ? Border.all(
-                                                  color: Colors.transparent,
-                                                  width: 0)
-                                              : Border.all(
-                                                  color: Colors.white
-                                                      .withValues(alpha: 0.08),
-                                                  width: 1),
-                                          boxShadow: minimal
-                                              ? const []
-                                              : [
-                                                  BoxShadow(
-                                                      color: tokens.halo
+                                    ),
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius:
+                                          BorderRadius.circular(tokens.radius),
+                                      child: Stack(
+                                        children: [
+                                          // Removed Beta banner
+                                          Positioned.fill(
+                                            child: minimal
+                                                ? const SizedBox.expand()
+                                                : BackdropFilter(
+                                                    filter: ImageFilter.blur(
+                                                        sigmaX: tokens.blur,
+                                                        sigmaY: tokens.blur),
+                                                    child:
+                                                        const SizedBox.expand(),
+                                                  ),
+                                          ),
+                                          DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              color: minimal
+                                                  ? Colors.transparent
+                                                  : tokens
+                                                      .glassBg, // TEMP: transparent to see tiles
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                      tokens.radius),
+                                              border: minimal
+                                                  ? Border.all(
+                                                      color: Colors.transparent,
+                                                      width: 0)
+                                                  : Border.all(
+                                                      color: Colors.white
                                                           .withValues(
-                                                              alpha: 0.15),
-                                                      blurRadius: 24,
-                                                      spreadRadius: 2)
-                                                ],
-                                        ),
-                                      ),
-                                      // TEMP: Disabled grayscale filter to see tile colors
-                                      ColorFiltered(
-                                        colorFilter: const ColorFilter.mode(
-                                            Colors.transparent,
-                                            BlendMode.srcOver),
-                                        child: LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            final size = Size(
-                                                constraints.maxWidth,
-                                                constraints.maxHeight);
-                                            final prefs =
-                                                ref.watch(uiPrefsProvider);
-                                            final tileTsf =
-                                                AppTextScale.forTreemap(
-                                                    context, prefs);
-                                            // Use synchronous layout to preserve golden parity and avoid blank frames.
-                                            final dynamicLayout =
-                                                ctrl.computeLayoutSync(
-                                                    viewport: size,
-                                                    resetCache: true);
-                                            final suggested =
-                                                ctrl.suggestedTopSpots;
-                                            return clampTreemapTSF(
-                                              context,
-                                              child: Stack(
-                                                children: [
-                                                  AnimatedSwitcher(
-                                                    duration: const Duration(
-                                                      milliseconds: 240,
-                                                    ),
-                                                    switchInCurve:
-                                                        Curves.easeOutCubic,
-                                                    switchOutCurve:
-                                                        Curves.easeOutCubic,
-                                                    child: showSemanticMap
-                                                        ? Stack(
-                                                            key: ValueKey(
-                                                              'semantic-${semanticViewport.zoomLevel.name}-${semanticViewport.selectedNodeId}',
-                                                            ),
-                                                            children: [
-                                                              Positioned.fill(
+                                                              alpha: 0.08),
+                                                      width: 1),
+                                              boxShadow: minimal
+                                                  ? const []
+                                                  : [
+                                                      BoxShadow(
+                                                          color: tokens.halo
+                                                              .withValues(
+                                                                  alpha: 0.15),
+                                                          blurRadius: 24,
+                                                          spreadRadius: 2)
+                                                    ],
+                                            ),
+                                          ),
+                                          // TEMP: Disabled grayscale filter to see tile colors
+                                          ColorFiltered(
+                                            colorFilter: const ColorFilter.mode(
+                                                Colors.transparent,
+                                                BlendMode.srcOver),
+                                            child: LayoutBuilder(
+                                              builder: (context, constraints) {
+                                                final size = Size(
+                                                    constraints.maxWidth,
+                                                    constraints.maxHeight);
+                                                final prefs =
+                                                    ref.watch(uiPrefsProvider);
+                                                final tileTsf =
+                                                    AppTextScale.forTreemap(
+                                                        context, prefs);
+                                                // Use synchronous layout to preserve golden parity and avoid blank frames.
+                                                final dynamicLayout =
+                                                    ctrl.computeLayoutSync(
+                                                        viewport: size,
+                                                        resetCache: true);
+                                                final suggested =
+                                                    ctrl.suggestedTopSpots;
+                                                return clampTreemapTSF(
+                                                  context,
+                                                  child: Stack(
+                                                    children: [
+                                                      AnimatedSwitcher(
+                                                        duration:
+                                                            const Duration(
+                                                          milliseconds: 240,
+                                                        ),
+                                                        switchInCurve:
+                                                            Curves.easeOutCubic,
+                                                        switchOutCurve:
+                                                            Curves.easeOutCubic,
+                                                        child: showSemanticMap
+                                                            ? Stack(
+                                                                key: ValueKey(
+                                                                  'semantic-${semanticViewport.zoomLevel.name}-${semanticViewport.selectedNodeId}',
+                                                                ),
+                                                                children: [
+                                                                  Positioned
+                                                                      .fill(
+                                                                    child:
+                                                                        SemanticTreemapView(
+                                                                      scene:
+                                                                          semanticScene,
+                                                                      selectedNodeId:
+                                                                          semanticViewport
+                                                                              .selectedNodeId,
+                                                                      categoryColorService: classificationSettings
+                                                                              .colorByCategory
+                                                                          ? classificationCategoryColorService
+                                                                          : ref
+                                                                              .watch(uiPrefsProvider)
+                                                                              .categoryColorService,
+                                                                      colorByCategory:
+                                                                          classificationSettings
+                                                                              .colorByCategory,
+                                                                      showConfidenceIndicators:
+                                                                          classificationSettings
+                                                                              .showConfidenceIndicators,
+                                                                      showAutoTags:
+                                                                          classificationSettings
+                                                                              .showAutoTags,
+                                                                      onNodeSelected:
+                                                                          (node) {
+                                                                        semanticViewportCtrl
+                                                                            .selectNode(
+                                                                          node.id,
+                                                                        );
+                                                                        if (screenWidth <
+                                                                            900) {
+                                                                          showModalBottomSheet<
+                                                                              void>(
+                                                                            context:
+                                                                                context,
+                                                                            showDragHandle:
+                                                                                true,
+                                                                            isScrollControlled:
+                                                                                true,
+                                                                            builder: (_) =>
+                                                                                SafeArea(
+                                                                              top: false,
+                                                                              child: Padding(
+                                                                                padding: const EdgeInsets.all(16),
+                                                                                child: SemanticTreemapDetailsCard(
+                                                                                  node: node,
+                                                                                  onOpen: () {
+                                                                                    Navigator.of(context).pop();
+                                                                                    _openSemanticNode(
+                                                                                      context: context,
+                                                                                      ctrl: ctrl,
+                                                                                      viewportCtrl: semanticViewportCtrl,
+                                                                                      viewport: semanticViewport,
+                                                                                      node: node,
+                                                                                    );
+                                                                                  },
+                                                                                  onReviewLowConfidence: () {
+                                                                                    Navigator.of(context).pop();
+                                                                                    semanticViewportCtrl.setQuickFilter(TreemapQuickFilter.lowConfidence);
+                                                                                    context.push('/classification-review');
+                                                                                  },
+                                                                                  onOpenTaskInspector: () {
+                                                                                    if (node.isTaskLeaf) {
+                                                                                      final task = node.tasks.single;
+                                                                                      ctrl.select(task.id);
+                                                                                      Navigator.of(context).pop();
+                                                                                      WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
+                                                                                    }
+                                                                                  },
+                                                                                  onMarkDone: () {
+                                                                                    if (node.isTaskLeaf) {
+                                                                                      final task = node.tasks.single;
+                                                                                      ctrl.markTaskDone(task.id);
+                                                                                      Navigator.of(context).pop();
+                                                                                    }
+                                                                                  },
+                                                                                ),
+                                                                              ),
+                                                                            ),
+                                                                          );
+                                                                        }
+                                                                      },
+                                                                      onNodeOpen:
+                                                                          (node) {
+                                                                        _openSemanticNode(
+                                                                          context:
+                                                                              context,
+                                                                          ctrl:
+                                                                              ctrl,
+                                                                          viewportCtrl:
+                                                                              semanticViewportCtrl,
+                                                                          viewport:
+                                                                              semanticViewport,
+                                                                          node:
+                                                                              node,
+                                                                        );
+                                                                      },
+                                                                      onOpenTaskInspector:
+                                                                          (task) {
+                                                                        ctrl.select(
+                                                                            task.id);
+                                                                        WidgetsBinding
+                                                                            .instance
+                                                                            .addPostFrameCallback((_) =>
+                                                                                _scaffoldKey.currentState?.openEndDrawer());
+                                                                      },
+                                                                      onReviewLowConfidence:
+                                                                          (node) {
+                                                                        semanticViewportCtrl
+                                                                            .setQuickFilter(
+                                                                          TreemapQuickFilter
+                                                                              .lowConfidence,
+                                                                        );
+                                                                        semanticViewportCtrl
+                                                                            .selectNode(
+                                                                          node.id,
+                                                                        );
+                                                                        context
+                                                                            .push(
+                                                                          '/classification-review',
+                                                                        );
+                                                                      },
+                                                                    ),
+                                                                  ),
+                                                                  if (semanticSelectedNode !=
+                                                                          null &&
+                                                                      screenWidth >=
+                                                                          920)
+                                                                    Positioned(
+                                                                      top: 16,
+                                                                      right: 16,
+                                                                      bottom:
+                                                                          16,
+                                                                      child:
+                                                                          SemanticTreemapDetailsCard(
+                                                                        node:
+                                                                            semanticSelectedNode,
+                                                                        onOpen:
+                                                                            () {
+                                                                          final node =
+                                                                              semanticSelectedNode;
+                                                                          if (node ==
+                                                                              null) {
+                                                                            return;
+                                                                          }
+                                                                          _openSemanticNode(
+                                                                            context:
+                                                                                context,
+                                                                            ctrl:
+                                                                                ctrl,
+                                                                            viewportCtrl:
+                                                                                semanticViewportCtrl,
+                                                                            viewport:
+                                                                                semanticViewport,
+                                                                            node:
+                                                                                node,
+                                                                          );
+                                                                        },
+                                                                        onReviewLowConfidence:
+                                                                            () {
+                                                                          semanticViewportCtrl
+                                                                              .setQuickFilter(
+                                                                            TreemapQuickFilter.lowConfidence,
+                                                                          );
+                                                                          context
+                                                                              .push(
+                                                                            '/classification-review',
+                                                                          );
+                                                                        },
+                                                                        onOpenTaskInspector:
+                                                                            () {
+                                                                          final node =
+                                                                              semanticSelectedNode;
+                                                                          if (node == null ||
+                                                                              !node.isTaskLeaf) {
+                                                                            return;
+                                                                          }
+                                                                          final task = node
+                                                                              .tasks
+                                                                              .single;
+                                                                          ctrl.select(
+                                                                              task.id);
+                                                                          WidgetsBinding
+                                                                              .instance
+                                                                              .addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
+                                                                        },
+                                                                        onMarkDone:
+                                                                            () {
+                                                                          final node =
+                                                                              semanticSelectedNode;
+                                                                          if (node == null ||
+                                                                              !node.isTaskLeaf) {
+                                                                            return;
+                                                                          }
+                                                                          ctrl.markTaskDone(
+                                                                            node.tasks.single.id,
+                                                                          );
+                                                                        },
+                                                                      ),
+                                                                    ),
+                                                                ],
+                                                              )
+                                                            : MatrixInteractiveWrapper(
+                                                                key: ValueKey(
+                                                                  '${zoom}_${dynamicLayout.length}_${suggested.length}',
+                                                                ),
+                                                                enabled:
+                                                                    !showSemanticMap,
                                                                 child:
-                                                                    SemanticTreemapView(
-                                                                  scene:
-                                                                      semanticScene,
-                                                                  selectedNodeId:
-                                                                      semanticViewport
-                                                                          .selectedNodeId,
+                                                                    TreemapCanvas(
+                                                                  tasks:
+                                                                      visibleTasks,
+                                                                  layout:
+                                                                      dynamicLayout,
+                                                                  compact:
+                                                                      compact,
+                                                                  suggestedIds:
+                                                                      suggested,
+                                                                  minimal:
+                                                                      minimal,
+                                                                  selectedId:
+                                                                      selectedId,
+                                                                  zoom: zoom,
+                                                                  presentQuadrant: zoom ??
+                                                                      ref
+                                                                          .read(
+                                                                              matrixControllerProvider)
+                                                                          .presentQuadrant,
+                                                                  textScale:
+                                                                      tileTsf,
+                                                                  minTileSizePx: ref
+                                                                      .watch(
+                                                                        uiPrefsProvider,
+                                                                      )
+                                                                      .minTileSizePx,
                                                                   categoryColorService: classificationSettings
                                                                           .colorByCategory
                                                                       ? classificationCategoryColorService
                                                                       : ref
                                                                           .watch(
-                                                                              uiPrefsProvider)
+                                                                            uiPrefsProvider,
+                                                                          )
                                                                           .categoryColorService,
                                                                   colorByCategory:
                                                                       classificationSettings
@@ -629,626 +873,398 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                                   showAutoTags:
                                                                       classificationSettings
                                                                           .showAutoTags,
-                                                                  onNodeSelected:
-                                                                      (node) {
-                                                                    semanticViewportCtrl
-                                                                        .selectNode(
-                                                                      node.id,
+                                                                  inlineEditId:
+                                                                      _inlineEditId,
+                                                                  lastMovedTaskId: ref
+                                                                      .read(
+                                                                        matrixControllerProvider,
+                                                                      )
+                                                                      .lastMovedTaskId,
+                                                                  loading:
+                                                                      isLoading,
+                                                                  warningTaskIds:
+                                                                      warningTasks,
+                                                                  onInlineSubmit:
+                                                                      (id,
+                                                                          title) {
+                                                                    ctrl.updateTask(
+                                                                      id,
+                                                                      (t) => t
+                                                                          .copyWith(
+                                                                        title:
+                                                                            title,
+                                                                      ),
                                                                     );
-                                                                    if (screenWidth <
-                                                                        900) {
-                                                                      showModalBottomSheet<
-                                                                          void>(
-                                                                        context:
-                                                                            context,
-                                                                        showDragHandle:
-                                                                            true,
-                                                                        isScrollControlled:
-                                                                            true,
-                                                                        builder:
-                                                                            (_) =>
-                                                                                SafeArea(
-                                                                          top:
-                                                                              false,
-                                                                          child:
-                                                                              Padding(
-                                                                            padding:
-                                                                                const EdgeInsets.all(16),
-                                                                            child:
-                                                                                SemanticTreemapDetailsCard(
-                                                                              node: node,
-                                                                              onOpen: () {
-                                                                                Navigator.of(context).pop();
-                                                                                _openSemanticNode(
-                                                                                  context: context,
-                                                                                  ctrl: ctrl,
-                                                                                  viewportCtrl: semanticViewportCtrl,
-                                                                                  viewport: semanticViewport,
-                                                                                  node: node,
-                                                                                );
-                                                                              },
-                                                                              onReviewLowConfidence: () {
-                                                                                Navigator.of(context).pop();
-                                                                                semanticViewportCtrl.setQuickFilter(TreemapQuickFilter.lowConfidence);
-                                                                                context.push('/classification-review');
-                                                                              },
-                                                                              onOpenTaskInspector: () {
-                                                                                if (node.isTaskLeaf) {
-                                                                                  final task = node.tasks.single;
-                                                                                  ctrl.select(task.id);
-                                                                                  Navigator.of(context).pop();
-                                                                                  WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
-                                                                                }
-                                                                              },
-                                                                              onMarkDone: () {
-                                                                                if (node.isTaskLeaf) {
-                                                                                  final task = node.tasks.single;
-                                                                                  ctrl.markTaskDone(task.id);
-                                                                                  Navigator.of(context).pop();
-                                                                                }
-                                                                              },
-                                                                            ),
-                                                                          ),
-                                                                        ),
-                                                                      );
+                                                                    setState(
+                                                                      () => _inlineEditId =
+                                                                          null,
+                                                                    );
+                                                                  },
+                                                                  onInlineCancel:
+                                                                      (id) {
+                                                                    final idx =
+                                                                        tasks
+                                                                            .indexWhere(
+                                                                      (e) =>
+                                                                          e.id ==
+                                                                          id,
+                                                                    );
+                                                                    if (idx !=
+                                                                        -1) {
+                                                                      final t =
+                                                                          tasks[
+                                                                              idx];
+                                                                      if (t.title ==
+                                                                              'New Task' &&
+                                                                          (t.notes == null ||
+                                                                              t.notes!.isEmpty)) {
+                                                                        ctrl.deleteTask(
+                                                                          id,
+                                                                        );
+                                                                      }
                                                                     }
-                                                                  },
-                                                                  onNodeOpen:
-                                                                      (node) {
-                                                                    _openSemanticNode(
-                                                                      context:
-                                                                          context,
-                                                                      ctrl:
-                                                                          ctrl,
-                                                                      viewportCtrl:
-                                                                          semanticViewportCtrl,
-                                                                      viewport:
-                                                                          semanticViewport,
-                                                                      node:
-                                                                          node,
+                                                                    setState(
+                                                                      () => _inlineEditId =
+                                                                          null,
                                                                     );
                                                                   },
-                                                                  onOpenTaskInspector:
-                                                                      (task) {
+                                                                  onTap: (id) {
                                                                     ctrl.select(
-                                                                        task.id);
-                                                                    WidgetsBinding
-                                                                        .instance
-                                                                        .addPostFrameCallback((_) => _scaffoldKey
-                                                                            .currentState
-                                                                            ?.openEndDrawer());
-                                                                  },
-                                                                  onReviewLowConfidence:
-                                                                      (node) {
-                                                                    semanticViewportCtrl
-                                                                        .setQuickFilter(
-                                                                      TreemapQuickFilter
-                                                                          .lowConfidence,
-                                                                    );
-                                                                    semanticViewportCtrl
-                                                                        .selectNode(
-                                                                      node.id,
-                                                                    );
-                                                                    context
-                                                                        .push(
-                                                                      '/classification-review',
-                                                                    );
-                                                                  },
-                                                                ),
-                                                              ),
-                                                              if (semanticSelectedNode !=
-                                                                      null &&
-                                                                  screenWidth >=
-                                                                      920)
-                                                                Positioned(
-                                                                  top: 16,
-                                                                  right: 16,
-                                                                  bottom: 16,
-                                                                  child:
-                                                                      SemanticTreemapDetailsCard(
-                                                                    node:
-                                                                        semanticSelectedNode,
-                                                                    onOpen: () {
-                                                                      final node =
-                                                                          semanticSelectedNode;
-                                                                      if (node ==
-                                                                          null) {
-                                                                        return;
-                                                                      }
-                                                                      _openSemanticNode(
-                                                                        context:
-                                                                            context,
-                                                                        ctrl:
-                                                                            ctrl,
-                                                                        viewportCtrl:
-                                                                            semanticViewportCtrl,
-                                                                        viewport:
-                                                                            semanticViewport,
-                                                                        node:
-                                                                            node,
-                                                                      );
-                                                                    },
-                                                                    onReviewLowConfidence:
-                                                                        () {
-                                                                      semanticViewportCtrl
-                                                                          .setQuickFilter(
-                                                                        TreemapQuickFilter
-                                                                            .lowConfidence,
-                                                                      );
-                                                                      context
-                                                                          .push(
-                                                                        '/classification-review',
-                                                                      );
-                                                                    },
-                                                                    onOpenTaskInspector:
-                                                                        () {
-                                                                      final node =
-                                                                          semanticSelectedNode;
-                                                                      if (node ==
-                                                                              null ||
-                                                                          !node
-                                                                              .isTaskLeaf) {
-                                                                        return;
-                                                                      }
-                                                                      final task = node
-                                                                          .tasks
-                                                                          .single;
-                                                                      ctrl.select(
-                                                                          task.id);
+                                                                        id);
+                                                                    if (id !=
+                                                                        null) {
                                                                       WidgetsBinding
                                                                           .instance
                                                                           .addPostFrameCallback((_) => _scaffoldKey
                                                                               .currentState
                                                                               ?.openEndDrawer());
-                                                                    },
-                                                                    onMarkDone:
-                                                                        () {
-                                                                      final node =
-                                                                          semanticSelectedNode;
-                                                                      if (node ==
-                                                                              null ||
-                                                                          !node
-                                                                              .isTaskLeaf) {
-                                                                        return;
-                                                                      }
-                                                                      ctrl.markTaskDone(
-                                                                        node
-                                                                            .tasks
-                                                                            .single
-                                                                            .id,
-                                                                      );
-                                                                    },
-                                                                  ),
-                                                                ),
-                                                            ],
-                                                          )
-                                                        : MatrixInteractiveWrapper(
-                                                            key: ValueKey(
-                                                              '${zoom}_${dynamicLayout.length}_${suggested.length}',
-                                                            ),
-                                                            enabled:
-                                                                !showSemanticMap,
-                                                            child:
-                                                                TreemapCanvas(
-                                                              tasks:
-                                                                  visibleTasks,
-                                                              layout:
-                                                                  dynamicLayout,
-                                                              compact: compact,
-                                                              suggestedIds:
-                                                                  suggested,
-                                                              minimal: minimal,
-                                                              selectedId:
-                                                                  selectedId,
-                                                              zoom: zoom,
-                                                              presentQuadrant: zoom ??
-                                                                  ref
-                                                                      .read(
-                                                                          matrixControllerProvider)
-                                                                      .presentQuadrant,
-                                                              textScale:
-                                                                  tileTsf,
-                                                              minTileSizePx: ref
-                                                                  .watch(
-                                                                    uiPrefsProvider,
-                                                                  )
-                                                                  .minTileSizePx,
-                                                              categoryColorService:
-                                                                  classificationSettings
-                                                                          .colorByCategory
-                                                                      ? classificationCategoryColorService
-                                                                      : ref
-                                                                          .watch(
-                                                                            uiPrefsProvider,
-                                                                          )
-                                                                          .categoryColorService,
-                                                              colorByCategory:
-                                                                  classificationSettings
-                                                                      .colorByCategory,
-                                                              showConfidenceIndicators:
-                                                                  classificationSettings
-                                                                      .showConfidenceIndicators,
-                                                              showAutoTags:
-                                                                  classificationSettings
-                                                                      .showAutoTags,
-                                                              inlineEditId:
-                                                                  _inlineEditId,
-                                                              lastMovedTaskId: ref
-                                                                  .read(
-                                                                    matrixControllerProvider,
-                                                                  )
-                                                                  .lastMovedTaskId,
-                                                              loading:
-                                                                  isLoading,
-                                                              warningTaskIds:
-                                                                  warningTasks,
-                                                              onInlineSubmit:
-                                                                  (id, title) {
-                                                                ctrl.updateTask(
-                                                                  id,
-                                                                  (t) => t
-                                                                      .copyWith(
-                                                                    title:
-                                                                        title,
-                                                                  ),
-                                                                );
-                                                                setState(
-                                                                  () =>
-                                                                      _inlineEditId =
-                                                                          null,
-                                                                );
-                                                              },
-                                                              onInlineCancel:
-                                                                  (id) {
-                                                                final idx = tasks
-                                                                    .indexWhere(
-                                                                  (e) =>
-                                                                      e.id ==
-                                                                      id,
-                                                                );
-                                                                if (idx != -1) {
-                                                                  final t =
-                                                                      tasks[
-                                                                          idx];
-                                                                  if (t.title ==
-                                                                          'New Task' &&
-                                                                      (t.notes ==
-                                                                              null ||
-                                                                          t.notes!
-                                                                              .isEmpty)) {
-                                                                    ctrl.deleteTask(
-                                                                      id,
-                                                                    );
-                                                                  }
-                                                                }
-                                                                setState(
-                                                                  () =>
-                                                                      _inlineEditId =
-                                                                          null,
-                                                                );
-                                                              },
-                                                              onTap: (id) {
-                                                                ctrl.select(id);
-                                                                if (id !=
-                                                                    null) {
-                                                                  WidgetsBinding
-                                                                      .instance
-                                                                      .addPostFrameCallback((_) => _scaffoldKey
-                                                                          .currentState
-                                                                          ?.openEndDrawer());
-                                                                }
-                                                              },
-                                                              onDropToQuadrant:
-                                                                  (id, q) {
-                                                                final idx = tasks
-                                                                    .indexWhere(
-                                                                  (t) =>
-                                                                      t.id ==
-                                                                      id,
-                                                                );
-                                                                if (idx == -1) {
-                                                                  return;
-                                                                }
-                                                                final prev =
-                                                                    tasks[idx]
-                                                                        .quadrant;
-                                                                if (prev == q) {
-                                                                  return;
-                                                                }
-                                                                ctrl.moveTaskToQuadrant(
-                                                                  id,
-                                                                  q,
-                                                                );
-                                                                final qName = q
-                                                                    .name
-                                                                    .toUpperCase();
-                                                                ScaffoldMessenger.of(
-                                                                        context)
-                                                                    .hideCurrentSnackBar();
-                                                                ScaffoldMessenger.of(
-                                                                        context)
-                                                                    .showSnackBar(
-                                                                  SnackBar(
-                                                                    content:
-                                                                        Text(
-                                                                      'Tarea movida a $qName',
-                                                                    ),
-                                                                    action:
-                                                                        SnackBarAction(
-                                                                      label:
-                                                                          'Deshacer',
-                                                                      onPressed:
-                                                                          () {
-                                                                        ctrl.moveTaskToQuadrant(
+                                                                    }
+                                                                  },
+                                                                  onDropToQuadrant:
+                                                                      (id, q) {
+                                                                    final idx =
+                                                                        tasks
+                                                                            .indexWhere(
+                                                                      (t) =>
+                                                                          t.id ==
                                                                           id,
-                                                                          prev,
-                                                                        );
-                                                                      },
-                                                                    ),
-                                                                    duration:
-                                                                        const Duration(
-                                                                      seconds:
-                                                                          4,
-                                                                    ),
-                                                                  ),
-                                                                );
-                                                              },
-                                                              onDoubleTapQuadrant:
-                                                                  (q) {
-                                                                semanticViewportCtrl
-                                                                    .enterQuadrant(
-                                                                  q,
-                                                                  label:
-                                                                      _quadrantLabel(
-                                                                    context,
-                                                                    q,
-                                                                  ),
-                                                                );
-                                                                ctrl.setZoom(q);
-                                                                ctrl.setPresentQuadrant(
-                                                                  q,
-                                                                );
-                                                                ctrl.invalidateLayout();
-                                                              },
-                                                              onLowConfidenceLongPress:
-                                                                  (task) async {
-                                                                final categories =
-                                                                    ref.read(
-                                                                  categoryConfigControllerProvider,
-                                                                );
-                                                                final meta = task
-                                                                        .classificationMetadata ??
-                                                                    ClassificationMetadata(
-                                                                      categoryId:
-                                                                          task.categoryId,
-                                                                      entryKind:
-                                                                          task.kind,
-                                                                      timeHorizon: task
-                                                                              .horizon ??
-                                                                          TimeHorizon
-                                                                              .someday,
-                                                                      energyLevel: task
-                                                                              .energy ??
-                                                                          EnergyLevel
-                                                                              .medium,
-                                                                      priorityLevel:
-                                                                          PriorityLevel
-                                                                              .medium,
-                                                                      confidenceScore:
-                                                                          0.4,
-                                                                      confidenceLevel:
-                                                                          ConfidenceLevel
-                                                                              .low,
                                                                     );
-                                                                final result =
-                                                                    await showModalBottomSheet<
-                                                                        QuickReclassifyResult>(
-                                                                  context:
-                                                                      context,
-                                                                  isScrollControlled:
-                                                                      true,
-                                                                  builder: (_) =>
-                                                                      QuickReclassifySheet(
-                                                                    metadata:
-                                                                        meta,
-                                                                    categories:
-                                                                        categories,
-                                                                  ),
-                                                                );
-                                                                if (result !=
-                                                                    null) {
-                                                                  final corrected =
-                                                                      result
-                                                                          .metadata;
-                                                                  ctrl.updateTask(
-                                                                    task.id,
-                                                                    (t) =>
-                                                                        applyClassificationToTask(
-                                                                      task: t,
-                                                                      metadata:
-                                                                          corrected,
-                                                                      categories:
-                                                                          categories,
-                                                                    ),
-                                                                  );
-                                                                  await ref
-                                                                      .read(
-                                                                        classificationReviewControllerProvider
-                                                                            .notifier,
-                                                                      )
-                                                                      .recordCorrection(
-                                                                        taskId:
-                                                                            task.id,
-                                                                        inputText:
-                                                                            meta.inputText,
-                                                                        original:
+                                                                    if (idx ==
+                                                                        -1) {
+                                                                      return;
+                                                                    }
+                                                                    final prev =
+                                                                        tasks[idx]
+                                                                            .quadrant;
+                                                                    if (prev ==
+                                                                        q) {
+                                                                      return;
+                                                                    }
+                                                                    ctrl.moveTaskToQuadrant(
+                                                                      id,
+                                                                      q,
+                                                                    );
+                                                                    final qName = q
+                                                                        .name
+                                                                        .toUpperCase();
+                                                                    ScaffoldMessenger.of(
+                                                                            context)
+                                                                        .hideCurrentSnackBar();
+                                                                    ScaffoldMessenger.of(
+                                                                            context)
+                                                                        .showSnackBar(
+                                                                      SnackBar(
+                                                                        content:
+                                                                            Text(
+                                                                          'Tarea movida a $qName',
+                                                                        ),
+                                                                        action:
+                                                                            SnackBarAction(
+                                                                          label:
+                                                                              'Deshacer',
+                                                                          onPressed:
+                                                                              () {
+                                                                            ctrl.moveTaskToQuadrant(
+                                                                              id,
+                                                                              prev,
+                                                                            );
+                                                                          },
+                                                                        ),
+                                                                        duration:
+                                                                            const Duration(
+                                                                          seconds:
+                                                                              4,
+                                                                        ),
+                                                                      ),
+                                                                    );
+                                                                  },
+                                                                  onDoubleTapQuadrant:
+                                                                      (q) {
+                                                                    semanticViewportCtrl
+                                                                        .enterQuadrant(
+                                                                      q,
+                                                                      label:
+                                                                          _quadrantLabel(
+                                                                        context,
+                                                                        q,
+                                                                      ),
+                                                                    );
+                                                                    ctrl.setZoom(
+                                                                        q);
+                                                                    ctrl.setPresentQuadrant(
+                                                                      q,
+                                                                    );
+                                                                    ctrl.invalidateLayout();
+                                                                  },
+                                                                  onLowConfidenceLongPress:
+                                                                      (task) async {
+                                                                    final categories =
+                                                                        ref.read(
+                                                                      categoryConfigControllerProvider,
+                                                                    );
+                                                                    final meta =
+                                                                        task.classificationMetadata ??
+                                                                            ClassificationMetadata(
+                                                                              categoryId: task.categoryId,
+                                                                              entryKind: task.kind,
+                                                                              timeHorizon: task.horizon ?? TimeHorizon.someday,
+                                                                              energyLevel: task.energy ?? EnergyLevel.medium,
+                                                                              priorityLevel: PriorityLevel.medium,
+                                                                              confidenceScore: 0.4,
+                                                                              confidenceLevel: ConfidenceLevel.low,
+                                                                            );
+                                                                    final result =
+                                                                        await showModalBottomSheet<
+                                                                            QuickReclassifyResult>(
+                                                                      context:
+                                                                          context,
+                                                                      isScrollControlled:
+                                                                          true,
+                                                                      builder:
+                                                                          (_) =>
+                                                                              QuickReclassifySheet(
+                                                                        metadata:
                                                                             meta,
-                                                                        corrected:
-                                                                            corrected,
+                                                                        categories:
+                                                                            categories,
+                                                                      ),
+                                                                    );
+                                                                    if (result !=
+                                                                        null) {
+                                                                      final corrected =
+                                                                          result
+                                                                              .metadata;
+                                                                      ctrl.updateTask(
+                                                                        task.id,
+                                                                        (t) =>
+                                                                            applyClassificationToTask(
+                                                                          task:
+                                                                              t,
+                                                                          metadata:
+                                                                              corrected,
+                                                                          categories:
+                                                                              categories,
+                                                                        ),
                                                                       );
-                                                                }
-                                                              },
+                                                                      await ref
+                                                                          .read(
+                                                                            classificationReviewControllerProvider.notifier,
+                                                                          )
+                                                                          .recordCorrection(
+                                                                            taskId:
+                                                                                task.id,
+                                                                            inputText:
+                                                                                meta.inputText,
+                                                                            original:
+                                                                                meta,
+                                                                            corrected:
+                                                                                corrected,
+                                                                          );
+                                                                    }
+                                                                  },
+                                                                ),
+                                                              ),
+                                                      ),
+                                                      const ZoomIndicator(),
+                                                      if (!showSemanticMap &&
+                                                          visibleTasks
+                                                              .isNotEmpty)
+                                                        Positioned(
+                                                          left: 12,
+                                                          top: 12,
+                                                          right:
+                                                              screenWidth < 720
+                                                                  ? 12
+                                                                  : 180,
+                                                          child:
+                                                              GlobalSemanticSummaryStrip(
+                                                            tasks: visibleTasks,
+                                                          ),
+                                                        ),
+                                                      if (!showSemanticMap &&
+                                                          dynamicLayout
+                                                              .isEmpty) ...[
+                                                        Positioned(
+                                                          left: 0,
+                                                          top: 0,
+                                                          width: size.width / 2,
+                                                          height:
+                                                              size.height / 2,
+                                                          child:
+                                                              const QuadrantEmptyPlaceholder(
+                                                            title:
+                                                                'Q1 · Urgente e Importante',
+                                                            hint:
+                                                                'No tienes tareas aquí. Usa “Entrada”.',
+                                                          ),
+                                                        ),
+                                                        Positioned(
+                                                          left: size.width / 2,
+                                                          top: 0,
+                                                          width: size.width / 2,
+                                                          height:
+                                                              size.height / 2,
+                                                          child:
+                                                              const QuadrantEmptyPlaceholder(
+                                                            title:
+                                                                'Q2 · No Urgente e Importante',
+                                                            hint:
+                                                                'Planifica aquí objetivos clave.',
+                                                          ),
+                                                        ),
+                                                        Positioned(
+                                                          left: 0,
+                                                          top: size.height / 2,
+                                                          width: size.width / 2,
+                                                          height:
+                                                              size.height / 2,
+                                                          child:
+                                                              const QuadrantEmptyPlaceholder(
+                                                            title:
+                                                                'Q3 · Urgente y No Importante',
+                                                            hint:
+                                                                'Delegables o de baja prioridad.',
+                                                          ),
+                                                        ),
+                                                        Positioned(
+                                                          left: size.width / 2,
+                                                          top: size.height / 2,
+                                                          width: size.width / 2,
+                                                          height:
+                                                              size.height / 2,
+                                                          child:
+                                                              const QuadrantEmptyPlaceholder(
+                                                            title:
+                                                                'Q4 · No Urgente y No Importante',
+                                                            hint:
+                                                                'Evita o elimina distracciones.',
+                                                          ),
+                                                        ),
+                                                      ],
+                                                      if (!showSemanticMap &&
+                                                          dynamicLayout
+                                                              .isNotEmpty) ...[
+                                                        if (!tasks.any((t) =>
+                                                            t.completedAt ==
+                                                                null &&
+                                                            t.quadrant ==
+                                                                Quadrant.q1))
+                                                          Positioned(
+                                                            left: 0,
+                                                            top: 0,
+                                                            width:
+                                                                size.width / 2,
+                                                            height:
+                                                                size.height / 2,
+                                                            child:
+                                                                const QuadrantEmptyPlaceholder(
+                                                              title:
+                                                                  'Q1 · Urgente e Importante',
+                                                              hint:
+                                                                  'No tienes tareas aquí. Usa “Entrada”.',
                                                             ),
                                                           ),
+                                                        if (!tasks.any((t) =>
+                                                            t.completedAt ==
+                                                                null &&
+                                                            t.quadrant ==
+                                                                Quadrant.q2))
+                                                          Positioned(
+                                                            left:
+                                                                size.width / 2,
+                                                            top: 0,
+                                                            width:
+                                                                size.width / 2,
+                                                            height:
+                                                                size.height / 2,
+                                                            child:
+                                                                const QuadrantEmptyPlaceholder(
+                                                              title:
+                                                                  'Q2 · No Urgente e Importante',
+                                                              hint:
+                                                                  'Planifica aquí objetivos clave.',
+                                                            ),
+                                                          ),
+                                                        if (!tasks.any((t) =>
+                                                            t.completedAt ==
+                                                                null &&
+                                                            t.quadrant ==
+                                                                Quadrant.q3))
+                                                          Positioned(
+                                                            left: 0,
+                                                            top:
+                                                                size.height / 2,
+                                                            width:
+                                                                size.width / 2,
+                                                            height:
+                                                                size.height / 2,
+                                                            child:
+                                                                const QuadrantEmptyPlaceholder(
+                                                              title:
+                                                                  'Q3 · Urgente y No Importante',
+                                                              hint:
+                                                                  'Delegables o de baja prioridad.',
+                                                            ),
+                                                          ),
+                                                        if (!tasks.any((t) =>
+                                                            t.completedAt ==
+                                                                null &&
+                                                            t.quadrant ==
+                                                                Quadrant.q4))
+                                                          Positioned(
+                                                            left:
+                                                                size.width / 2,
+                                                            top:
+                                                                size.height / 2,
+                                                            width:
+                                                                size.width / 2,
+                                                            height:
+                                                                size.height / 2,
+                                                            child:
+                                                                const QuadrantEmptyPlaceholder(
+                                                              title:
+                                                                  'Q4 · No Urgente y No Importante',
+                                                              hint:
+                                                                  'Evita o elimina distracciones.',
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ],
                                                   ),
-                                                  const ZoomIndicator(),
-                                                  if (!showSemanticMap &&
-                                                      visibleTasks.isNotEmpty)
-                                                    Positioned(
-                                                      left: 12,
-                                                      top: 12,
-                                                      right: screenWidth < 720
-                                                          ? 12
-                                                          : 180,
-                                                      child:
-                                                          GlobalSemanticSummaryStrip(
-                                                        tasks: visibleTasks,
-                                                      ),
-                                                    ),
-                                                  if (!showSemanticMap &&
-                                                      dynamicLayout
-                                                          .isEmpty) ...[
-                                                    Positioned(
-                                                      left: 0,
-                                                      top: 0,
-                                                      width: size.width / 2,
-                                                      height: size.height / 2,
-                                                      child:
-                                                          const QuadrantEmptyPlaceholder(
-                                                        title:
-                                                            'Q1 · Urgente e Importante',
-                                                        hint:
-                                                            'No tienes tareas aquí. Usa “Entrada”.',
-                                                      ),
-                                                    ),
-                                                    Positioned(
-                                                      left: size.width / 2,
-                                                      top: 0,
-                                                      width: size.width / 2,
-                                                      height: size.height / 2,
-                                                      child:
-                                                          const QuadrantEmptyPlaceholder(
-                                                        title:
-                                                            'Q2 · No Urgente e Importante',
-                                                        hint:
-                                                            'Planifica aquí objetivos clave.',
-                                                      ),
-                                                    ),
-                                                    Positioned(
-                                                      left: 0,
-                                                      top: size.height / 2,
-                                                      width: size.width / 2,
-                                                      height: size.height / 2,
-                                                      child:
-                                                          const QuadrantEmptyPlaceholder(
-                                                        title:
-                                                            'Q3 · Urgente y No Importante',
-                                                        hint:
-                                                            'Delegables o de baja prioridad.',
-                                                      ),
-                                                    ),
-                                                    Positioned(
-                                                      left: size.width / 2,
-                                                      top: size.height / 2,
-                                                      width: size.width / 2,
-                                                      height: size.height / 2,
-                                                      child:
-                                                          const QuadrantEmptyPlaceholder(
-                                                        title:
-                                                            'Q4 · No Urgente y No Importante',
-                                                        hint:
-                                                            'Evita o elimina distracciones.',
-                                                      ),
-                                                    ),
-                                                  ],
-                                                  if (!showSemanticMap &&
-                                                      dynamicLayout
-                                                          .isNotEmpty) ...[
-                                                    if (!tasks.any((t) =>
-                                                        t.completedAt == null &&
-                                                        t.quadrant ==
-                                                            Quadrant.q1))
-                                                      Positioned(
-                                                        left: 0,
-                                                        top: 0,
-                                                        width: size.width / 2,
-                                                        height: size.height / 2,
-                                                        child:
-                                                            const QuadrantEmptyPlaceholder(
-                                                          title:
-                                                              'Q1 · Urgente e Importante',
-                                                          hint:
-                                                              'No tienes tareas aquí. Usa “Entrada”.',
-                                                        ),
-                                                      ),
-                                                    if (!tasks.any((t) =>
-                                                        t.completedAt == null &&
-                                                        t.quadrant ==
-                                                            Quadrant.q2))
-                                                      Positioned(
-                                                        left: size.width / 2,
-                                                        top: 0,
-                                                        width: size.width / 2,
-                                                        height: size.height / 2,
-                                                        child:
-                                                            const QuadrantEmptyPlaceholder(
-                                                          title:
-                                                              'Q2 · No Urgente e Importante',
-                                                          hint:
-                                                              'Planifica aquí objetivos clave.',
-                                                        ),
-                                                      ),
-                                                    if (!tasks.any((t) =>
-                                                        t.completedAt == null &&
-                                                        t.quadrant ==
-                                                            Quadrant.q3))
-                                                      Positioned(
-                                                        left: 0,
-                                                        top: size.height / 2,
-                                                        width: size.width / 2,
-                                                        height: size.height / 2,
-                                                        child:
-                                                            const QuadrantEmptyPlaceholder(
-                                                          title:
-                                                              'Q3 · Urgente y No Importante',
-                                                          hint:
-                                                              'Delegables o de baja prioridad.',
-                                                        ),
-                                                      ),
-                                                    if (!tasks.any((t) =>
-                                                        t.completedAt == null &&
-                                                        t.quadrant ==
-                                                            Quadrant.q4))
-                                                      Positioned(
-                                                        left: size.width / 2,
-                                                        top: size.height / 2,
-                                                        width: size.width / 2,
-                                                        height: size.height / 2,
-                                                        child:
-                                                            const QuadrantEmptyPlaceholder(
-                                                          title:
-                                                              'Q4 · No Urgente y No Importante',
-                                                          hint:
-                                                              'Evita o elimina distracciones.',
-                                                        ),
-                                                      ),
-                                                  ],
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                          // Removed quadrant quick-add buttons; using global FAB instead
+                                        ],
                                       ),
-                                      // Removed quadrant quick-add buttons; using global FAB instead
-                                    ],
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
             ),
           ),
         ),
