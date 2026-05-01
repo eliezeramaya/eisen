@@ -24,8 +24,7 @@ class ClassificationGroupingBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groups = <_GroupSummary>[
-      if (settings.allowGroupingByCategory)
-        ..._categoryGroups(tasks, categories),
+      if (settings.allowGroupingByCategory) ..._categoryGroups(tasks, categories),
       if (settings.allowGroupingByKind)
         ..._enumGroups(
           'Tipo',
@@ -45,15 +44,14 @@ class ClassificationGroupingBar extends ConsumerWidget {
           (task) => task.energy?.label ?? 'Sin energía',
         ),
     ];
-    final lowConfidenceCount = tasks
-        .where((task) => task.classificationConfidence == ConfidenceLevel.low)
-        .length;
+    final lowConfidenceCount = tasks.where((task) => task.classificationConfidence == ConfidenceLevel.low).length;
 
     if (groups.isEmpty && lowConfidenceCount == 0) {
       return const SizedBox.shrink();
     }
 
-    return Padding(
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       padding: padding,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -67,9 +65,7 @@ class ClassificationGroupingBar extends ConsumerWidget {
                 final next = current.contains(ConfidenceLevel.low)
                     ? current.where((item) => item != ConfidenceLevel.low)
                     : <ConfidenceLevel>{...current, ConfidenceLevel.low};
-                ref
-                    .read(activeConfidenceFiltersProvider.notifier)
-                    .update(next.toList());
+                ref.read(activeConfidenceFiltersProvider.notifier).update(next.toList());
               },
             ),
             const SizedBox(width: 8),
@@ -87,29 +83,20 @@ class ClassificationGroupingBar extends ConsumerWidget {
                       children: [
                         Text(
                           '${group.dimension}: ',
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                         Text(
                           group.label,
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const Spacer(),
                         Text(
                           '${group.count}',
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                       ],
                     ),

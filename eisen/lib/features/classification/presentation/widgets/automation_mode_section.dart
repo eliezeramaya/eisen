@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class AutomationModeSection extends ConsumerWidget {
   const AutomationModeSection({super.key});
 
+  static const double _minWidthForInlineModes = 760;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(classificationSettingsControllerProvider);
@@ -23,7 +25,7 @@ class AutomationModeSection extends ConsumerWidget {
         ),
         LayoutBuilder(
           builder: (context, constraints) {
-            final isNarrow = constraints.maxWidth < 760;
+            final isNarrow = constraints.maxWidth < _minWidthForInlineModes;
             final children = [
               for (final mode in AutomationMode.values)
                 _ModeCard(

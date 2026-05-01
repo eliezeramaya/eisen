@@ -1,30 +1,44 @@
 import 'package:flutter/widgets.dart';
 
-/// App-wide breakpoint tokens inspired by Material 3 and common web breakpoints.
+/// App-wide breakpoint tokens.
 ///
 /// Widths are in logical pixels.
 class AppBreakpoints {
-  static const double xs = 0; // phones portrait
-  static const double sm = 600; // phones landscape / small tablets
-  static const double md = 905; // medium tablets
-  static const double lg = 1240; // desktops small
-  static const double xl = 1440; // large desktops
+  static const double compact = 0;
+  static const double medium = 600;
+  static const double expanded = 905;
+  static const double large = 1240;
 }
 
 /// Semantic categories for responsive decisions.
-enum BreakpointSize { xs, sm, md, lg, xl }
-
-/// Returns the [BreakpointSize] for a given width.
-BreakpointSize breakpointOf(double width) {
-  if (width < AppBreakpoints.sm) return BreakpointSize.xs;
-  if (width < AppBreakpoints.md) return BreakpointSize.sm;
-  if (width < AppBreakpoints.lg) return BreakpointSize.md;
-  if (width < AppBreakpoints.xl) return BreakpointSize.lg;
-  return BreakpointSize.xl;
+enum DeviceClass {
+  compact,
+  medium,
+  expanded,
+  large,
 }
 
-/// Compute breakpoint from current [BuildContext].
-BreakpointSize breakpointFromContext(BuildContext context) {
+extension DeviceClassX on DeviceClass {
+  bool get isCompact => this == DeviceClass.compact;
+  bool get isMedium => this == DeviceClass.medium;
+  bool get isExpanded => this == DeviceClass.expanded;
+  bool get isLarge => this == DeviceClass.large;
+
+  bool get isMediumUp => index >= DeviceClass.medium.index;
+  bool get isExpandedUp => index >= DeviceClass.expanded.index;
+  bool get isLargeUp => index >= DeviceClass.large.index;
+}
+
+/// Returns the [DeviceClass] for a given width.
+DeviceClass deviceClassOf(double width) {
+  if (width < AppBreakpoints.medium) return DeviceClass.compact;
+  if (width < AppBreakpoints.expanded) return DeviceClass.medium;
+  if (width < AppBreakpoints.large) return DeviceClass.expanded;
+  return DeviceClass.large;
+}
+
+/// Compute device class from current [BuildContext].
+DeviceClass deviceClassFromContext(BuildContext context) {
   final w = MediaQuery.sizeOf(context).width;
-  return breakpointOf(w);
+  return deviceClassOf(w);
 }

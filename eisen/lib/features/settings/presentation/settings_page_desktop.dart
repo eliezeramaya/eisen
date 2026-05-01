@@ -1,3 +1,4 @@
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/features/eisen_matrix/domain/layout/treemap_density_resolver.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
@@ -12,9 +13,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class SettingsPageDesktop extends ConsumerStatefulWidget {
-  const SettingsPageDesktop({super.key, this.initialSection = 'General'});
+  const SettingsPageDesktop({
+    super.key,
+    this.initialSection = 'General',
+    this.useShellNavigation = false,
+  });
 
   final String initialSection;
+  final bool useShellNavigation;
   @override
   ConsumerState<SettingsPageDesktop> createState() =>
       _SettingsPageDesktopState();
@@ -105,17 +111,21 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final size = MediaQuery.sizeOf(context);
-    final isWide = size.width >= 1280;
-    final isNarrow = size.width < 900;
+    final deviceClass = deviceClassOf(size.width);
+    final isWide = deviceClass.isLarge;
+    final isNarrow = !deviceClass.isExpandedUp;
     return SettingsSectionBus(
       jumpTo: (s) => setState(() => _section = s),
       child: Scaffold(
         appBar: AppBar(
-          leadingWidth: 72,
-          leading: const Padding(
-            padding: EdgeInsets.only(left: 12),
-            child: AppLogoHomeButton(),
-          ),
+          automaticallyImplyLeading: !widget.useShellNavigation,
+          leadingWidth: widget.useShellNavigation ? null : 72,
+          leading: widget.useShellNavigation
+              ? null
+              : const Padding(
+                  padding: EdgeInsets.only(left: 12),
+                  child: AppLogoHomeButton(),
+                ),
           title: Text('Settings · $_section'),
           backgroundColor: cs.surface,
           foregroundColor: cs.onSurface,
@@ -274,7 +284,7 @@ class _SettingsPageDesktopState extends ConsumerState<SettingsPageDesktop> {
           quadrantPadding: _stagedPadding,
           minTileSizePx: _stagedMinTileSize,
           treemapDensityProfile: _stagedTreemapDensityProfile,
-          isDesktop: MediaQuery.sizeOf(context).width >= 900,
+          isDesktop: deviceClassFromContext(context).isExpandedUp,
         )
         .then((_) => uiCtl.setDensityPreset(_stagedDensity))
         .then((_) => uiCtl.applyGanttPrefs(

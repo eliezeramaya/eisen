@@ -3,9 +3,9 @@ import 'app_breakpoints.dart';
 import 'responsive_extensions.dart';
 
 /// A minimal adaptive scaffold that switches navigation affordances across sizes.
-/// - xs/sm: Bottom NavigationBar
-/// - md: NavigationRail
-/// - lg/xl: Permanent Drawer/Sidebar
+/// - compact/medium: Bottom NavigationBar
+/// - expanded: NavigationRail
+/// - large: Permanent Drawer/Sidebar
 class ResponsiveScaffold extends StatelessWidget {
   const ResponsiveScaffold({
     super.key,
@@ -27,8 +27,8 @@ class ResponsiveScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bp = context.bp;
-    if (bp == BreakpointSize.lg || bp == BreakpointSize.xl) {
+    final deviceClass = context.deviceClass;
+    if (deviceClass.isLarge) {
       // Sidebar layout
       return Scaffold(
         appBar: appBar,
@@ -42,6 +42,7 @@ class ResponsiveScaffold extends StatelessWidget {
                 for (final d in destinations)
                   NavigationDrawerDestination(
                     icon: d.icon,
+                    selectedIcon: d.selectedIcon,
                     label: Text(d.label),
                   ),
               ],
@@ -53,7 +54,7 @@ class ResponsiveScaffold extends StatelessWidget {
         endDrawer: endDrawer,
         floatingActionButton: floatingActionButton,
       );
-    } else if (bp == BreakpointSize.md) {
+    } else if (deviceClass.isExpanded) {
       // NavigationRail layout
       return Scaffold(
         appBar: appBar,
@@ -67,6 +68,7 @@ class ResponsiveScaffold extends StatelessWidget {
                 for (final d in destinations)
                   NavigationRailDestination(
                     icon: d.icon,
+                    selectedIcon: d.selectedIcon,
                     label: Text(d.label),
                   ),
               ],
@@ -89,7 +91,11 @@ class ResponsiveScaffold extends StatelessWidget {
         onDestinationSelected: onDestinationSelected,
         destinations: [
           for (final d in destinations)
-            NavigationDestination(icon: d.icon, label: d.label),
+            NavigationDestination(
+              icon: d.icon,
+              selectedIcon: d.selectedIcon,
+              label: d.label,
+            ),
         ],
       ),
       endDrawer: endDrawer,
@@ -99,7 +105,12 @@ class ResponsiveScaffold extends StatelessWidget {
 }
 
 class AppNavDestination {
-  const AppNavDestination({required this.icon, required this.label});
+  const AppNavDestination({
+    required this.icon,
+    this.selectedIcon,
+    required this.label,
+  });
   final Widget icon;
+  final Widget? selectedIcon;
   final String label;
 }

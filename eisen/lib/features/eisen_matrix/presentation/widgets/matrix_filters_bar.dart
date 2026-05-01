@@ -1,3 +1,4 @@
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -158,7 +159,7 @@ class _TimeAndCompletionRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(matrixViewFilterProvider.notifier);
-    final isCompact = MediaQuery.sizeOf(context).width < 720;
+    final isCompact = !deviceClassFromContext(context).isExpandedUp;
 
     final timeSegments = MatrixTimeFilterType.values.map((type) {
       return ButtonSegment<MatrixTimeFilterType>(
@@ -215,7 +216,7 @@ class _ViewModeRow extends ConsumerWidget {
     final controller = ref.read(matrixControllerProvider.notifier);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isCompact = MediaQuery.sizeOf(context).width < 720;
+    final isCompact = !deviceClassFromContext(context).isExpandedUp;
     final isEs = Localizations.localeOf(context).languageCode == 'es';
 
     String labelFor(MatrixViewMode mode) {

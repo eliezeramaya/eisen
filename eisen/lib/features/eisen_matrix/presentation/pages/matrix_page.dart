@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:eisen/core/design_system/eisen_tokens.dart';
 import 'package:eisen/core/design_system/widgets/eisen_card.dart';
 import 'package:eisen/core/platform/platform_utils.dart';
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
 import 'package:eisen/core/theme/app_theme.dart';
 import 'package:eisen/core/theme/colors.dart';
@@ -53,16 +54,16 @@ import 'package:eisen/l10n/app_localizations.dart';
 import 'package:eisen/l10n/app_localizations_en.dart';
 import 'package:eisen/theme/density.dart';
 import 'package:eisen/ui/matrix/matrix_desktop.dart';
-import 'package:eisen/utils/breakpoints.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 // Removed FAB + coachmark imports; using single CTA in bottom bar
 
+const double _ultraDensityMinWidth = 1600;
+
 /// Score heurístico más reciente (ventana de 7 días).
-final todayProductivityScoreProvider =
-    FutureProvider<DailyProductivityScore?>((ref) async {
+final todayProductivityScoreProvider = FutureProvider<DailyProductivityScore?>((ref) async {
   final scoring = ref.read(productivityScoringServiceProvider);
   final now = DateTime.now();
   final to = DateTime(now.year, now.month, now.day);
@@ -77,7 +78,13 @@ final overloadRiskTodayProvider = FutureProvider<OverloadRisk>((ref) async {
 });
 
 class MatrixPage extends ConsumerStatefulWidget {
-  const MatrixPage({super.key});
+  const MatrixPage({
+    super.key,
+    this.useShellNavigation = false,
+  });
+
+  /// True when this page is hosted by AppShell, which owns global navigation.
+  final bool useShellNavigation;
 
   @override
   ConsumerState<MatrixPage> createState() => _MatrixPageState();
@@ -123,32 +130,25 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
     final ctrl = ref.read(matrixControllerProvider.notifier);
     // Minimize rebuild noise via .select
     final zoom = ref.watch(matrixZoomProvider);
-    final themeMode =
-        ref.watch(matrixControllerProvider.select((s) => s.themeMode));
-    final compact =
-        ref.watch(matrixControllerProvider.select((s) => s.compact));
-    final showAxisLegends =
-        ref.watch(matrixControllerProvider.select((s) => s.showAxisLegends));
-    final minimal =
-        ref.watch(matrixControllerProvider.select((s) => s.minimal));
+    final themeMode = ref.watch(matrixControllerProvider.select((s) => s.themeMode));
+    final compact = ref.watch(matrixControllerProvider.select((s) => s.compact));
+    final showAxisLegends = ref.watch(matrixControllerProvider.select((s) => s.showAxisLegends));
+    final minimal = ref.watch(matrixControllerProvider.select((s) => s.minimal));
     final tasks = ref.watch(matrixTasksProvider);
     final visibleTasks = ref.watch(visibleMatrixTasksProvider);
-    final selectedId =
-        ref.watch(matrixControllerProvider.select((s) => s.selectedId));
-    final isLoading =
-        ref.watch(matrixControllerProvider.select((s) => s.isLoading));
-    final advancedInsights =
-        ref.watch(uiPrefsProvider.select((p) => p.advancedInsightsEnabled));
+    final selectedId = ref.watch(matrixControllerProvider.select((s) => s.selectedId));
+    final isLoading = ref.watch(matrixControllerProvider.select((s) => s.isLoading));
+    final advancedInsights = ref.watch(uiPrefsProvider.select((p) => p.advancedInsightsEnabled));
 
     // Safe lookup for selected task (may be deleted externally)
     final selectedTask = selectedId == null
         ? null
-        : (tasks.indexWhere((t) => t.id == selectedId) == -1
-            ? null
-            : tasks.firstWhere((t) => t.id == selectedId));
+        : (tasks.indexWhere((t) => t.id == selectedId) == -1 ? null : tasks.firstWhere((t) => t.id == selectedId));
 
     final screenSize = MediaQuery.sizeOf(context);
     final screenWidth = screenSize.width;
+    final deviceClass = deviceClassOf(screenWidth);
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
     // Trigger recompute when size changes (orientation/resize)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -157,8 +157,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         ref.read(matrixControllerProvider.notifier).notifyLayoutRecompute();
       }
     });
-    final legendsVisible =
-        showAxisLegends && zoom == null && screenWidth >= 600;
+    final legendsVisible = showAxisLegends && zoom == null && deviceClass.isMediumUp;
     // AppTextScale applied
     final prefsUi = ref.watch(uiPrefsProvider);
     final uiTsf = AppTextScale.of(context, prefsUi);
@@ -167,52 +166,38 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
     final axisHeaderHeight = isExtremeScale ? 52.0 : 42.0;
     final viewMode = ref.watch(uiPrefsProvider).viewMode; // 'treemap' | 'list'
     final taskViewMode = ref.watch(taskViewModeProvider);
-    final isDesktopGrid = screenWidth >= bpDesktop && viewMode == 'list';
-    final workflowPlanEnabled =
-        ref.watch(uiPrefsProvider.select((p) => p.workflowPlanEnabled));
-    final isSearchOpen =
-        ref.watch(matrixControllerProvider.select((s) => s.isSearchOpen));
-    final searchQuery =
-        ref.watch(matrixControllerProvider.select((s) => s.searchQuery));
-    final showFocusFab = screenWidth < 600;
+    final isDesktopGrid = deviceClass.isLarge && viewMode == 'list';
+    final workflowPlanEnabled = ref.watch(uiPrefsProvider.select((p) => p.workflowPlanEnabled));
+    final isSearchOpen = ref.watch(matrixControllerProvider.select((s) => s.isSearchOpen));
+    final searchQuery = ref.watch(matrixControllerProvider.select((s) => s.searchQuery));
+    final showFocusFab = deviceClass.isCompact;
     ref.read(nudgeControllerProvider.notifier).loadNudges();
     final nudgesAsync = ref.watch(nudgeControllerProvider);
-    final Nudge? firstNudge = nudgesAsync.value?.nudges.isNotEmpty == true
-        ? nudgesAsync.value!.nudges.first
-        : null;
+    final Nudge? firstNudge = nudgesAsync.value?.nudges.isNotEmpty == true ? nudgesAsync.value!.nudges.first : null;
     final nudgeCtrl = ref.read(nudgeControllerProvider.notifier);
-    final scoreAsync = advancedInsights
-        ? ref.watch(todayProductivityScoreProvider)
-        : const AsyncData<DailyProductivityScore?>(null);
+    final scoreAsync =
+        advancedInsights ? ref.watch(todayProductivityScoreProvider) : const AsyncData<DailyProductivityScore?>(null);
     final overloadRiskAsync = ref.watch(overloadRiskTodayProvider);
-    final overloadRisk =
-        overloadRiskAsync.maybeWhen(data: (v) => v, orElse: () => null);
-    final classificationSettings =
-        ref.watch(classificationSettingsControllerProvider);
+    final overloadRisk = overloadRiskAsync.maybeWhen(data: (v) => v, orElse: () => null);
+    final classificationSettings = ref.watch(classificationSettingsControllerProvider);
     final categoryConfigs = ref.watch(categoryConfigControllerProvider);
     final semanticViewport = ref.watch(treemapViewportControllerProvider);
-    final semanticViewportCtrl =
-        ref.read(treemapViewportControllerProvider.notifier);
+    final semanticViewportCtrl = ref.read(treemapViewportControllerProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final restoredSearch = semanticViewport.activeSearchQuery;
-      if (searchQuery.isEmpty &&
-          restoredSearch != null &&
-          restoredSearch.isNotEmpty) {
+      if (searchQuery.isEmpty && restoredSearch != null && restoredSearch.isNotEmpty) {
         ctrl.setSearchQuery(restoredSearch);
         return;
       }
       semanticViewportCtrl.syncSearchQuery(searchQuery);
     });
-    final classificationCategoryColorService =
-        buildClassificationCategoryColorService(
+    final classificationCategoryColorService = buildClassificationCategoryColorService(
       categories: categoryConfigs,
       userColorOverrides: ref.watch(uiPrefsProvider).categoryColors,
     );
-    final warningTasks = tasks
-        .where((t) => t.completedAt == null && _procrastinationScore(t) >= 0.75)
-        .map((t) => t.id)
-        .toSet();
+    final warningTasks =
+        tasks.where((t) => t.completedAt == null && _procrastinationScore(t) >= 0.75).map((t) => t.id).toSet();
     final adaptiveProfileAsync = ref.watch(
       FutureProvider<UserProductivityProfile>((ref) {
         return ref.read(adaptivePolicyEngineProvider).getCurrentProfile();
@@ -234,8 +219,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
         }
       }
     }
-    final canExitSemantic =
-        semanticViewport.zoomLevel != TreemapZoomLevel.global;
+    final canExitSemantic = semanticViewport.zoomLevel != TreemapZoomLevel.global;
     final showSemanticMap = canExitSemantic;
 
     return PopScope<void>(
@@ -269,7 +253,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
               onToggleSearch: ctrl.toggleSearch,
               taskViewModeSwitch: const TaskViewModeSwitch(),
               viewMode: viewMode,
-              showViewModeToggle: screenWidth >= bpDesktop,
+              showViewModeToggle: deviceClass.isLarge,
               onToggleViewMode: () {
                 ref.read(uiPrefsControllerProvider.notifier).toggleViewMode();
               },
@@ -280,79 +264,24 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                 builder: (_) => const ProfileSheet(),
               ),
               onOpenContextTasks: () => context.push('/context-aware-tasks'),
-              onExitZoom: () => _exitSemanticLevel(
-                  ctrl, semanticViewportCtrl, semanticViewport),
+              onExitZoom: () => _exitSemanticLevel(ctrl, semanticViewportCtrl, semanticViewport),
               canExitZoom: zoom != null || canExitSemantic,
-              onOpenStats: () => context.push('/stats'),
-              onOpenFocus: () => context.push('/focus'),
+              onOpenStats: widget.useShellNavigation ? null : () => context.push('/stats'),
+              onOpenFocus: widget.useShellNavigation ? null : () => context.push('/focus'),
               // When workflow plan is enabled in Settings > General, show the
               // Gantt/Workflow action in the top toolbar.
               showWorkflowPlan: workflowPlanEnabled,
-              onOpenWorkflow: workflowPlanEnabled
-                  ? () => context.push('/workflow-plan')
-                  : null,
-              onOpenSettings: () {
-                if (isDesktop) {
-                  context.push('/settings');
-                } else {
-                  final width = MediaQuery.sizeOf(context).width;
-                  final isMobile = width < 600;
-                  showModalBottomSheet(
-                    context: context,
-                    showDragHandle: true,
-                    isScrollControlled: true,
-                    useSafeArea: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => isMobile
-                        ? SettingsSheetCompact(
-                            onToggleTheme: ctrl.toggleTheme,
-                            onToggleDensity: ctrl.toggleCompact,
-                            compact: compact,
-                            showAxisLegends: showAxisLegends,
-                            onToggleAxisLegends: ctrl.toggleAxisLegends,
-                            minimal: minimal,
-                            onToggleMinimal: ctrl.toggleMinimal,
-                            onResetToDemo: () async {
-                              await ctrl.resetToDemo();
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '\u2728 Tareas demo restauradas '
-                                      '($kDemoTaskCount tareas)',
-                                    ),
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
-                              }
-                            },
-                          )
-                        : SettingsSheet(
-                            onToggleTheme: ctrl.toggleTheme,
-                            onToggleDensity: ctrl.toggleCompact,
-                            compact: compact,
-                            showAxisLegends: showAxisLegends,
-                            onToggleAxisLegends: ctrl.toggleAxisLegends,
-                            minimal: minimal,
-                            onToggleMinimal: ctrl.toggleMinimal,
-                            onResetToDemo: () async {
-                              await ctrl.resetToDemo();
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '\u2728 Tareas demo restauradas '
-                                      '($kDemoTaskCount tareas)',
-                                    ),
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                  );
-                }
-              },
+              onOpenWorkflow: workflowPlanEnabled ? () => context.push('/workflow-plan') : null,
+              onOpenSettings: widget.useShellNavigation
+                  ? null
+                  : () => _openMatrixSettings(
+                        context: context,
+                        ctrl: ctrl,
+                        compact: compact,
+                        showAxisLegends: showAxisLegends,
+                        minimal: minimal,
+                        deviceClass: deviceClass,
+                      ),
             ),
           ),
         ),
@@ -371,25 +300,29 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                     },
                   )
                 : FloatingActionButton.extended(
-                    heroTag: 'fab-focus',
-                    icon: const Icon(Icons.bolt),
-                    label: const Text('Focus'),
-                    onPressed: () => context.push('/focus'),
+                    heroTag: widget.useShellNavigation ? 'fab-new-task' : 'fab-focus',
+                    icon: Icon(
+                      widget.useShellNavigation ? Icons.add : Icons.bolt,
+                    ),
+                    label: Text(
+                      widget.useShellNavigation ? (isEs ? 'Nueva' : 'New') : 'Focus',
+                    ),
+                    onPressed:
+                        widget.useShellNavigation ? () => _openAddTaskSheet(context) : () => context.push('/focus'),
                   )
             : null,
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         body: SafeArea(
           child: MediaQuery(
             // AppTextScale applied: scale general UI using prefs
-            data: MediaQuery.of(context)
-                .copyWith(textScaler: TextScaler.linear(uiTsf)),
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(uiTsf)),
             child: Padding(
               // Slightly reduce bottom spacing above the bottom bar on compact layouts.
               padding: EdgeInsets.fromLTRB(
                 16,
                 16,
                 16,
-                screenWidth < 600 ? 8 : 16,
+                deviceClass.isCompact ? 8 : 16,
               ),
               child: taskViewMode == TaskViewMode.atlas
                   ? const AtlasScreen()
@@ -414,9 +347,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                   AnimatedSwitcher(
                                     duration: const Duration(milliseconds: 200),
                                     transitionBuilder: (child, animation) {
-                                      final curved = CurvedAnimation(
-                                          parent: animation,
-                                          curve: Curves.easeOutCubic);
+                                      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
                                       return SlideTransition(
                                         position: Tween<Offset>(
                                           begin: const Offset(0, -0.05),
@@ -441,8 +372,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                         }
                                       },
                                       onOpenStats: () => context.push('/stats'),
-                                      onOpenQ2Picker: () =>
-                                          _openQ2Picker(context, tasks),
+                                      onOpenQ2Picker: () => _openQ2Picker(context, tasks),
                                     ),
                                   ),
                                   AnimatedSwitcher(
@@ -473,13 +403,10 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                         ctrl.resetHomeView();
                                       }
                                     },
-                                    onSelectGrouping:
-                                        semanticViewportCtrl.setGrouping,
+                                    onSelectGrouping: semanticViewportCtrl.setGrouping,
                                     onSelectQuickFilter: (filter) {
                                       semanticViewportCtrl.setQuickFilter(
-                                        semanticViewport.quickFilter == filter
-                                            ? null
-                                            : filter,
+                                        semanticViewport.quickFilter == filter ? null : filter,
                                       );
                                     },
                                     onViewAll: () {
@@ -489,37 +416,27 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                       );
                                       ctrl.resetHomeView();
                                     },
-                                    onOpenReviewCenter: () =>
-                                        context.push('/classification-review'),
-                                    onFocusExactTask: semanticScene
-                                                .exactTaskMatch ==
-                                            null
+                                    onOpenReviewCenter: () => context.push('/classification-review'),
+                                    onFocusExactTask: semanticScene.exactTaskMatch == null
                                         ? null
                                         : () {
-                                            final task =
-                                                semanticScene.exactTaskMatch!;
-                                            final qLabel = _quadrantLabel(
-                                                context, task.quadrant);
+                                            final task = semanticScene.exactTaskMatch!;
+                                            final qLabel = _quadrantLabel(context, task.quadrant);
                                             semanticViewportCtrl.enterQuadrant(
                                               task.quadrant,
                                               label: qLabel,
                                             );
                                             semanticViewportCtrl.openCategory(
                                               categoryId: task.categoryId ??
-                                                  (task.category ??
-                                                          'sin-categoria')
+                                                  (task.category ?? 'sin-categoria')
                                                       .trim()
                                                       .toLowerCase()
                                                       .replaceAll(' ', '-'),
-                                              categoryLabel: task.category ??
-                                                  task.categoryId ??
-                                                  'Sin categoria',
+                                              categoryLabel: task.category ?? task.categoryId ?? 'Sin categoria',
                                             );
-                                            semanticViewportCtrl
-                                                .focusTask(task);
+                                            semanticViewportCtrl.focusTask(task);
                                             ctrl.setZoom(task.quadrant);
-                                            ctrl.setPresentQuadrant(
-                                                task.quadrant);
+                                            ctrl.setPresentQuadrant(task.quadrant);
                                           },
                                   ),
                                   if (legendsVisible)
@@ -533,8 +450,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                     ),
                                   Expanded(
                                     child: ClipRRect(
-                                      borderRadius:
-                                          BorderRadius.circular(tokens.radius),
+                                      borderRadius: BorderRadius.circular(tokens.radius),
                                       child: Stack(
                                         children: [
                                           // Removed Beta banner
@@ -542,38 +458,24 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                             child: minimal
                                                 ? const SizedBox.expand()
                                                 : BackdropFilter(
-                                                    filter: ImageFilter.blur(
-                                                        sigmaX: tokens.blur,
-                                                        sigmaY: tokens.blur),
-                                                    child:
-                                                        const SizedBox.expand(),
+                                                    filter: ImageFilter.blur(sigmaX: tokens.blur, sigmaY: tokens.blur),
+                                                    child: const SizedBox.expand(),
                                                   ),
                                           ),
                                           DecoratedBox(
                                             decoration: BoxDecoration(
                                               color: minimal
                                                   ? Colors.transparent
-                                                  : tokens
-                                                      .glassBg, // TEMP: transparent to see tiles
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                      tokens.radius),
+                                                  : tokens.glassBg, // TEMP: transparent to see tiles
+                                              borderRadius: BorderRadius.circular(tokens.radius),
                                               border: minimal
-                                                  ? Border.all(
-                                                      color: Colors.transparent,
-                                                      width: 0)
-                                                  : Border.all(
-                                                      color: Colors.white
-                                                          .withValues(
-                                                              alpha: 0.08),
-                                                      width: 1),
+                                                  ? Border.all(color: Colors.transparent, width: 0)
+                                                  : Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1),
                                               boxShadow: minimal
                                                   ? const []
                                                   : [
                                                       BoxShadow(
-                                                          color: tokens.halo
-                                                              .withValues(
-                                                                  alpha: 0.15),
+                                                          color: tokens.halo.withValues(alpha: 0.15),
                                                           blurRadius: 24,
                                                           spreadRadius: 2)
                                                     ],
@@ -581,87 +483,57 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                           ),
                                           // TEMP: Disabled grayscale filter to see tile colors
                                           ColorFiltered(
-                                            colorFilter: const ColorFilter.mode(
-                                                Colors.transparent,
-                                                BlendMode.srcOver),
+                                            colorFilter: const ColorFilter.mode(Colors.transparent, BlendMode.srcOver),
                                             child: LayoutBuilder(
                                               builder: (context, constraints) {
-                                                final size = Size(
-                                                    constraints.maxWidth,
-                                                    constraints.maxHeight);
-                                                final prefs =
-                                                    ref.watch(uiPrefsProvider);
-                                                final tileTsf =
-                                                    AppTextScale.forTreemap(
-                                                        context, prefs);
+                                                final size = Size(constraints.maxWidth, constraints.maxHeight);
+                                                final prefs = ref.watch(uiPrefsProvider);
+                                                final tileTsf = AppTextScale.forTreemap(context, prefs);
                                                 // Use synchronous layout to preserve golden parity and avoid blank frames.
                                                 final dynamicLayout =
-                                                    ctrl.computeLayoutSync(
-                                                        viewport: size,
-                                                        resetCache: true);
-                                                final suggested =
-                                                    ctrl.suggestedTopSpots;
+                                                    ctrl.computeLayoutSync(viewport: size, resetCache: true);
+                                                final suggested = ctrl.suggestedTopSpots;
                                                 return clampTreemapTSF(
                                                   context,
                                                   child: Stack(
                                                     children: [
                                                       AnimatedSwitcher(
-                                                        duration:
-                                                            const Duration(
+                                                        duration: const Duration(
                                                           milliseconds: 240,
                                                         ),
-                                                        switchInCurve:
-                                                            Curves.easeOutCubic,
-                                                        switchOutCurve:
-                                                            Curves.easeOutCubic,
+                                                        switchInCurve: Curves.easeOutCubic,
+                                                        switchOutCurve: Curves.easeOutCubic,
                                                         child: showSemanticMap
                                                             ? Stack(
                                                                 key: ValueKey(
                                                                   'semantic-${semanticViewport.zoomLevel.name}-${semanticViewport.selectedNodeId}',
                                                                 ),
                                                                 children: [
-                                                                  Positioned
-                                                                      .fill(
-                                                                    child:
-                                                                        SemanticTreemapView(
-                                                                      scene:
-                                                                          semanticScene,
-                                                                      selectedNodeId:
-                                                                          semanticViewport
-                                                                              .selectedNodeId,
-                                                                      categoryColorService: classificationSettings
-                                                                              .colorByCategory
-                                                                          ? classificationCategoryColorService
-                                                                          : ref
-                                                                              .watch(uiPrefsProvider)
-                                                                              .categoryColorService,
+                                                                  Positioned.fill(
+                                                                    child: SemanticTreemapView(
+                                                                      scene: semanticScene,
+                                                                      selectedNodeId: semanticViewport.selectedNodeId,
+                                                                      categoryColorService:
+                                                                          classificationSettings.colorByCategory
+                                                                              ? classificationCategoryColorService
+                                                                              : ref
+                                                                                  .watch(uiPrefsProvider)
+                                                                                  .categoryColorService,
                                                                       colorByCategory:
-                                                                          classificationSettings
-                                                                              .colorByCategory,
-                                                                      showConfidenceIndicators:
-                                                                          classificationSettings
-                                                                              .showConfidenceIndicators,
-                                                                      showAutoTags:
-                                                                          classificationSettings
-                                                                              .showAutoTags,
-                                                                      onNodeSelected:
-                                                                          (node) {
-                                                                        semanticViewportCtrl
-                                                                            .selectNode(
+                                                                          classificationSettings.colorByCategory,
+                                                                      showConfidenceIndicators: classificationSettings
+                                                                          .showConfidenceIndicators,
+                                                                      showAutoTags: classificationSettings.showAutoTags,
+                                                                      onNodeSelected: (node) {
+                                                                        semanticViewportCtrl.selectNode(
                                                                           node.id,
                                                                         );
-                                                                        if (screenWidth <
-                                                                            900) {
-                                                                          showModalBottomSheet<
-                                                                              void>(
-                                                                            context:
-                                                                                context,
-                                                                            showDragHandle:
-                                                                                true,
-                                                                            isScrollControlled:
-                                                                                true,
-                                                                            builder: (_) =>
-                                                                                SafeArea(
+                                                                        if (!deviceClass.isExpandedUp) {
+                                                                          showModalBottomSheet<void>(
+                                                                            context: context,
+                                                                            showDragHandle: true,
+                                                                            isScrollControlled: true,
+                                                                            builder: (_) => SafeArea(
                                                                               top: false,
                                                                               child: Padding(
                                                                                 padding: const EdgeInsets.all(16),
@@ -672,22 +544,29 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                                                     _openSemanticNode(
                                                                                       context: context,
                                                                                       ctrl: ctrl,
-                                                                                      viewportCtrl: semanticViewportCtrl,
+                                                                                      viewportCtrl:
+                                                                                          semanticViewportCtrl,
                                                                                       viewport: semanticViewport,
                                                                                       node: node,
                                                                                     );
                                                                                   },
                                                                                   onReviewLowConfidence: () {
                                                                                     Navigator.of(context).pop();
-                                                                                    semanticViewportCtrl.setQuickFilter(TreemapQuickFilter.lowConfidence);
-                                                                                    context.push('/classification-review');
+                                                                                    semanticViewportCtrl.setQuickFilter(
+                                                                                        TreemapQuickFilter
+                                                                                            .lowConfidence);
+                                                                                    context
+                                                                                        .push('/classification-review');
                                                                                   },
                                                                                   onOpenTaskInspector: () {
                                                                                     if (node.isTaskLeaf) {
                                                                                       final task = node.tasks.single;
                                                                                       ctrl.select(task.id);
                                                                                       Navigator.of(context).pop();
-                                                                                      WidgetsBinding.instance.addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
+                                                                                      WidgetsBinding.instance
+                                                                                          .addPostFrameCallback((_) =>
+                                                                                              _scaffoldKey.currentState
+                                                                                                  ?.openEndDrawer());
                                                                                     }
                                                                                   },
                                                                                   onMarkDone: () {
@@ -703,116 +582,77 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                                           );
                                                                         }
                                                                       },
-                                                                      onNodeOpen:
-                                                                          (node) {
+                                                                      onNodeOpen: (node) {
                                                                         _openSemanticNode(
-                                                                          context:
-                                                                              context,
-                                                                          ctrl:
-                                                                              ctrl,
-                                                                          viewportCtrl:
-                                                                              semanticViewportCtrl,
-                                                                          viewport:
-                                                                              semanticViewport,
-                                                                          node:
-                                                                              node,
+                                                                          context: context,
+                                                                          ctrl: ctrl,
+                                                                          viewportCtrl: semanticViewportCtrl,
+                                                                          viewport: semanticViewport,
+                                                                          node: node,
                                                                         );
                                                                       },
-                                                                      onOpenTaskInspector:
-                                                                          (task) {
-                                                                        ctrl.select(
-                                                                            task.id);
-                                                                        WidgetsBinding
-                                                                            .instance
-                                                                            .addPostFrameCallback((_) =>
-                                                                                _scaffoldKey.currentState?.openEndDrawer());
+                                                                      onOpenTaskInspector: (task) {
+                                                                        ctrl.select(task.id);
+                                                                        WidgetsBinding.instance.addPostFrameCallback(
+                                                                            (_) => _scaffoldKey.currentState
+                                                                                ?.openEndDrawer());
                                                                       },
-                                                                      onReviewLowConfidence:
-                                                                          (node) {
-                                                                        semanticViewportCtrl
-                                                                            .setQuickFilter(
-                                                                          TreemapQuickFilter
-                                                                              .lowConfidence,
+                                                                      onReviewLowConfidence: (node) {
+                                                                        semanticViewportCtrl.setQuickFilter(
+                                                                          TreemapQuickFilter.lowConfidence,
                                                                         );
-                                                                        semanticViewportCtrl
-                                                                            .selectNode(
+                                                                        semanticViewportCtrl.selectNode(
                                                                           node.id,
                                                                         );
-                                                                        context
-                                                                            .push(
+                                                                        context.push(
                                                                           '/classification-review',
                                                                         );
                                                                       },
                                                                     ),
                                                                   ),
-                                                                  if (semanticSelectedNode !=
-                                                                          null &&
-                                                                      screenWidth >=
-                                                                          920)
+                                                                  if (semanticSelectedNode != null &&
+                                                                      deviceClass.isExpandedUp)
                                                                     Positioned(
                                                                       top: 16,
                                                                       right: 16,
-                                                                      bottom:
-                                                                          16,
-                                                                      child:
-                                                                          SemanticTreemapDetailsCard(
-                                                                        node:
-                                                                            semanticSelectedNode,
-                                                                        onOpen:
-                                                                            () {
-                                                                          final node =
-                                                                              semanticSelectedNode;
-                                                                          if (node ==
-                                                                              null) {
+                                                                      bottom: 16,
+                                                                      child: SemanticTreemapDetailsCard(
+                                                                        node: semanticSelectedNode,
+                                                                        onOpen: () {
+                                                                          final node = semanticSelectedNode;
+                                                                          if (node == null) {
                                                                             return;
                                                                           }
                                                                           _openSemanticNode(
-                                                                            context:
-                                                                                context,
-                                                                            ctrl:
-                                                                                ctrl,
-                                                                            viewportCtrl:
-                                                                                semanticViewportCtrl,
-                                                                            viewport:
-                                                                                semanticViewport,
-                                                                            node:
-                                                                                node,
+                                                                            context: context,
+                                                                            ctrl: ctrl,
+                                                                            viewportCtrl: semanticViewportCtrl,
+                                                                            viewport: semanticViewport,
+                                                                            node: node,
                                                                           );
                                                                         },
-                                                                        onReviewLowConfidence:
-                                                                            () {
-                                                                          semanticViewportCtrl
-                                                                              .setQuickFilter(
+                                                                        onReviewLowConfidence: () {
+                                                                          semanticViewportCtrl.setQuickFilter(
                                                                             TreemapQuickFilter.lowConfidence,
                                                                           );
-                                                                          context
-                                                                              .push(
+                                                                          context.push(
                                                                             '/classification-review',
                                                                           );
                                                                         },
-                                                                        onOpenTaskInspector:
-                                                                            () {
-                                                                          final node =
-                                                                              semanticSelectedNode;
-                                                                          if (node == null ||
-                                                                              !node.isTaskLeaf) {
+                                                                        onOpenTaskInspector: () {
+                                                                          final node = semanticSelectedNode;
+                                                                          if (node == null || !node.isTaskLeaf) {
                                                                             return;
                                                                           }
-                                                                          final task = node
-                                                                              .tasks
-                                                                              .single;
-                                                                          ctrl.select(
-                                                                              task.id);
-                                                                          WidgetsBinding
-                                                                              .instance
-                                                                              .addPostFrameCallback((_) => _scaffoldKey.currentState?.openEndDrawer());
+                                                                          final task = node.tasks.single;
+                                                                          ctrl.select(task.id);
+                                                                          WidgetsBinding.instance.addPostFrameCallback(
+                                                                              (_) => _scaffoldKey.currentState
+                                                                                  ?.openEndDrawer());
                                                                         },
-                                                                        onMarkDone:
-                                                                            () {
-                                                                          final node =
-                                                                              semanticSelectedNode;
-                                                                          if (node == null ||
-                                                                              !node.isTaskLeaf) {
+                                                                        onMarkDone: () {
+                                                                          final node = semanticSelectedNode;
+                                                                          if (node == null || !node.isTaskLeaf) {
                                                                             return;
                                                                           }
                                                                           ctrl.markTaskDone(
@@ -827,258 +667,178 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                                 key: ValueKey(
                                                                   '${zoom}_${dynamicLayout.length}_${suggested.length}',
                                                                 ),
-                                                                enabled:
-                                                                    !showSemanticMap,
-                                                                child:
-                                                                    TreemapCanvas(
-                                                                  tasks:
-                                                                      visibleTasks,
-                                                                  layout:
-                                                                      dynamicLayout,
-                                                                  compact:
-                                                                      compact,
-                                                                  suggestedIds:
-                                                                      suggested,
-                                                                  minimal:
-                                                                      minimal,
-                                                                  selectedId:
-                                                                      selectedId,
+                                                                enabled: !showSemanticMap,
+                                                                child: TreemapCanvas(
+                                                                  tasks: visibleTasks,
+                                                                  layout: dynamicLayout,
+                                                                  compact: compact,
+                                                                  suggestedIds: suggested,
+                                                                  minimal: minimal,
+                                                                  selectedId: selectedId,
                                                                   zoom: zoom,
                                                                   presentQuadrant: zoom ??
                                                                       ref
-                                                                          .read(
-                                                                              matrixControllerProvider)
+                                                                          .read(matrixControllerProvider)
                                                                           .presentQuadrant,
-                                                                  textScale:
-                                                                      tileTsf,
+                                                                  textScale: tileTsf,
                                                                   minTileSizePx: ref
                                                                       .watch(
                                                                         uiPrefsProvider,
                                                                       )
                                                                       .minTileSizePx,
-                                                                  categoryColorService: classificationSettings
-                                                                          .colorByCategory
-                                                                      ? classificationCategoryColorService
-                                                                      : ref
-                                                                          .watch(
-                                                                            uiPrefsProvider,
-                                                                          )
-                                                                          .categoryColorService,
+                                                                  categoryColorService:
+                                                                      classificationSettings.colorByCategory
+                                                                          ? classificationCategoryColorService
+                                                                          : ref
+                                                                              .watch(
+                                                                                uiPrefsProvider,
+                                                                              )
+                                                                              .categoryColorService,
                                                                   colorByCategory:
-                                                                      classificationSettings
-                                                                          .colorByCategory,
+                                                                      classificationSettings.colorByCategory,
                                                                   showConfidenceIndicators:
-                                                                      classificationSettings
-                                                                          .showConfidenceIndicators,
-                                                                  showAutoTags:
-                                                                      classificationSettings
-                                                                          .showAutoTags,
-                                                                  inlineEditId:
-                                                                      _inlineEditId,
+                                                                      classificationSettings.showConfidenceIndicators,
+                                                                  showAutoTags: classificationSettings.showAutoTags,
+                                                                  inlineEditId: _inlineEditId,
                                                                   lastMovedTaskId: ref
                                                                       .read(
                                                                         matrixControllerProvider,
                                                                       )
                                                                       .lastMovedTaskId,
-                                                                  loading:
-                                                                      isLoading,
-                                                                  warningTaskIds:
-                                                                      warningTasks,
-                                                                  onInlineSubmit:
-                                                                      (id,
-                                                                          title) {
+                                                                  loading: isLoading,
+                                                                  warningTaskIds: warningTasks,
+                                                                  onInlineSubmit: (id, title) {
                                                                     ctrl.updateTask(
                                                                       id,
-                                                                      (t) => t
-                                                                          .copyWith(
-                                                                        title:
-                                                                            title,
+                                                                      (t) => t.copyWith(
+                                                                        title: title,
                                                                       ),
                                                                     );
                                                                     setState(
-                                                                      () => _inlineEditId =
-                                                                          null,
+                                                                      () => _inlineEditId = null,
                                                                     );
                                                                   },
-                                                                  onInlineCancel:
-                                                                      (id) {
-                                                                    final idx =
-                                                                        tasks
-                                                                            .indexWhere(
-                                                                      (e) =>
-                                                                          e.id ==
-                                                                          id,
+                                                                  onInlineCancel: (id) {
+                                                                    final idx = tasks.indexWhere(
+                                                                      (e) => e.id == id,
                                                                     );
-                                                                    if (idx !=
-                                                                        -1) {
-                                                                      final t =
-                                                                          tasks[
-                                                                              idx];
-                                                                      if (t.title ==
-                                                                              'New Task' &&
-                                                                          (t.notes == null ||
-                                                                              t.notes!.isEmpty)) {
+                                                                    if (idx != -1) {
+                                                                      final t = tasks[idx];
+                                                                      if (t.title == 'New Task' &&
+                                                                          (t.notes == null || t.notes!.isEmpty)) {
                                                                         ctrl.deleteTask(
                                                                           id,
                                                                         );
                                                                       }
                                                                     }
                                                                     setState(
-                                                                      () => _inlineEditId =
-                                                                          null,
+                                                                      () => _inlineEditId = null,
                                                                     );
                                                                   },
                                                                   onTap: (id) {
-                                                                    ctrl.select(
-                                                                        id);
-                                                                    if (id !=
-                                                                        null) {
-                                                                      WidgetsBinding
-                                                                          .instance
-                                                                          .addPostFrameCallback((_) => _scaffoldKey
-                                                                              .currentState
+                                                                    ctrl.select(id);
+                                                                    if (id != null) {
+                                                                      WidgetsBinding.instance.addPostFrameCallback(
+                                                                          (_) => _scaffoldKey.currentState
                                                                               ?.openEndDrawer());
                                                                     }
                                                                   },
-                                                                  onDropToQuadrant:
-                                                                      (id, q) {
-                                                                    final idx =
-                                                                        tasks
-                                                                            .indexWhere(
-                                                                      (t) =>
-                                                                          t.id ==
-                                                                          id,
+                                                                  onDropToQuadrant: (id, q) {
+                                                                    final idx = tasks.indexWhere(
+                                                                      (t) => t.id == id,
                                                                     );
-                                                                    if (idx ==
-                                                                        -1) {
+                                                                    if (idx == -1) {
                                                                       return;
                                                                     }
-                                                                    final prev =
-                                                                        tasks[idx]
-                                                                            .quadrant;
-                                                                    if (prev ==
-                                                                        q) {
+                                                                    final prev = tasks[idx].quadrant;
+                                                                    if (prev == q) {
                                                                       return;
                                                                     }
                                                                     ctrl.moveTaskToQuadrant(
                                                                       id,
                                                                       q,
                                                                     );
-                                                                    final qName = q
-                                                                        .name
-                                                                        .toUpperCase();
-                                                                    ScaffoldMessenger.of(
-                                                                            context)
-                                                                        .hideCurrentSnackBar();
-                                                                    ScaffoldMessenger.of(
-                                                                            context)
-                                                                        .showSnackBar(
+                                                                    final qName = q.name.toUpperCase();
+                                                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                                                    ScaffoldMessenger.of(context).showSnackBar(
                                                                       SnackBar(
-                                                                        content:
-                                                                            Text(
+                                                                        content: Text(
                                                                           'Tarea movida a $qName',
                                                                         ),
-                                                                        action:
-                                                                            SnackBarAction(
-                                                                          label:
-                                                                              'Deshacer',
-                                                                          onPressed:
-                                                                              () {
+                                                                        action: SnackBarAction(
+                                                                          label: 'Deshacer',
+                                                                          onPressed: () {
                                                                             ctrl.moveTaskToQuadrant(
                                                                               id,
                                                                               prev,
                                                                             );
                                                                           },
                                                                         ),
-                                                                        duration:
-                                                                            const Duration(
-                                                                          seconds:
-                                                                              4,
+                                                                        duration: const Duration(
+                                                                          seconds: 4,
                                                                         ),
                                                                       ),
                                                                     );
                                                                   },
-                                                                  onDoubleTapQuadrant:
-                                                                      (q) {
-                                                                    semanticViewportCtrl
-                                                                        .enterQuadrant(
+                                                                  onDoubleTapQuadrant: (q) {
+                                                                    semanticViewportCtrl.enterQuadrant(
                                                                       q,
-                                                                      label:
-                                                                          _quadrantLabel(
+                                                                      label: _quadrantLabel(
                                                                         context,
                                                                         q,
                                                                       ),
                                                                     );
-                                                                    ctrl.setZoom(
-                                                                        q);
+                                                                    ctrl.setZoom(q);
                                                                     ctrl.setPresentQuadrant(
                                                                       q,
                                                                     );
                                                                     ctrl.invalidateLayout();
                                                                   },
-                                                                  onLowConfidenceLongPress:
-                                                                      (task) async {
-                                                                    final categories =
-                                                                        ref.read(
+                                                                  onLowConfidenceLongPress: (task) async {
+                                                                    final categories = ref.read(
                                                                       categoryConfigControllerProvider,
                                                                     );
-                                                                    final meta =
-                                                                        task.classificationMetadata ??
-                                                                            ClassificationMetadata(
-                                                                              categoryId: task.categoryId,
-                                                                              entryKind: task.kind,
-                                                                              timeHorizon: task.horizon ?? TimeHorizon.someday,
-                                                                              energyLevel: task.energy ?? EnergyLevel.medium,
-                                                                              priorityLevel: PriorityLevel.medium,
-                                                                              confidenceScore: 0.4,
-                                                                              confidenceLevel: ConfidenceLevel.low,
-                                                                            );
-                                                                    final result =
-                                                                        await showModalBottomSheet<
-                                                                            QuickReclassifyResult>(
-                                                                      context:
-                                                                          context,
-                                                                      isScrollControlled:
-                                                                          true,
-                                                                      builder:
-                                                                          (_) =>
-                                                                              QuickReclassifySheet(
-                                                                        metadata:
-                                                                            meta,
-                                                                        categories:
-                                                                            categories,
+                                                                    final meta = task.classificationMetadata ??
+                                                                        ClassificationMetadata(
+                                                                          categoryId: task.categoryId,
+                                                                          entryKind: task.kind,
+                                                                          timeHorizon:
+                                                                              task.horizon ?? TimeHorizon.someday,
+                                                                          energyLevel:
+                                                                              task.energy ?? EnergyLevel.medium,
+                                                                          priorityLevel: PriorityLevel.medium,
+                                                                          confidenceScore: 0.4,
+                                                                          confidenceLevel: ConfidenceLevel.low,
+                                                                        );
+                                                                    final result = await showModalBottomSheet<
+                                                                        QuickReclassifyResult>(
+                                                                      context: context,
+                                                                      isScrollControlled: true,
+                                                                      builder: (_) => QuickReclassifySheet(
+                                                                        metadata: meta,
+                                                                        categories: categories,
                                                                       ),
                                                                     );
-                                                                    if (result !=
-                                                                        null) {
-                                                                      final corrected =
-                                                                          result
-                                                                              .metadata;
+                                                                    if (result != null) {
+                                                                      final corrected = result.metadata;
                                                                       ctrl.updateTask(
                                                                         task.id,
-                                                                        (t) =>
-                                                                            applyClassificationToTask(
-                                                                          task:
-                                                                              t,
-                                                                          metadata:
-                                                                              corrected,
-                                                                          categories:
-                                                                              categories,
+                                                                        (t) => applyClassificationToTask(
+                                                                          task: t,
+                                                                          metadata: corrected,
+                                                                          categories: categories,
                                                                         ),
                                                                       );
                                                                       await ref
                                                                           .read(
-                                                                            classificationReviewControllerProvider.notifier,
+                                                                            classificationReviewControllerProvider
+                                                                                .notifier,
                                                                           )
                                                                           .recordCorrection(
-                                                                            taskId:
-                                                                                task.id,
-                                                                            inputText:
-                                                                                meta.inputText,
-                                                                            original:
-                                                                                meta,
-                                                                            corrected:
-                                                                                corrected,
+                                                                            taskId: task.id,
+                                                                            inputText: meta.inputText,
+                                                                            original: meta,
+                                                                            corrected: corrected,
                                                                           );
                                                                     }
                                                                   },
@@ -1086,166 +846,104 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                                                               ),
                                                       ),
                                                       const ZoomIndicator(),
-                                                      if (!showSemanticMap &&
-                                                          visibleTasks
-                                                              .isNotEmpty)
+                                                      if (!showSemanticMap && visibleTasks.isNotEmpty)
                                                         Positioned(
                                                           left: 12,
                                                           top: 12,
-                                                          right:
-                                                              screenWidth < 720
-                                                                  ? 12
-                                                                  : 180,
-                                                          child:
-                                                              GlobalSemanticSummaryStrip(
+                                                          right: deviceClass.isExpandedUp ? 180 : 12,
+                                                          child: GlobalSemanticSummaryStrip(
                                                             tasks: visibleTasks,
                                                           ),
                                                         ),
-                                                      if (!showSemanticMap &&
-                                                          dynamicLayout
-                                                              .isEmpty) ...[
+                                                      if (!showSemanticMap && dynamicLayout.isEmpty) ...[
                                                         Positioned(
                                                           left: 0,
                                                           top: 0,
                                                           width: size.width / 2,
-                                                          height:
-                                                              size.height / 2,
-                                                          child:
-                                                              const QuadrantEmptyPlaceholder(
-                                                            title:
-                                                                'Q1 · Urgente e Importante',
-                                                            hint:
-                                                                'No tienes tareas aquí. Usa “Entrada”.',
+                                                          height: size.height / 2,
+                                                          child: const QuadrantEmptyPlaceholder(
+                                                            title: 'Q1 · Urgente e Importante',
+                                                            hint: 'No tienes tareas aquí. Usa “Entrada”.',
                                                           ),
                                                         ),
                                                         Positioned(
                                                           left: size.width / 2,
                                                           top: 0,
                                                           width: size.width / 2,
-                                                          height:
-                                                              size.height / 2,
-                                                          child:
-                                                              const QuadrantEmptyPlaceholder(
-                                                            title:
-                                                                'Q2 · No Urgente e Importante',
-                                                            hint:
-                                                                'Planifica aquí objetivos clave.',
+                                                          height: size.height / 2,
+                                                          child: const QuadrantEmptyPlaceholder(
+                                                            title: 'Q2 · No Urgente e Importante',
+                                                            hint: 'Planifica aquí objetivos clave.',
                                                           ),
                                                         ),
                                                         Positioned(
                                                           left: 0,
                                                           top: size.height / 2,
                                                           width: size.width / 2,
-                                                          height:
-                                                              size.height / 2,
-                                                          child:
-                                                              const QuadrantEmptyPlaceholder(
-                                                            title:
-                                                                'Q3 · Urgente y No Importante',
-                                                            hint:
-                                                                'Delegables o de baja prioridad.',
+                                                          height: size.height / 2,
+                                                          child: const QuadrantEmptyPlaceholder(
+                                                            title: 'Q3 · Urgente y No Importante',
+                                                            hint: 'Delegables o de baja prioridad.',
                                                           ),
                                                         ),
                                                         Positioned(
                                                           left: size.width / 2,
                                                           top: size.height / 2,
                                                           width: size.width / 2,
-                                                          height:
-                                                              size.height / 2,
-                                                          child:
-                                                              const QuadrantEmptyPlaceholder(
-                                                            title:
-                                                                'Q4 · No Urgente y No Importante',
-                                                            hint:
-                                                                'Evita o elimina distracciones.',
+                                                          height: size.height / 2,
+                                                          child: const QuadrantEmptyPlaceholder(
+                                                            title: 'Q4 · No Urgente y No Importante',
+                                                            hint: 'Evita o elimina distracciones.',
                                                           ),
                                                         ),
                                                       ],
-                                                      if (!showSemanticMap &&
-                                                          dynamicLayout
-                                                              .isNotEmpty) ...[
-                                                        if (!tasks.any((t) =>
-                                                            t.completedAt ==
-                                                                null &&
-                                                            t.quadrant ==
-                                                                Quadrant.q1))
+                                                      if (!showSemanticMap && dynamicLayout.isNotEmpty) ...[
+                                                        if (!tasks.any(
+                                                            (t) => t.completedAt == null && t.quadrant == Quadrant.q1))
                                                           Positioned(
                                                             left: 0,
                                                             top: 0,
-                                                            width:
-                                                                size.width / 2,
-                                                            height:
-                                                                size.height / 2,
-                                                            child:
-                                                                const QuadrantEmptyPlaceholder(
-                                                              title:
-                                                                  'Q1 · Urgente e Importante',
-                                                              hint:
-                                                                  'No tienes tareas aquí. Usa “Entrada”.',
+                                                            width: size.width / 2,
+                                                            height: size.height / 2,
+                                                            child: const QuadrantEmptyPlaceholder(
+                                                              title: 'Q1 · Urgente e Importante',
+                                                              hint: 'No tienes tareas aquí. Usa “Entrada”.',
                                                             ),
                                                           ),
-                                                        if (!tasks.any((t) =>
-                                                            t.completedAt ==
-                                                                null &&
-                                                            t.quadrant ==
-                                                                Quadrant.q2))
+                                                        if (!tasks.any(
+                                                            (t) => t.completedAt == null && t.quadrant == Quadrant.q2))
                                                           Positioned(
-                                                            left:
-                                                                size.width / 2,
+                                                            left: size.width / 2,
                                                             top: 0,
-                                                            width:
-                                                                size.width / 2,
-                                                            height:
-                                                                size.height / 2,
-                                                            child:
-                                                                const QuadrantEmptyPlaceholder(
-                                                              title:
-                                                                  'Q2 · No Urgente e Importante',
-                                                              hint:
-                                                                  'Planifica aquí objetivos clave.',
+                                                            width: size.width / 2,
+                                                            height: size.height / 2,
+                                                            child: const QuadrantEmptyPlaceholder(
+                                                              title: 'Q2 · No Urgente e Importante',
+                                                              hint: 'Planifica aquí objetivos clave.',
                                                             ),
                                                           ),
-                                                        if (!tasks.any((t) =>
-                                                            t.completedAt ==
-                                                                null &&
-                                                            t.quadrant ==
-                                                                Quadrant.q3))
+                                                        if (!tasks.any(
+                                                            (t) => t.completedAt == null && t.quadrant == Quadrant.q3))
                                                           Positioned(
                                                             left: 0,
-                                                            top:
-                                                                size.height / 2,
-                                                            width:
-                                                                size.width / 2,
-                                                            height:
-                                                                size.height / 2,
-                                                            child:
-                                                                const QuadrantEmptyPlaceholder(
-                                                              title:
-                                                                  'Q3 · Urgente y No Importante',
-                                                              hint:
-                                                                  'Delegables o de baja prioridad.',
+                                                            top: size.height / 2,
+                                                            width: size.width / 2,
+                                                            height: size.height / 2,
+                                                            child: const QuadrantEmptyPlaceholder(
+                                                              title: 'Q3 · Urgente y No Importante',
+                                                              hint: 'Delegables o de baja prioridad.',
                                                             ),
                                                           ),
-                                                        if (!tasks.any((t) =>
-                                                            t.completedAt ==
-                                                                null &&
-                                                            t.quadrant ==
-                                                                Quadrant.q4))
+                                                        if (!tasks.any(
+                                                            (t) => t.completedAt == null && t.quadrant == Quadrant.q4))
                                                           Positioned(
-                                                            left:
-                                                                size.width / 2,
-                                                            top:
-                                                                size.height / 2,
-                                                            width:
-                                                                size.width / 2,
-                                                            height:
-                                                                size.height / 2,
-                                                            child:
-                                                                const QuadrantEmptyPlaceholder(
-                                                              title:
-                                                                  'Q4 · No Urgente y No Importante',
-                                                              hint:
-                                                                  'Evita o elimina distracciones.',
+                                                            left: size.width / 2,
+                                                            top: size.height / 2,
+                                                            width: size.width / 2,
+                                                            height: size.height / 2,
+                                                            child: const QuadrantEmptyPlaceholder(
+                                                              title: 'Q4 · No Urgente y No Importante',
+                                                              hint: 'Evita o elimina distracciones.',
                                                             ),
                                                           ),
                                                       ],
@@ -1277,51 +975,52 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                 onDelete: () => ctrl.deleteTask(selectedTask.id),
                 onComplete: () {
                   ctrl.markTaskDone(selectedTask.id);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('¡Tarea completada!'),
-                      duration: Duration(milliseconds: 900)));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('¡Tarea completada!'), duration: Duration(milliseconds: 900)));
                 },
               ),
-        bottomNavigationBar: MediaQuery(
-            data: MediaQuery.of(context)
-                .copyWith(textScaler: TextScaler.linear(uiTsf)),
-            child: screenWidth >= 600
-                ? _BottomActionBar(
-                    highScale: isExtremeScale,
-                    onNew: () => _openAddTaskSheet(context),
-                    onNewInQuadrant: (q) {
-                      ctrl.setZoom(q);
-                      _openAddTaskSheet(context);
-                    },
-                    minimap: Minimap(
-                      zoom: zoom,
-                      tasks: tasks,
-                      onSelectQuadrant: (q) {
-                        semanticViewportCtrl.enterQuadrant(
-                          q,
-                          label: _quadrantLabel(context, q),
-                        );
-                        ctrl.setZoom(q);
-                        ctrl.setPresentQuadrant(q);
-                        ctrl.invalidateLayout();
-                      },
-                      onFullView: () {
-                        semanticViewportCtrl.reset(
-                          grouping: semanticViewport.grouping,
-                          density: semanticViewport.density,
-                        );
-                        ctrl.resetHomeView();
-                      },
-                    ),
-                  )
-                : _buildMobileBottomNav(context, tokens)),
+        bottomNavigationBar: widget.useShellNavigation && deviceClass.isCompact
+            ? null
+            : MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(uiTsf)),
+                child: deviceClass.isMediumUp
+                    ? _BottomActionBar(
+                        highScale: isExtremeScale,
+                        onNew: () => _openAddTaskSheet(context),
+                        onNewInQuadrant: (q) {
+                          ctrl.setZoom(q);
+                          _openAddTaskSheet(context);
+                        },
+                        minimap: Minimap(
+                          zoom: zoom,
+                          tasks: tasks,
+                          onSelectQuadrant: (q) {
+                            semanticViewportCtrl.enterQuadrant(
+                              q,
+                              label: _quadrantLabel(context, q),
+                            );
+                            ctrl.setZoom(q);
+                            ctrl.setPresentQuadrant(q);
+                            ctrl.invalidateLayout();
+                          },
+                          onFullView: () {
+                            semanticViewportCtrl.reset(
+                              grouping: semanticViewport.grouping,
+                              density: semanticViewport.density,
+                            );
+                            ctrl.resetHomeView();
+                          },
+                        ),
+                      )
+                    : _buildMobileBottomNav(context, tokens),
+              ),
       ),
     );
   }
 
-  Widget _buildDesktopGrid(
-      BuildContext context, GlassTokens tokens, List<Task> tasks) {
+  Widget _buildDesktopGrid(BuildContext context, GlassTokens tokens, List<Task> tasks) {
     final w = MediaQuery.sizeOf(context).width;
+    final deviceClass = deviceClassOf(w);
     final densityPref = ref.watch(uiPrefsProvider).densityPreset;
     final DensityPreset preset = () {
       if (densityPref != 'auto') {
@@ -1335,25 +1034,17 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
             return DensityPreset.comfy;
         }
       }
-      if (w >= bpWidescreen) return DensityPreset.ultra;
-      if (w >= bpDesktop) return DensityPreset.compact;
+      if (w >= _ultraDensityMinWidth) return DensityPreset.ultra;
+      if (deviceClass.isLarge) return DensityPreset.compact;
       return DensityPreset.comfy;
     }();
 
     final theme = Theme.of(context);
     final filtered = tasks.toList(growable: false);
-    final q1 = filtered
-        .where((t) => t.quadrant == Quadrant.q1)
-        .toList(growable: false);
-    final q2 = filtered
-        .where((t) => t.quadrant == Quadrant.q2)
-        .toList(growable: false);
-    final q3 = filtered
-        .where((t) => t.quadrant == Quadrant.q3)
-        .toList(growable: false);
-    final q4 = filtered
-        .where((t) => t.quadrant == Quadrant.q4)
-        .toList(growable: false);
+    final q1 = filtered.where((t) => t.quadrant == Quadrant.q1).toList(growable: false);
+    final q2 = filtered.where((t) => t.quadrant == Quadrant.q2).toList(growable: false);
+    final q3 = filtered.where((t) => t.quadrant == Quadrant.q3).toList(growable: false);
+    final q4 = filtered.where((t) => t.quadrant == Quadrant.q4).toList(growable: false);
 
     return Theme(
       data: applyDensity(theme, preset),
@@ -1363,8 +1054,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           decoration: BoxDecoration(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(tokens.radius),
-            border: Border.all(
-                color: Colors.white.withValues(alpha: 0.06), width: 1),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1),
           ),
           child: Column(
             children: [
@@ -1406,6 +1096,62 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
           ),
         ),
       ),
+    );
+  }
+
+  void _openMatrixSettings({
+    required BuildContext context,
+    required MatrixController ctrl,
+    required bool compact,
+    required bool showAxisLegends,
+    required bool minimal,
+    required DeviceClass deviceClass,
+  }) {
+    if (isDesktop) {
+      context.push('/settings');
+      return;
+    }
+
+    Future<void> resetDemoTasks() async {
+      await ctrl.resetToDemo();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '\u2728 Tareas demo restauradas ($kDemoTaskCount tareas)',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => deviceClass.isCompact
+          ? SettingsSheetCompact(
+              onToggleTheme: ctrl.toggleTheme,
+              onToggleDensity: ctrl.toggleCompact,
+              compact: compact,
+              showAxisLegends: showAxisLegends,
+              onToggleAxisLegends: ctrl.toggleAxisLegends,
+              minimal: minimal,
+              onToggleMinimal: ctrl.toggleMinimal,
+              onResetToDemo: resetDemoTasks,
+            )
+          : SettingsSheet(
+              onToggleTheme: ctrl.toggleTheme,
+              onToggleDensity: ctrl.toggleCompact,
+              compact: compact,
+              showAxisLegends: showAxisLegends,
+              onToggleAxisLegends: ctrl.toggleAxisLegends,
+              minimal: minimal,
+              onToggleMinimal: ctrl.toggleMinimal,
+              onResetToDemo: resetDemoTasks,
+            ),
     );
   }
 
@@ -1458,11 +1204,8 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                   label: isEs ? 'Workflow' : 'Workflow',
                   onTap: () {
                     if (!ref.read(uiPrefsProvider).workflowPlanEnabled) {
-                      final msg = isEs
-                          ? 'Activa "Workflow plan" en Ajustes'
-                          : 'Enable "Workflow plan" in Settings';
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(SnackBar(content: Text(msg)));
+                      final msg = isEs ? 'Activa "Workflow plan" en Ajustes' : 'Enable "Workflow plan" in Settings';
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
                       return;
                     }
                     context.push('/list-mode');
@@ -1471,62 +1214,14 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
                 _NavBarItem(
                   icon: Icons.settings,
                   label: isEs ? 'Ajustes' : 'Settings',
-                  onTap: () {
-                    final width = MediaQuery.sizeOf(context).width;
-                    final isMobile = width < 600;
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      useSafeArea: true,
-                      builder: (_) => isMobile
-                          ? SettingsSheetCompact(
-                              onToggleTheme: ctrl.toggleTheme,
-                              onToggleDensity: ctrl.toggleCompact,
-                              compact: compact,
-                              showAxisLegends: showAxisLegends,
-                              onToggleAxisLegends: ctrl.toggleAxisLegends,
-                              minimal: minimal,
-                              onToggleMinimal: ctrl.toggleMinimal,
-                              onResetToDemo: () async {
-                                await ctrl.resetToDemo();
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        '\u2728 Tareas demo restauradas '
-                                        '($kDemoTaskCount tareas)',
-                                      ),
-                                      duration: const Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              },
-                            )
-                          : SettingsSheet(
-                              onToggleTheme: ctrl.toggleTheme,
-                              onToggleDensity: ctrl.toggleCompact,
-                              compact: compact,
-                              showAxisLegends: showAxisLegends,
-                              onToggleAxisLegends: ctrl.toggleAxisLegends,
-                              minimal: minimal,
-                              onToggleMinimal: ctrl.toggleMinimal,
-                              onResetToDemo: () async {
-                                await ctrl.resetToDemo();
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        '\u2728 Tareas demo restauradas '
-                                        '($kDemoTaskCount tareas)',
-                                      ),
-                                      duration: const Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              },
-                            ),
-                    );
-                  },
+                  onTap: () => _openMatrixSettings(
+                    context: context,
+                    ctrl: ctrl,
+                    compact: compact,
+                    showAxisLegends: showAxisLegends,
+                    minimal: minimal,
+                    deviceClass: deviceClassFromContext(context),
+                  ),
                 ),
               ];
 
@@ -1543,9 +1238,7 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
 
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: items
-                    .map((w) => Expanded(child: Center(child: w)))
-                    .toList(growable: false),
+                children: items.map((w) => Expanded(child: Center(child: w))).toList(growable: false),
               );
             },
           ),
@@ -1622,10 +1315,7 @@ Widget _buildBanner({
             Expanded(
               child: Text(
                 'Tu día de hoy parece muy cargado. Considera mover 1–2 tareas a mañana.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: cs.onSurface),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: cs.onSurface),
               ),
             ),
             const SizedBox(width: EisenSpacing.sm),
@@ -1700,9 +1390,7 @@ Widget _buildBanner({
 }
 
 void _openQ2Picker(BuildContext context, List<Task> tasks) {
-  final q2 = tasks
-      .where((t) => t.completedAt == null && t.quadrant == Quadrant.q2)
-      .toList();
+  final q2 = tasks.where((t) => t.completedAt == null && t.quadrant == Quadrant.q2).toList();
   showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
@@ -1724,8 +1412,10 @@ void _openQ2Picker(BuildContext context, List<Task> tasks) {
             subtitle: t.due != null
                 ? Text(
                     'Vence: ${t.due}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   )
                 : null,
             trailing: const Icon(Icons.chevron_right),
@@ -1767,8 +1457,7 @@ Widget? _adaptiveBanner(
             const Icon(Icons.wb_sunny_outlined),
             const SizedBox(width: EisenSpacing.sm),
             const Expanded(
-              child: Text(
-                  'Tus mañanas rinden más. Mueve una tarea Q2 a primera hora.'),
+              child: Text('Tus mañanas rinden más. Mueve una tarea Q2 a primera hora.'),
             ),
             TextButton(
               onPressed: onOpenQ2Picker,
@@ -1791,8 +1480,7 @@ Widget? _adaptiveBanner(
             const Icon(Icons.nightlight_round),
             const SizedBox(width: EisenSpacing.sm),
             const Expanded(
-              child: Text(
-                  'Has trabajado tarde varios días. Prueba un cierre antes.'),
+              child: Text('Has trabajado tarde varios días. Prueba un cierre antes.'),
             ),
             TextButton(
               onPressed: onOpenStats,
@@ -1815,8 +1503,7 @@ Widget? _adaptiveBanner(
             const Icon(Icons.call_split),
             const SizedBox(width: EisenSpacing.sm),
             const Expanded(
-              child: Text(
-                  'Inicias muchas tareas. Divide una grande en pasos pequeños hoy.'),
+              child: Text('Inicias muchas tareas. Divide una grande en pasos pequeños hoy.'),
             ),
             TextButton(
               onPressed: onOpenQ2Picker,
@@ -1904,19 +1591,14 @@ Future<void> _openAddTaskSheet(BuildContext context) async {
 }
 
 class _TopAxisLegends extends StatelessWidget {
-  const _TopAxisLegends(
-      {this.minimal = false,
-      required this.textScale,
-      required this.headerHeight});
+  const _TopAxisLegends({this.minimal = false, required this.textScale, required this.headerHeight});
   final bool minimal;
   // AppTextScale applied
   final double textScale;
   final double headerHeight;
   @override
   Widget build(BuildContext context) {
-    final l10n =
-        Localizations.of<AppLocalizations>(context, AppLocalizations) ??
-            AppLocalizationsEn();
+    final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
     final cs = Theme.of(context).colorScheme;
     final style = Theme.of(context).textTheme.labelLarge?.copyWith(
           color: cs.onSurfaceVariant,
@@ -1958,19 +1640,14 @@ class _TopAxisLegends extends StatelessWidget {
 }
 
 class _LeftAxisLegends extends StatelessWidget {
-  const _LeftAxisLegends(
-      {this.minimal = false,
-      required this.textScale,
-      required this.headerHeight});
+  const _LeftAxisLegends({this.minimal = false, required this.textScale, required this.headerHeight});
   final bool minimal;
   // AppTextScale applied
   final double textScale;
   final double headerHeight;
   @override
   Widget build(BuildContext context) {
-    final l10n =
-        Localizations.of<AppLocalizations>(context, AppLocalizations) ??
-            AppLocalizationsEn();
+    final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations) ?? AppLocalizationsEn();
     final cs = Theme.of(context).colorScheme;
     final style = Theme.of(context).textTheme.labelLarge?.copyWith(
           color: cs.onSurfaceVariant,
@@ -2146,8 +1823,7 @@ class _SemanticTreemapHeader extends StatelessWidget {
                 for (var i = 0; i < viewport.breadcrumbPath.length; i++) ...[
                   TextButton(
                     onPressed: () => onJumpToLevel(
-                      TreemapZoomLevel.values[
-                          i.clamp(0, TreemapZoomLevel.values.length - 1)],
+                      TreemapZoomLevel.values[i.clamp(0, TreemapZoomLevel.values.length - 1)],
                     ),
                     child: Text(viewport.breadcrumbPath[i]),
                   ),
@@ -2171,35 +1847,48 @@ class _SemanticTreemapHeader extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              FilledButton.tonalIcon(
-                onPressed: () async {
-                  final picked = await showMenu<TreemapGrouping>(
-                    context: context,
-                    position: const RelativeRect.fromLTRB(40, 140, 0, 0),
-                    items: [
-                      for (final grouping in TreemapGrouping.values)
-                        PopupMenuItem<TreemapGrouping>(
-                          value: grouping,
-                          child: Text(_groupingLabel(grouping)),
+              Flexible(
+                flex: 3,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FilledButton.tonalIcon(
+                        onPressed: () async {
+                          final picked = await showMenu<TreemapGrouping>(
+                            context: context,
+                            position: const RelativeRect.fromLTRB(40, 140, 0, 0),
+                            items: [
+                              for (final grouping in TreemapGrouping.values)
+                                PopupMenuItem<TreemapGrouping>(
+                                  value: grouping,
+                                  child: Text(_groupingLabel(grouping)),
+                                ),
+                            ],
+                          );
+                          if (picked != null) {
+                            onSelectGrouping(picked);
+                          }
+                        },
+                        icon: const Icon(Icons.account_tree_outlined),
+                        label: Text('Vista: ${_groupingLabel(viewport.grouping)}'),
+                      ),
+                      if (scene.lowConfidenceCount > 0) ...[
+                        const SizedBox(width: 8),
+                        ActionChip(
+                          avatar: const Icon(Icons.rule_folder_outlined, size: 16),
+                          label: Text('Revisar ${scene.lowConfidenceCount}'),
+                          onPressed: onOpenReviewCenter,
                         ),
+                      ],
                     ],
-                  );
-                  if (picked != null) {
-                    onSelectGrouping(picked);
-                  }
-                },
-                icon: const Icon(Icons.account_tree_outlined),
-                label: Text('Vista: ${_groupingLabel(viewport.grouping)}'),
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
-              if (scene.lowConfidenceCount > 0)
-                ActionChip(
-                  avatar: const Icon(Icons.rule_folder_outlined, size: 16),
-                  label: Text('Revisar ${scene.lowConfidenceCount}'),
-                  onPressed: onOpenReviewCenter,
-                ),
-              const Spacer(),
               Flexible(
+                flex: 2,
                 child: Text(
                   scene.subtitle,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(

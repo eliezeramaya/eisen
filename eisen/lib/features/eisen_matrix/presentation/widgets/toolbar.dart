@@ -1,3 +1,4 @@
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/ui/widgets/app_logo_home_button.dart';
 import 'package:flutter/material.dart';
 
@@ -107,8 +108,7 @@ class _AppToolbarState extends State<AppToolbar> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final isMobile = width < 600;
+    final isMobile = deviceClassFromContext(context).isCompact;
     final isEs = Localizations.localeOf(context).languageCode == 'es';
     final searchLabel = isEs ? 'Buscar' : 'Search';
     final statsLabel = isEs ? 'Stats' : 'Stats';

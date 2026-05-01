@@ -5,7 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class FocusTopBar extends ConsumerWidget {
-  const FocusTopBar({super.key});
+  const FocusTopBar({
+    super.key,
+    this.showNavigationActions = true,
+  });
+
+  final bool showNavigationActions;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,18 +25,20 @@ class FocusTopBar extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              if (context.canPop()) ...[
+              if (showNavigationActions && context.canPop()) ...[
                 _CircleIconButton(
                   icon: Icons.arrow_back,
                   onTap: () => context.pop(),
                 ),
                 const SizedBox(width: 8),
               ],
-              _CircleIconButton(
-                icon: Icons.home_outlined,
-                onTap: () => context.go('/matrix'),
-              ),
-              const SizedBox(width: 10),
+              if (showNavigationActions) ...[
+                _CircleIconButton(
+                  icon: Icons.home_outlined,
+                  onTap: () => context.go('/matrix'),
+                ),
+                const SizedBox(width: 10),
+              ],
               Text(
                 dateLabel,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(

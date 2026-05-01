@@ -1,3 +1,4 @@
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/core/theme/app_theme.dart';
 import 'package:eisen/core/ui/text_scaling.dart';
 import 'package:eisen/theme/density.dart';
@@ -24,8 +25,7 @@ class AppearancePreviewCard extends ConsumerWidget {
 
     // Base theme + minimal + density applied, mirroring EisenApp.
     final baseTheme = buildAppTheme(baseBrightness);
-    final withMinimal =
-        preview.minimal ? asMinimal(baseTheme) : baseTheme;
+    final withMinimal = preview.minimal ? asMinimal(baseTheme) : baseTheme;
 
     final densityEnum = () {
       switch (preview.densityPreset) {
@@ -38,8 +38,9 @@ class AppearancePreviewCard extends ConsumerWidget {
         case 'auto':
         default:
           // Auto: compact on small screens, comfy otherwise.
-          final width = MediaQuery.sizeOf(context).width;
-          return width < 600 ? DensityPreset.compact : DensityPreset.comfy;
+          return deviceClassFromContext(context).isCompact
+              ? DensityPreset.compact
+              : DensityPreset.comfy;
       }
     }();
     final themed = applyDensity(withMinimal, densityEnum);
@@ -70,8 +71,7 @@ class AppearancePreviewCard extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.check_circle,
-                      size: 18, color: cs.primary),
+                  Icon(Icons.check_circle, size: 18, color: cs.primary),
                   const SizedBox(width: 8),
                   Text(
                     'Tarea importante',
@@ -80,8 +80,8 @@ class AppearancePreviewCard extends ConsumerWidget {
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: cs.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(999),
@@ -126,4 +126,3 @@ class AppearancePreviewCard extends ConsumerWidget {
     );
   }
 }
-

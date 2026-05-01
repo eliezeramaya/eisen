@@ -13,9 +13,14 @@ import 'package:go_router/go_router.dart';
 /// Each category opens a [SettingsCategoryPage] with a breadcrumb
 /// "Settings ▸ {Category}" and its corresponding content.
 class SettingsMobileScaffold extends ConsumerStatefulWidget {
-  const SettingsMobileScaffold({super.key, this.initialSection = 'General'});
+  const SettingsMobileScaffold({
+    super.key,
+    this.initialSection = 'General',
+    this.useShellNavigation = false,
+  });
 
   final String initialSection;
+  final bool useShellNavigation;
 
   @override
   ConsumerState<SettingsMobileScaffold> createState() =>
@@ -91,15 +96,20 @@ class _SettingsMobileScaffoldState
         backgroundColor: cs.surface,
         foregroundColor: cs.onSurface,
         title: const Text('Settings'),
-        leading: BackButton(
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: AppLogoHomeButton(),
-          ),
-        ],
+        automaticallyImplyLeading: !widget.useShellNavigation,
+        leading: widget.useShellNavigation
+            ? null
+            : BackButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+        actions: widget.useShellNavigation
+            ? null
+            : const [
+                Padding(
+                  padding: EdgeInsets.only(right: 12),
+                  child: AppLogoHomeButton(),
+                ),
+              ],
       ),
       body: SafeArea(
         top: false,

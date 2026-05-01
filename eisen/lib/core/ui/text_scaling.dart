@@ -1,5 +1,5 @@
+import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/core/services/ui_prefs.dart';
-import 'package:eisen/core/ui/ui_breakpoints.dart';
 import 'package:flutter/material.dart';
 
 /// Maps user level 1..5 to a multiplicative factor around 1.0.
@@ -29,12 +29,13 @@ double effectiveTextScaleFactor(BuildContext context, UiPrefsData prefs) {
   final device = mq.textScaler.scale(1.0).clamp(0.8, 2.0);
   final user = userLevelToFactor(prefs.textScaleLevel);
   final raw = (device * user).toDouble();
-  // Clamp by screen class to keep within readable standards per device size
-  final sc = classifyScreen(mq.size);
-  final (minTSF, maxTSF) = switch (sc) {
-    ScreenClass.compact => (0.90, 1.30),
-    ScreenClass.medium => (0.90, 1.35),
-    ScreenClass.wide => (0.90, 1.40),
+  // Clamp by device class to keep within readable standards per device size.
+  final deviceClass = deviceClassOf(mq.size.width);
+  final (minTSF, maxTSF) = switch (deviceClass) {
+    DeviceClass.compact => (0.90, 1.30),
+    DeviceClass.medium => (0.90, 1.35),
+    DeviceClass.expanded => (0.90, 1.35),
+    DeviceClass.large => (0.90, 1.40),
   };
   return raw.clamp(minTSF, maxTSF);
 }

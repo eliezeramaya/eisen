@@ -51,7 +51,8 @@ class _AppToolbarState extends State<AppToolbar> {
   Widget build(BuildContext context) {
     final r = Responsive.of(context);
     // If parent already applies AppTextScale via MediaQuery, this is a no-op; otherwise it ensures consistency
-    final prefs = ProviderScope.containerOf(context, listen: false).read(uiPrefsControllerProvider);
+    final prefs = ProviderScope.containerOf(context, listen: false)
+        .read(uiPrefsControllerProvider);
     final uiTsf = AppTextScale.of(context, prefs);
     final isEs = Localizations.localeOf(context).languageCode == 'es';
     final fullViewLabel = isEs ? 'Vista completa' : 'Full view';
@@ -72,8 +73,8 @@ class _AppToolbarState extends State<AppToolbar> {
     final size = MediaQuery.of(context).size;
     final width = size.width;
     final compactActions = width < 1100; // icons-only when narrow
-    final isWide = width >= 600; // show logo + name on wide screens
-    final isMobileTopBar = width < 600;
+    final isWide = !r.isMobile; // show logo + name on wider screens
+    final isMobileTopBar = r.isMobile;
 
     Widget actionButton({
       required VoidCallback? onPressed,
@@ -104,7 +105,8 @@ class _AppToolbarState extends State<AppToolbar> {
       }
       return compactActions
           ? IconButton(onPressed: onPressed, tooltip: label, icon: Icon(icon))
-          : TextButton.icon(onPressed: onPressed, icon: Icon(icon), label: Text(label));
+          : TextButton.icon(
+              onPressed: onPressed, icon: Icon(icon), label: Text(label));
     }
 
     final theme = Theme.of(context);
@@ -125,8 +127,9 @@ class _AppToolbarState extends State<AppToolbar> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaleFactor: uiTsf), // AppTextScale applied
-              child: Container(
+            data: MediaQuery.of(context)
+                .copyWith(textScaleFactor: uiTsf), // AppTextScale applied
+            child: Container(
               height: 56,
               decoration: BoxDecoration(
                 color: bg,
@@ -150,7 +153,8 @@ class _AppToolbarState extends State<AppToolbar> {
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                          color:
+                              theme.colorScheme.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Icon(
@@ -172,13 +176,14 @@ class _AppToolbarState extends State<AppToolbar> {
                     ],
                   );
 
-                  final Widget logo = (widget.canExitZoom && widget.onExitZoom != null)
-                      ? InkWell(
-                          onTap: widget.onExitZoom,
-                          borderRadius: BorderRadius.circular(8),
-                          child: logoCore,
-                        )
-                      : logoCore;
+                  final Widget logo =
+                      (widget.canExitZoom && widget.onExitZoom != null)
+                          ? InkWell(
+                              onTap: widget.onExitZoom,
+                              borderRadius: BorderRadius.circular(8),
+                              child: logoCore,
+                            )
+                          : logoCore;
 
                   if (isMobileTopBar) {
                     // Mobile: align logo with center "+" and mirror bottom nav actions,
@@ -240,7 +245,8 @@ class _AppToolbarState extends State<AppToolbar> {
                         icon: Icons.history,
                         label: completedLabel,
                       ),
-                    if (widget.showWorkflowPlan && widget.onOpenWorkflow != null)
+                    if (widget.showWorkflowPlan &&
+                        widget.onOpenWorkflow != null)
                       actionButton(
                         onPressed: widget.onOpenWorkflow,
                         icon: Icons.view_timeline,
@@ -281,8 +287,8 @@ class _AppToolbarState extends State<AppToolbar> {
                     children: [
                       SizedBox(width: AppSpacing.sm * r.spacingScale),
                       Padding(
-                        padding:
-                            EdgeInsets.only(right: AppSpacing.sm * r.spacingScale),
+                        padding: EdgeInsets.only(
+                            right: AppSpacing.sm * r.spacingScale),
                         child: logo,
                       ),
                       ...actions,
@@ -312,7 +318,7 @@ class _ViewModeMenuState extends ConsumerState<_ViewModeMenu> {
     final current = prefs.viewMode; // 'treemap' | 'list'
     final width = MediaQuery.sizeOf(context).width;
     final isCompactBar = width < 1100;
-    final isMobileTopBar = width < 600;
+    final isMobileTopBar = Responsive.of(context).isMobile;
     final isEs = Localizations.localeOf(context).languageCode == 'es';
     final label = isEs ? 'Vista' : 'View';
     final icon = const Icon(Icons.view_agenda_outlined);
@@ -347,13 +353,15 @@ class _ViewModeMenuState extends ConsumerState<_ViewModeMenu> {
         tooltip: label,
         icon: icon,
         initialValue: current,
-        onSelected: (v) => ref.read(uiPrefsControllerProvider.notifier).setViewMode(v),
+        onSelected: (v) =>
+            ref.read(uiPrefsControllerProvider.notifier).setViewMode(v),
         itemBuilder: (ctx) => _entries(ctx, current),
       );
     }
     return MenuAnchor(
       builder: (ctx, controller, child) => TextButton.icon(
-        onPressed: () => controller.isOpen ? controller.close() : controller.open(),
+        onPressed: () =>
+            controller.isOpen ? controller.close() : controller.open(),
         icon: icon,
         label: Text(label),
       ),
@@ -366,8 +374,12 @@ class _ViewModeMenuState extends ConsumerState<_ViewModeMenu> {
     final treemap = isEs ? 'Treemap' : 'Treemap';
     final list = isEs ? 'Lista' : 'List';
     return [
-      CheckedPopupMenuItem(value: 'treemap', checked: current == 'treemap', child: Text(treemap)),
-      CheckedPopupMenuItem(value: 'list', checked: current == 'list', child: Text(list)),
+      CheckedPopupMenuItem(
+          value: 'treemap',
+          checked: current == 'treemap',
+          child: Text(treemap)),
+      CheckedPopupMenuItem(
+          value: 'list', checked: current == 'list', child: Text(list)),
     ];
   }
 
@@ -380,8 +392,10 @@ class _ViewModeMenuState extends ConsumerState<_ViewModeMenu> {
     return items
         .map(
           (e) => MenuItemButton(
-            onPressed: () => ref.read(uiPrefsControllerProvider.notifier).setViewMode(e.$1),
-            leadingIcon: current == e.$1 ? const Icon(Icons.check, size: 16) : null,
+            onPressed: () =>
+                ref.read(uiPrefsControllerProvider.notifier).setViewMode(e.$1),
+            leadingIcon:
+                current == e.$1 ? const Icon(Icons.check, size: 16) : null,
             child: Text(e.$2),
           ),
         )

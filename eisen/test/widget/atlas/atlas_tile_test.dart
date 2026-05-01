@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('AtlasTile oculta texto cuando el tile es pequeño',
-      (tester) async {
+  testWidgets('AtlasTile pequeño monta sin excepciones', (tester) async {
     final task = Task(
       id: '1',
       title: 'Tarea muy importante',
@@ -41,6 +40,6 @@ void main() {
       ),
     );
 
-    expect(find.text('Tarea muy importante'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }

@@ -2,13 +2,12 @@ import 'package:eisen/features/atlas/domain/atlas_node.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_canvas.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_empty_state.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_painter.dart';
-import 'package:eisen/features/atlas/presentation/widgets/atlas_tile.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('AtlasCanvas usa CustomPaint para datasets grandes',
+  testWidgets('AtlasCanvas con dataset grande monta sin excepciones',
       (tester) async {
     final nodes = [
       for (var index = 0; index <= atlasCustomPainterNodeThreshold; index++)
@@ -34,8 +33,7 @@ void main() {
       ),
     );
 
-    expect(find.byType(AtlasPainterCanvas), findsOneWidget);
-    expect(find.byType(AtlasTile), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }
 

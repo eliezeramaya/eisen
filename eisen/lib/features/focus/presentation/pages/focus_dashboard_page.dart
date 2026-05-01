@@ -10,7 +10,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class FocusDashboardPage extends ConsumerStatefulWidget {
-  const FocusDashboardPage({super.key});
+  const FocusDashboardPage({
+    super.key,
+    this.useShellNavigation = false,
+  });
+
+  /// True when this page is hosted by AppShell, which owns global navigation.
+  final bool useShellNavigation;
 
   @override
   ConsumerState<FocusDashboardPage> createState() => _FocusDashboardPageState();
@@ -62,14 +68,16 @@ class _FocusDashboardPageState extends ConsumerState<FocusDashboardPage> {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              FocusTopBar(),
-              SizedBox(height: 12),
-              FocusRhythmCard(),
-              SizedBox(height: 16),
-              FocusWindowCard(),
-              SizedBox(height: 16),
-              QuickFocusSection(),
+            children: [
+              FocusTopBar(
+                showNavigationActions: !widget.useShellNavigation,
+              ),
+              const SizedBox(height: 12),
+              const FocusRhythmCard(),
+              const SizedBox(height: 16),
+              const FocusWindowCard(),
+              const SizedBox(height: 16),
+              const QuickFocusSection(),
             ],
           ),
         ),
