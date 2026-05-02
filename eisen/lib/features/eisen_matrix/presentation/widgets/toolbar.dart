@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 class AppToolbar extends StatefulWidget {
   const AppToolbar({
     super.key,
-    required this.onToggleTheme,
+    this.onToggleTheme,
     required this.onQuery,
-    required this.themeMode,
+    this.themeMode = ThemeMode.system,
     required this.isSearchOpen,
     required this.searchQuery,
     required this.onToggleSearch,
@@ -28,8 +28,10 @@ class AppToolbar extends StatefulWidget {
     this.showViewModeToggle = false,
     this.minimal = false,
     this.showWorkflowPlan = false,
+    this.onOpenAtlas,
   });
-  final VoidCallback onToggleTheme;
+  final VoidCallback? onToggleTheme;
+  final VoidCallback? onOpenAtlas;
   final void Function(String) onQuery;
   final bool isSearchOpen;
   final String searchQuery;
@@ -84,28 +86,6 @@ class _AppToolbarState extends State<AppToolbar> {
     super.dispose();
   }
 
-  void _setThemeMode(ThemeMode target) {
-    var current = widget.themeMode;
-    var steps = 0;
-    while (current != target && steps < 3) {
-      switch (current) {
-        case ThemeMode.system:
-          current = ThemeMode.light;
-          break;
-        case ThemeMode.light:
-          current = ThemeMode.dark;
-          break;
-        case ThemeMode.dark:
-          current = ThemeMode.system;
-          break;
-      }
-      steps++;
-    }
-    for (var i = 0; i < steps; i++) {
-      widget.onToggleTheme();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isMobile = deviceClassFromContext(context).isCompact;
@@ -118,7 +98,7 @@ class _AppToolbarState extends State<AppToolbar> {
     final settingsLabel = isEs ? 'Ajustes' : 'Settings';
     final profileLabel = isEs ? 'Perfil' : 'Profile';
     final completedLabel = isEs ? 'Completed' : 'Completed';
-    final themeLabel = isEs ? 'Tema' : 'Theme';
+    final atlasLabel = isEs ? 'Atlas' : 'Atlas';
     final backLabel = isEs ? 'Volver' : 'Back';
     final viewLabel = widget.viewMode == 'list'
         ? (isEs ? 'Lista' : 'List')
@@ -266,14 +246,10 @@ class _AppToolbarState extends State<AppToolbar> {
                     child: Row(
                       children: [
                         mobileSettingsOrBackSlot(),
-                        mobileSlot(
-                          child: Center(
-                            child: _ThemeMenuButton(
-                              label: themeLabel,
-                              themeMode: widget.themeMode,
-                              onSelect: _setThemeMode,
-                            ),
-                          ),
+                        mobileCenteredAction(
+                          onPressed: widget.onOpenAtlas,
+                          icon: Icons.map_outlined,
+                          label: atlasLabel,
                         ),
                         mobileSlot(
                           child: const AppLogoHomeButton(
@@ -341,10 +317,10 @@ class _AppToolbarState extends State<AppToolbar> {
                             icon: Icons.history,
                             label: completedLabel,
                           ),
-                        _ThemeMenuButton(
-                          label: themeLabel,
-                          themeMode: widget.themeMode,
-                          onSelect: _setThemeMode,
+                        actionButton(
+                          onPressed: widget.onOpenAtlas,
+                          icon: Icons.map_outlined,
+                          label: atlasLabel,
                         ),
                         if (widget.showWorkflowPlan &&
                             widget.onOpenWorkflow != null)
@@ -397,69 +373,6 @@ class _AppToolbarState extends State<AppToolbar> {
                 : const SizedBox.shrink(),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ThemeMenuButton extends StatelessWidget {
-  const _ThemeMenuButton({
-    required this.label,
-    required this.themeMode,
-    required this.onSelect,
-  });
-
-  final String label;
-  final ThemeMode themeMode;
-  final void Function(ThemeMode) onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isEs = Localizations.localeOf(context).languageCode == 'es';
-    final icon = switch (themeMode) {
-      ThemeMode.dark => Icons.dark_mode,
-      ThemeMode.light => Icons.light_mode,
-      ThemeMode.system => Icons.brightness_4_outlined,
-    };
-
-    return PopupMenuButton<ThemeMode>(
-      onSelected: onSelect,
-      itemBuilder: (ctx) => [
-        PopupMenuItem(
-          value: ThemeMode.system,
-          child: Text(isEs ? 'Sistema' : 'System'),
-        ),
-        PopupMenuItem(
-          value: ThemeMode.light,
-          child: Text(isEs ? 'Claro' : 'Light'),
-        ),
-        PopupMenuItem(
-          value: ThemeMode.dark,
-          child: Text(isEs ? 'Oscuro' : 'Dark'),
-        ),
-      ],
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 24, color: colorScheme.onSurfaceVariant),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
       ),
     );
   }

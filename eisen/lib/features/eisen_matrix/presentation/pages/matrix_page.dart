@@ -244,6 +244,9 @@ class _MatrixPageState extends ConsumerState<MatrixPage> {
               onToggleTheme: ctrl.toggleTheme,
               onQuery: ctrl.setSearchQuery,
               themeMode: themeMode,
+              onOpenAtlas: () => ref
+                  .read(taskViewModeProvider.notifier)
+                  .update(TaskViewMode.atlas),
               minimal: minimal,
               onToggleMinimal: ctrl.toggleMinimal,
               isSearchOpen: isSearchOpen,
