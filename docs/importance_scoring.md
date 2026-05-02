@@ -2,7 +2,8 @@
 
 **Feature**: `features/importance/`  
 **Estado**: ✅ Implementado y funcional  
-**Última actualización**: Abril 2026
+**Última actualización**: Abril 2026  
+**Last reviewed**: 2026-05-02
 
 ---
 

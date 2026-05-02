@@ -17,8 +17,11 @@ class LocalStorageKeys {
   static const filtersHorizons = '${filtersPrefix}horizons';
   static const filtersEnergies = '${filtersPrefix}energies';
   static const filtersConfidences = '${filtersPrefix}confidences';
+  static const filtersShowArchived = '${filtersPrefix}showArchived';
 
   static const taskViewMode = '${settingsPrefix}task_view_mode';
+  static const atlasGrouping = '${settingsPrefix}atlas_grouping';
+  static const atlasSavedViews = '${settingsPrefix}atlas_saved_views';
 
   static const localSchemaVersion = '${localSchemaPrefix}version';
   static const localSchemaLastMigratedAt =

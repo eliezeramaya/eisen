@@ -1,5 +1,7 @@
 # Calendar/Gantt
 
+**Last reviewed**: 2026-05-02
+
 This document explains the architecture of the Calendar/Gantt view, UI tokens, keyboard/mouse shortcuts, and known limits. It also links to a short demo GIF for contributors.
 
 ## Architecture

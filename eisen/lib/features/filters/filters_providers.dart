@@ -8,6 +8,7 @@ import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _kCategoryFiltersKey = LocalStorageKeys.filtersCategories;
 const _kKindFiltersKey = LocalStorageKeys.filtersKinds;
@@ -16,6 +17,8 @@ const _kEnergyFiltersKey = LocalStorageKeys.filtersEnergies;
 const _kConfidenceFiltersKey = LocalStorageKeys.filtersConfidences;
 
 final filtersStorageProvider = Provider<StoragePrefs>((ref) => StoragePrefs());
+final showArchivedPrefsProvider =
+    Provider<ShowArchivedPrefs>((ref) => const ShowArchivedPrefs());
 
 final activeCategoryFiltersProvider =
     NotifierProvider<ActiveCategoryFilters, List<String>>(
@@ -27,16 +30,46 @@ final showArchivedProvider = NotifierProvider<ShowArchived, bool>(
 );
 
 class ShowArchived extends Notifier<bool> {
+  late final ShowArchivedPrefs _prefs;
+  bool _hasLocalUpdate = false;
+
   @override
-  bool build() => false;
+  bool build() {
+    _prefs = ref.read(showArchivedPrefsProvider);
+    unawaited(_loadAsync());
+    return false;
+  }
+
+  Future<void> _loadAsync() async {
+    final loaded = await _prefs.load();
+    if (!ref.mounted || _hasLocalUpdate) return;
+    state = loaded;
+  }
 
   void update(bool value) {
+    _hasLocalUpdate = true;
     state = value;
+    unawaited(_prefs.save(value));
+  }
+}
+
+class ShowArchivedPrefs {
+  const ShowArchivedPrefs();
+
+  Future<bool> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(LocalStorageKeys.filtersShowArchived) ?? false;
+  }
+
+  Future<void> save(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(LocalStorageKeys.filtersShowArchived, value);
   }
 }
 
 class ActiveCategoryFilters extends Notifier<List<String>> {
   late final StoragePrefs _storage = ref.read(filtersStorageProvider);
+  bool _hasLocalUpdate = false;
 
   @override
   List<String> build() {
@@ -46,12 +79,13 @@ class ActiveCategoryFilters extends Notifier<List<String>> {
 
   Future<void> _loadAsync() async {
     final loaded = await _storage.loadStringListField(_kCategoryFiltersKey);
-    if (ref.mounted) {
+    if (ref.mounted && !_hasLocalUpdate) {
       state = loaded;
     }
   }
 
   Future<void> update(List<String> newFilters) async {
+    _hasLocalUpdate = true;
     state = newFilters;
     await _storage.saveStringListField(_kCategoryFiltersKey, newFilters);
   }
@@ -64,6 +98,7 @@ final activeKindFiltersProvider =
 
 class ActiveKindFilters extends Notifier<List<EntryKind>> {
   late final StoragePrefs _storage = ref.read(filtersStorageProvider);
+  bool _hasLocalUpdate = false;
 
   @override
   List<EntryKind> build() {
@@ -73,13 +108,14 @@ class ActiveKindFilters extends Notifier<List<EntryKind>> {
 
   Future<void> _loadAsync() async {
     final names = await _storage.loadStringListField(_kKindFiltersKey);
-    if (!ref.mounted) {
+    if (!ref.mounted || _hasLocalUpdate) {
       return;
     }
     state = _parseEnumList(names, EntryKind.values);
   }
 
   Future<void> update(List<EntryKind> newFilters) async {
+    _hasLocalUpdate = true;
     state = newFilters;
     await _storage.saveStringListField(
       _kKindFiltersKey,
@@ -95,6 +131,7 @@ final activeHorizonFiltersProvider =
 
 class ActiveHorizonFilters extends Notifier<List<TimeHorizon>> {
   late final StoragePrefs _storage = ref.read(filtersStorageProvider);
+  bool _hasLocalUpdate = false;
 
   @override
   List<TimeHorizon> build() {
@@ -104,13 +141,14 @@ class ActiveHorizonFilters extends Notifier<List<TimeHorizon>> {
 
   Future<void> _loadAsync() async {
     final names = await _storage.loadStringListField(_kHorizonFiltersKey);
-    if (!ref.mounted) {
+    if (!ref.mounted || _hasLocalUpdate) {
       return;
     }
     state = _parseEnumList(names, TimeHorizon.values);
   }
 
   Future<void> update(List<TimeHorizon> newFilters) async {
+    _hasLocalUpdate = true;
     state = newFilters;
     await _storage.saveStringListField(
       _kHorizonFiltersKey,
@@ -126,6 +164,7 @@ final activeEnergyFiltersProvider =
 
 class ActiveEnergyFilters extends Notifier<List<EnergyLevel>> {
   late final StoragePrefs _storage = ref.read(filtersStorageProvider);
+  bool _hasLocalUpdate = false;
 
   @override
   List<EnergyLevel> build() {
@@ -135,13 +174,14 @@ class ActiveEnergyFilters extends Notifier<List<EnergyLevel>> {
 
   Future<void> _loadAsync() async {
     final names = await _storage.loadStringListField(_kEnergyFiltersKey);
-    if (!ref.mounted) {
+    if (!ref.mounted || _hasLocalUpdate) {
       return;
     }
     state = _parseEnumList(names, EnergyLevel.values);
   }
 
   Future<void> update(List<EnergyLevel> newFilters) async {
+    _hasLocalUpdate = true;
     state = newFilters;
     await _storage.saveStringListField(
       _kEnergyFiltersKey,
@@ -157,6 +197,7 @@ final activeConfidenceFiltersProvider =
 
 class ActiveConfidenceFilters extends Notifier<List<ConfidenceLevel>> {
   late final StoragePrefs _storage = ref.read(filtersStorageProvider);
+  bool _hasLocalUpdate = false;
 
   @override
   List<ConfidenceLevel> build() {
@@ -166,13 +207,14 @@ class ActiveConfidenceFilters extends Notifier<List<ConfidenceLevel>> {
 
   Future<void> _loadAsync() async {
     final names = await _storage.loadStringListField(_kConfidenceFiltersKey);
-    if (!ref.mounted) {
+    if (!ref.mounted || _hasLocalUpdate) {
       return;
     }
     state = _parseEnumList(names, ConfidenceLevel.values);
   }
 
   Future<void> update(List<ConfidenceLevel> newFilters) async {
+    _hasLocalUpdate = true;
     state = newFilters;
     await _storage.saveStringListField(
       _kConfidenceFiltersKey,

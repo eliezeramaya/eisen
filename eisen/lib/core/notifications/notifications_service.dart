@@ -6,17 +6,18 @@ class NotificationsService {
   static bool _initialized = false;
   static Future<void> Function(String payload)? _onNudgeSelected;
 
-  static void setOnNudgeSelected(
-      Future<void> Function(String payload)? handler) {
+  static void setOnNudgeSelected(Future<void> Function(String payload)? handler) {
     _onNudgeSelected = handler;
   }
 
   static Future<void> init() async {
+    if (kIsWeb) return; // flutter_local_notifications not supported on web
     if (_initialized) return;
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings();
+    const linux = LinuxInitializationSettings(defaultActionName: 'Open');
     await _plugin.initialize(
-      const InitializationSettings(android: android, iOS: ios),
+      const InitializationSettings(android: android, iOS: ios, linux: linux),
       onDidReceiveNotificationResponse: (resp) async {
         final payload = resp.payload;
         if (payload != null) {
@@ -35,14 +36,12 @@ class NotificationsService {
   }) async {
     try {
       if (kDebugMode) {
-        debugPrint(
-            '[NotificationsService] scheduleDaily (debug only): id=$id time=$time title=$title');
+        debugPrint('[NotificationsService] scheduleDaily (debug only): id=$id time=$time title=$title');
         return;
       }
       await init();
       const details = NotificationDetails(
-        android: AndroidNotificationDetails('daily', 'Daily',
-            importance: Importance.defaultImportance),
+        android: AndroidNotificationDetails('daily', 'Daily', importance: Importance.defaultImportance),
         iOS: DarwinNotificationDetails(),
       );
       // Fallback in dev: show a one-off notification instead of exact daily schedule
@@ -61,6 +60,7 @@ class NotificationsService {
 
   static Future<void> cancel(int id) async {
     try {
+      if (kIsWeb) return;
       if (kDebugMode) {
         debugPrint('[NotificationsService] cancel (debug only): id=$id');
         return;
@@ -79,8 +79,7 @@ class NotificationsService {
   }) async {
     try {
       if (kDebugMode) {
-        debugPrint(
-            '[NotificationsService] show (debug only): id=$id title=$title');
+        debugPrint('[NotificationsService] show (debug only): id=$id title=$title');
         return;
       }
       await init();
@@ -108,8 +107,7 @@ class NotificationsService {
   }) async {
     try {
       if (kDebugMode) {
-        debugPrint(
-            '[NotificationsService] showNudge (debug only): id=$id title=$title');
+        debugPrint('[NotificationsService] showNudge (debug only): id=$id title=$title');
         return;
       }
       await init();
@@ -144,8 +142,7 @@ class NotificationsService {
   }) async {
     try {
       if (kDebugMode) {
-        debugPrint(
-            '[NotificationsService] scheduleNudge (debug only): id=$id delay=$delay title=$title');
+        debugPrint('[NotificationsService] scheduleNudge (debug only): id=$id delay=$delay title=$title');
         return;
       }
       await init();

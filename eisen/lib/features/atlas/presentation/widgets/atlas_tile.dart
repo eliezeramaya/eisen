@@ -1,5 +1,6 @@
 import 'package:eisen/features/atlas/application/atlas_animation_controller.dart';
 import 'package:eisen/features/atlas/domain/atlas_node.dart';
+import 'package:eisen/features/atlas/domain/atlas_semantic_zoom.dart';
 import 'package:eisen/features/atlas/domain/atlas_visual_encoding.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_group_header.dart';
 import 'package:flutter/material.dart';
@@ -9,16 +10,28 @@ class AtlasTile extends StatefulWidget {
     super.key,
     required this.node,
     required this.size,
+    required this.minReadableSize,
+    required this.compactMode,
+    required this.enableHover,
+    this.exportMode = false,
+    this.semanticLevel = AtlasSemanticLevel.task,
     required this.isSelected,
     required this.isFocused,
+    this.isInsightHighlighted = false,
     required this.onTap,
     required this.onLongPress,
   });
 
   final AtlasNode node;
   final Size size;
+  final Size minReadableSize;
+  final bool compactMode;
+  final bool enableHover;
+  final bool exportMode;
+  final AtlasSemanticLevel semanticLevel;
   final bool isSelected;
   final bool isFocused;
+  final bool isInsightHighlighted;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -33,28 +46,36 @@ class _AtlasTileState extends State<AtlasTile> {
   Widget build(BuildContext context) {
     final node = widget.node;
     final theme = Theme.of(context);
+    final hovered = widget.exportMode ? false : _hovered;
 
     if (node.type == AtlasNodeType.group) {
       return _InteractiveShell(
+        enableHover: widget.enableHover,
         onHover: (value) => setState(() => _hovered = value),
         onTap: widget.onTap,
         onLongPress: widget.onLongPress,
         child: AnimatedContainer(
           duration: AtlasAnimationTokens.tile,
           curve: AtlasAnimationTokens.curve,
-          padding: const EdgeInsets.fromLTRB(8, 5, 8, 4),
+          padding: EdgeInsets.fromLTRB(
+            widget.compactMode ? 6 : 8,
+            widget.compactMode ? 4 : 5,
+            widget.compactMode ? 6 : 8,
+            4,
+          ),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: _hovered ? 0.54 : 0.34,
+              alpha: hovered ? 0.54 : 0.34,
             ),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: theme.colorScheme.outlineVariant.withValues(
-                alpha: _hovered ? 0.88 : 0.58,
+                alpha: hovered ? 0.88 : 0.58,
               ),
             ),
           ),
-          child: widget.size.width < 80 || widget.size.height < 26
+          child: widget.size.width < widget.minReadableSize.width ||
+                  widget.size.height < 26
               ? const SizedBox.shrink()
               : AtlasGroupHeader(label: node.label, weight: node.weight),
         ),
@@ -69,27 +90,45 @@ class _AtlasTileState extends State<AtlasTile> {
       theme: theme,
       isFocused: widget.isFocused,
     );
-    final showFullText = widget.size.width >= 92 && widget.size.height >= 52;
-    final showShortText = widget.size.width >= 60 && widget.size.height >= 36;
+    final showFullText = widget.semanticLevel.showRichTaskContent &&
+        !widget.compactMode &&
+        widget.size.width >= widget.minReadableSize.width + 20 &&
+        widget.size.height >= widget.minReadableSize.height + 8;
+    final showShortText = widget.size.width >= widget.minReadableSize.width &&
+        widget.size.height >= widget.minReadableSize.height;
     final onlyBlock = widget.size.width < 36 || widget.size.height < 24;
     final borderWidth = widget.isSelected
         ? 2.4
-        : encoding.showConfidenceBorder
-            ? 1.6
-            : 0.8;
+        : widget.isInsightHighlighted
+            ? 2.0
+            : encoding.showConfidenceBorder
+                ? 1.6
+                : 0.8;
+    final borderColor = widget.isSelected
+        ? theme.colorScheme.primary
+        : widget.isInsightHighlighted
+            ? theme.colorScheme.tertiary
+            : encoding.borderColor;
 
     return _InteractiveShell(
+      enableHover: widget.enableHover,
       onHover: (value) => setState(() => _hovered = value),
       onTap: widget.onTap,
       onLongPress: widget.onLongPress,
       child: AnimatedScale(
-        duration: AtlasAnimationTokens.tile,
+        duration:
+            widget.compactMode ? Duration.zero : AtlasAnimationTokens.tile,
         curve: AtlasAnimationTokens.curve,
-        scale: widget.isSelected ? 1.015 : (_hovered ? 1.008 : 1),
+        scale: widget.compactMode
+            ? 1
+            : widget.isSelected
+                ? 1.015
+                : (hovered ? 1.008 : 1),
         child: AnimatedContainer(
-          duration: AtlasAnimationTokens.tile,
+          duration:
+              widget.compactMode ? Duration.zero : AtlasAnimationTokens.tile,
           curve: AtlasAnimationTokens.curve,
-          padding: const EdgeInsets.all(7),
+          padding: EdgeInsets.all(widget.compactMode ? 5 : 7),
           foregroundDecoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             boxShadow: encoding.showFocusGlow
@@ -105,8 +144,8 @@ class _AtlasTileState extends State<AtlasTile> {
           decoration: BoxDecoration(
             color: encoding.fillColor.withValues(alpha: encoding.opacity),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: encoding.borderColor, width: borderWidth),
-            boxShadow: _hovered
+            border: Border.all(color: borderColor, width: borderWidth),
+            boxShadow: hovered && !widget.compactMode
                 ? [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.12),
@@ -124,7 +163,9 @@ class _AtlasTileState extends State<AtlasTile> {
                     if (showFullText || showShortText)
                       Expanded(
                         child: Text(
-                          showFullText ? task.title : _shortLabel(task.title),
+                          showFullText || widget.compactMode
+                              ? task.title
+                              : _shortLabel(task.title),
                           maxLines: showFullText ? 3 : 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.labelMedium?.copyWith(
@@ -153,13 +194,63 @@ class _AtlasTileState extends State<AtlasTile> {
                           ),
                           if (widget.isFocused) ...[
                             const Spacer(),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: encoding.labelColor.withValues(
+                                  alpha: 0.14,
+                                ),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 2,
+                                ),
+                                child: Text(
+                                  'Foco',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: encoding.labelColor,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ] else if (widget.isInsightHighlighted &&
+                              widget.size.width >= 128) ...[
+                            const Spacer(),
                             Icon(
-                              Icons.bolt,
+                              Icons.auto_awesome,
                               size: 13,
-                              color: encoding.labelColor,
+                              color: encoding.labelColor.withValues(
+                                alpha: 0.88,
+                              ),
                             ),
                           ],
                         ],
+                      ),
+                    if (widget.compactMode && widget.isInsightHighlighted)
+                      Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.tertiary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    if (widget.compactMode && widget.isFocused)
+                      Align(
+                        alignment: Alignment.bottomRight,
+                        child: Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: encoding.labelColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -178,12 +269,14 @@ class _AtlasTileState extends State<AtlasTile> {
 class _InteractiveShell extends StatelessWidget {
   const _InteractiveShell({
     required this.child,
+    required this.enableHover,
     required this.onHover,
     this.onTap,
     this.onLongPress,
   });
 
   final Widget child;
+  final bool enableHover;
   final ValueChanged<bool> onHover;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
@@ -192,8 +285,8 @@ class _InteractiveShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => onHover(true),
-      onExit: (_) => onHover(false),
+      onEnter: enableHover ? (_) => onHover(true) : null,
+      onExit: enableHover ? (_) => onHover(false) : null,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,

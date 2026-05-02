@@ -2,7 +2,8 @@
 
 **Módulos**: `features/insights_ml/`, `features/insights_adaptive/`  
 **Estado**: ✅ Capas 0, 1 y 2 implementadas | 🚧 Capa 3 pendiente  
-**Última actualización**: Abril 2026
+**Última actualización**: Abril 2026  
+**Last reviewed**: 2026-05-02
 
 ---
 

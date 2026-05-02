@@ -16,7 +16,7 @@ void main() {
 
   test('mantiene widgets para datasets debajo del umbral', () {
     final nodes = [
-      for (var index = 0; index < atlasCustomPainterNodeThreshold; index++)
+      for (var index = 0; index < atlasCustomPainterNodeThreshold - 1; index++)
         _node('task:$index'),
     ];
 

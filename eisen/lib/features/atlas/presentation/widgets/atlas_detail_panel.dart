@@ -10,6 +10,8 @@ class AtlasDetailPanel extends StatelessWidget {
     required this.onEdit,
     required this.onReclassify,
     required this.onArchive,
+    required this.onRestore,
+    required this.labelStyle,
     this.onClose,
   });
 
@@ -18,6 +20,8 @@ class AtlasDetailPanel extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onReclassify;
   final VoidCallback onArchive;
+  final VoidCallback onRestore;
+  final QuadrantLabelStyle labelStyle;
   final VoidCallback? onClose;
 
   @override
@@ -48,6 +52,8 @@ class AtlasDetailPanel extends StatelessWidget {
                 onEdit: onEdit,
                 onReclassify: onReclassify,
                 onArchive: onArchive,
+                onRestore: onRestore,
+                labelStyle: labelStyle,
                 onClose: onClose,
               ),
       ),
@@ -62,6 +68,8 @@ class _TaskDetail extends StatelessWidget {
     required this.onEdit,
     required this.onReclassify,
     required this.onArchive,
+    required this.onRestore,
+    required this.labelStyle,
     this.onClose,
   });
 
@@ -70,15 +78,14 @@ class _TaskDetail extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onReclassify;
   final VoidCallback onArchive;
+  final VoidCallback onRestore;
+  final QuadrantLabelStyle labelStyle;
   final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final quadrant = getQuadrantLabel(
-      task.quadrant,
-      QuadrantLabelStyle.professional,
-    );
+    final quadrant = getQuadrantLabel(task.quadrant, labelStyle);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -101,18 +108,34 @@ class _TaskDetail extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        _MetaRow(label: 'Cuadrante', value: quadrant.shortLabel),
-        _MetaRow(label: 'Categoría', value: _categoryLabel(task)),
-        _MetaRow(label: 'Prioridad', value: '${task.priority}/10'),
-        _MetaRow(label: 'Minutos', value: '${task.minutes} min'),
-        _MetaRow(
-            label: 'Horizonte', value: task.horizon?.label ?? 'Sin horizonte'),
-        _MetaRow(label: 'Energía', value: task.energy?.label ?? 'Sin energía'),
-        _MetaRow(
-          label: 'Confianza',
-          value: task.classificationConfidence?.label ?? 'Sin confianza',
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _MetaRow(label: 'Cuadrante', value: quadrant.title),
+                _MetaRow(label: 'Categoría', value: _categoryLabel(task)),
+                _MetaRow(label: 'Prioridad', value: '${task.priority}/10'),
+                _MetaRow(label: 'Minutos', value: '${task.minutes} min'),
+                _MetaRow(
+                  label: 'Horizonte',
+                  value: task.horizon?.label ?? 'Sin horizonte',
+                ),
+                _MetaRow(
+                  label: 'Energía',
+                  value: task.energy?.label ?? 'Sin energía',
+                ),
+                _MetaRow(
+                  label: 'Confianza',
+                  value:
+                      task.classificationConfidence?.label ?? 'Sin confianza',
+                ),
+                if (task.notes?.trim().isNotEmpty == true)
+                  _MetaRow(label: 'Notas', value: task.notes!.trim()),
+              ],
+            ),
+          ),
         ),
-        const Spacer(),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -133,9 +156,14 @@ class _TaskDetail extends StatelessWidget {
               label: const Text('Reclasificar'),
             ),
             OutlinedButton.icon(
-              onPressed: task.isArchived ? null : onArchive,
-              icon: const Icon(Icons.archive_outlined, size: 18),
-              label: const Text('Archivar'),
+              onPressed: task.isArchived ? onRestore : onArchive,
+              icon: Icon(
+                task.isArchived
+                    ? Icons.unarchive_outlined
+                    : Icons.archive_outlined,
+                size: 18,
+              ),
+              label: Text(task.isArchived ? 'Restaurar' : 'Archivar'),
             ),
           ],
         ),
@@ -168,6 +196,7 @@ class _MetaRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 92,
@@ -181,8 +210,7 @@ class _MetaRow extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              softWrap: true,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),

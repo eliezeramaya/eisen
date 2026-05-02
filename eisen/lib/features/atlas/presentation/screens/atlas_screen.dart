@@ -1,9 +1,23 @@
+import 'dart:async';
+
+import 'package:eisen/core/observability/observability_provider.dart';
 import 'package:eisen/core/responsive/app_breakpoints.dart';
+import 'package:eisen/core/services/ui_prefs.dart';
+import 'package:eisen/features/atlas/application/atlas_export_filename.dart';
+import 'package:eisen/features/atlas/application/atlas_export_service.dart';
+import 'package:eisen/features/atlas/application/atlas_export_write_result.dart';
+import 'package:eisen/features/atlas/application/atlas_export_writer.dart';
 import 'package:eisen/features/atlas/application/atlas_providers.dart';
+import 'package:eisen/features/atlas/application/atlas_zoom_controller.dart';
+import 'package:eisen/features/atlas/domain/atlas_grouping.dart';
+import 'package:eisen/features/atlas/domain/atlas_insight.dart';
+import 'package:eisen/features/atlas/domain/atlas_responsive_config.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_breadcrumb.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_canvas.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_detail_panel.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_empty_state.dart';
+import 'package:eisen/features/atlas/presentation/widgets/atlas_export_frame.dart';
+import 'package:eisen/features/atlas/presentation/widgets/atlas_insights_strip.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_legend.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_toolbar.dart';
 import 'package:eisen/features/classification/domain/entities/classification_metadata.dart';
@@ -17,30 +31,62 @@ import 'package:eisen/features/classification/presentation/controllers/classific
 import 'package:eisen/features/classification/presentation/controllers/classification_rules_controller.dart';
 import 'package:eisen/features/classification/presentation/widgets/quick_reclassify_sheet.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:eisen/features/eisen_matrix/presentation/controllers/matrix_controller.dart';
+import 'package:eisen/features/eisen_matrix/presentation/pages/task_editor_page.dart';
+import 'package:eisen/features/filters/filters_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AtlasScreen extends ConsumerWidget {
+class AtlasScreen extends ConsumerStatefulWidget {
   const AtlasScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AtlasScreen> createState() => _AtlasScreenState();
+}
+
+class _AtlasScreenState extends ConsumerState<AtlasScreen> {
+  final GlobalKey _atlasExportBoundaryKey = GlobalKey(
+    debugLabel: 'atlas-export-boundary',
+  );
+  bool _isExportingAtlas = false;
+  DateTime? _exportStartedAt;
+
+  @override
+  Widget build(BuildContext context) {
     final nodes = ref.watch(atlasVisibleNodesProvider);
     final focusedIds = ref.watch(atlasFocusedTaskIdsProvider);
+    final insightTaskIds = ref.watch(atlasInsightTaskIdsProvider);
+    final insights = ref.watch(atlasInsightsProvider);
+    final grouping = ref.watch(atlasGroupingProvider);
     final selectedTask = ref.watch(atlasSelectedTaskProvider);
+    final labelStyle = ref.watch(
+      uiPrefsProvider.select((prefs) => prefs.quadrantLabelStyle),
+    );
     final allTasks = ref.watch(matrixTasksProvider);
     final atlasTasks = ref.watch(atlasTasksProvider);
     final hasFilters = ref.watch(atlasHasActiveFiltersProvider);
+    final showArchived = ref.watch(showArchivedProvider);
     final path = ref.watch(atlasResolvedDrilldownPathProvider);
+    final zoomState = ref.watch(atlasZoomProvider);
     final width = MediaQuery.sizeOf(context).width;
+    final config = atlasResponsiveConfigForWidth(width);
     final deviceClass = deviceClassOf(width);
-    final showDetailPanel = deviceClass.isExpandedUp;
+    final showDetailPanel = config.enableSidePanel && deviceClass.isExpandedUp;
     final emptyKind = _emptyKind(
       allTasks: allTasks,
       atlasTasks: atlasTasks,
       hasFilters: hasFilters,
     );
+
+    Future<void> openEdit(Task task) async {
+      ref.read(matrixControllerProvider.notifier).select(task.id);
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => TaskEditorPage(task: task),
+        ),
+      );
+    }
 
     Future<void> openReclassify(Task task) async {
       final categories = ref.read(categoryConfigControllerProvider);
@@ -74,7 +120,7 @@ class AtlasScreen extends ConsumerWidget {
         },
       );
       if (updatedTask != null) {
-        ref.read(atlasSelectedTaskProvider.notifier).select(updatedTask);
+        ref.read(atlasSelectedTaskIdProvider.notifier).select(updatedTask!.id);
       }
 
       await ref
@@ -99,8 +145,99 @@ class AtlasScreen extends ConsumerWidget {
       );
     }
 
+    Task? taskForInsight(AtlasInsight insight) {
+      final taskId = insight.primaryTaskId;
+      if (taskId == null) return null;
+      for (final candidate in atlasTasks) {
+        if (candidate.id == taskId) return candidate;
+      }
+      return null;
+    }
+
+    void showAtlasFeedback(String message) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+
+    Future<void> exportAtlasPng() async {
+      if (_isExportingAtlas) return;
+      final startedAt = DateTime.now();
+      setState(() {
+        _isExportingAtlas = true;
+        _exportStartedAt = startedAt;
+      });
+
+      try {
+        await WidgetsBinding.instance.endOfFrame;
+        final bytes = await const AtlasExportService().exportBoundaryToPng(
+          repaintBoundaryKey: _atlasExportBoundaryKey,
+          pixelRatio: AtlasExportPixelRatio.standard,
+        );
+        final filename = atlasExportFilename(date: startedAt);
+        final result = await const AtlasExportWriter().writePng(
+          bytes: bytes,
+          filename: filename,
+        );
+        showAtlasFeedback(_atlasExportSuccessMessage(result));
+      } on AtlasExportException catch (error) {
+        final context = _atlasExportErrorContext(
+          grouping: grouping,
+          visibleTaskCount: atlasTasks.length,
+          nodeCount: nodes.length,
+          hasFilters: hasFilters,
+          showArchived: showArchived,
+          pixelRatio: AtlasExportPixelRatio.standard,
+        );
+        await ref.read(errorReporterProvider).captureMessage(
+              'Atlas export failed: ${error.message}',
+              context: context,
+            );
+        showAtlasFeedback(error.message);
+      } on AtlasExportWriteException catch (error) {
+        final context = _atlasExportErrorContext(
+          grouping: grouping,
+          visibleTaskCount: atlasTasks.length,
+          nodeCount: nodes.length,
+          hasFilters: hasFilters,
+          showArchived: showArchived,
+          pixelRatio: AtlasExportPixelRatio.standard,
+        );
+        await ref.read(errorReporterProvider).captureMessage(
+              'Atlas export write failed: ${error.message}',
+              context: context,
+            );
+        showAtlasFeedback(error.message);
+      } catch (error, stackTrace) {
+        final context = _atlasExportErrorContext(
+          grouping: grouping,
+          visibleTaskCount: atlasTasks.length,
+          nodeCount: nodes.length,
+          hasFilters: hasFilters,
+          showArchived: showArchived,
+          pixelRatio: AtlasExportPixelRatio.standard,
+        );
+        await ref.read(errorReporterProvider).captureException(
+              error,
+              stackTrace,
+              context: context,
+            );
+        showAtlasFeedback(
+          'No se pudo exportar Atlas. Intenta de nuevo cuando el mapa termine de cargar.',
+        );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isExportingAtlas = false;
+            _exportStartedAt = null;
+          });
+        }
+      }
+    }
+
     void selectTask(Task task) {
-      ref.read(atlasSelectedTaskProvider.notifier).select(task);
+      ref.read(atlasSelectedTaskIdProvider.notifier).select(task.id);
       ref.read(matrixControllerProvider.notifier).select(task.id);
       if (!showDetailPanel) {
         showModalBottomSheet<void>(
@@ -108,30 +245,50 @@ class AtlasScreen extends ConsumerWidget {
           showDragHandle: true,
           isScrollControlled: true,
           useSafeArea: true,
-          builder: (_) => SizedBox(
-            height: MediaQuery.sizeOf(context).height * 0.62,
-            child: Padding(
+          builder: (_) => DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.66,
+            minChildSize: 0.42,
+            maxChildSize: 0.92,
+            builder: (context, _) => Padding(
               padding: const EdgeInsets.all(16),
-              child: AtlasDetailPanel(
-                task: task,
-                onComplete: () {
-                  ref
-                      .read(matrixControllerProvider.notifier)
-                      .markTaskDone(task.id);
-                  Navigator.of(context).pop();
-                },
-                onEdit: () => Navigator.of(context).pop(),
-                onReclassify: () {
-                  Navigator.of(context).pop();
-                  WidgetsBinding.instance.addPostFrameCallback(
-                    (_) => openReclassify(task),
+              child: Consumer(
+                builder: (context, ref, _) {
+                  final liveTask = ref.watch(atlasSelectedTaskProvider);
+                  return AtlasDetailPanel(
+                    task: liveTask ?? task,
+                    labelStyle: labelStyle,
+                    onComplete: () {
+                      ref
+                          .read(matrixControllerProvider.notifier)
+                          .markTaskDone(task.id);
+                      Navigator.of(context).pop();
+                    },
+                    onEdit: () {
+                      Navigator.of(context).pop();
+                      WidgetsBinding.instance.addPostFrameCallback(
+                        (_) => openEdit(task),
+                      );
+                    },
+                    onReclassify: () {
+                      Navigator.of(context).pop();
+                      WidgetsBinding.instance.addPostFrameCallback(
+                        (_) => openReclassify(task),
+                      );
+                    },
+                    onArchive: () {
+                      ref
+                          .read(matrixControllerProvider.notifier)
+                          .archiveTask(task.id);
+                      Navigator.of(context).pop();
+                    },
+                    onRestore: () {
+                      ref
+                          .read(matrixControllerProvider.notifier)
+                          .restoreTask(task.id);
+                      Navigator.of(context).pop();
+                    },
                   );
-                },
-                onArchive: () {
-                  ref
-                      .read(matrixControllerProvider.notifier)
-                      .archiveTask(task.id);
-                  Navigator.of(context).pop();
                 },
               ),
             ),
@@ -140,7 +297,45 @@ class AtlasScreen extends ConsumerWidget {
       }
     }
 
+    Future<void> handleInsightAction(
+      AtlasInsight insight,
+      AtlasInsightAction action,
+    ) async {
+      final task = taskForInsight(insight);
+      switch (action.kind) {
+        case AtlasInsightActionKind.openPrimaryTask:
+          if (task != null) selectTask(task);
+          break;
+        case AtlasInsightActionKind.editPrimaryTask:
+          if (task == null) return;
+          selectTask(task);
+          await openEdit(task);
+          break;
+        case AtlasInsightActionKind.reclassifyPrimaryTask:
+          if (task == null) return;
+          selectTask(task);
+          await openReclassify(task);
+          break;
+        case AtlasInsightActionKind.filterLowConfidence:
+          await ref
+              .read(activeConfidenceFiltersProvider.notifier)
+              .update(const [ConfidenceLevel.low]);
+          showAtlasFeedback('Mostrando tareas con baja confianza');
+          break;
+        case AtlasInsightActionKind.groupByQuadrant:
+          ref
+              .read(atlasGroupingProvider.notifier)
+              .update(AtlasGrouping.quadrant);
+          ref.read(atlasDrilldownPathProvider.notifier).clear();
+          ref.read(atlasZoomProvider.notifier).reset();
+          showAtlasFeedback('Atlas agrupado por cuadrante');
+          break;
+      }
+    }
+
     void showQuickActions(Task task) {
+      void close() => Navigator.of(context).pop();
+
       showModalBottomSheet<void>(
         context: context,
         showDragHandle: true,
@@ -149,23 +344,77 @@ class AtlasScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
+                leading: const Icon(Icons.open_in_new),
+                title: const Text('Ver detalle'),
+                onTap: () {
+                  close();
+                  WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => selectTask(task),
+                  );
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.check_circle_outline),
                 title: const Text('Completar'),
                 onTap: () {
                   ref
                       .read(matrixControllerProvider.notifier)
                       .markTaskDone(task.id);
-                  Navigator.of(context).pop();
+                  close();
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.archive_outlined),
-                title: const Text('Archivar'),
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Editar'),
                 onTap: () {
-                  ref
-                      .read(matrixControllerProvider.notifier)
-                      .archiveTask(task.id);
-                  Navigator.of(context).pop();
+                  close();
+                  WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => openEdit(task),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.auto_fix_high),
+                title: const Text('Reclasificar'),
+                onTap: () {
+                  close();
+                  WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => openReclassify(task),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.open_with),
+                title: const Text('Mover cuadrante'),
+                onTap: () {
+                  close();
+                  WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => _showMoveQuadrantSheet(
+                      context: context,
+                      ref: ref,
+                      task: task,
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  task.isArchived
+                      ? Icons.unarchive_outlined
+                      : Icons.archive_outlined,
+                ),
+                title: Text(task.isArchived ? 'Restaurar' : 'Archivar'),
+                onTap: () {
+                  if (task.isArchived) {
+                    ref
+                        .read(matrixControllerProvider.notifier)
+                        .restoreTask(task.id);
+                  } else {
+                    ref
+                        .read(matrixControllerProvider.notifier)
+                        .archiveTask(task.id);
+                  }
+                  close();
                 },
               ),
             ],
@@ -174,29 +423,78 @@ class AtlasScreen extends ConsumerWidget {
       );
     }
 
-    final canvas = AtlasCanvas(
-      nodes: nodes,
-      focusedTaskIds: focusedIds,
-      selectedTaskId: selectedTask?.id,
-      emptyStateKind: emptyKind,
-      onTaskSelected: selectTask,
-      onTaskLongPress: showQuickActions,
-      onGroupTap: (node) {
-        ref.read(atlasDrilldownPathProvider.notifier).enter(node);
-      },
+    final canvas = RepaintBoundary(
+      key: _atlasExportBoundaryKey,
+      child: AtlasExportFrame(
+        includeHeader: _isExportingAtlas,
+        title: 'Atlas',
+        subtitle: 'Reporte visual de tareas',
+        date: _exportStartedAt,
+        groupingLabel: grouping.label,
+        filtersLabel: _atlasExportFilterLabel(
+          hasFilters: hasFilters,
+          showArchived: showArchived,
+        ),
+        visibleTaskCount: atlasTasks.length,
+        insights: _exportInsightLabels(insights),
+        footerLabel: 'Eisen',
+        child: AtlasCanvas(
+          nodes: nodes,
+          focusedTaskIds: focusedIds,
+          insightTaskIds: insightTaskIds,
+          selectedTaskId: selectedTask?.id,
+          emptyStateKind: emptyKind,
+          onTaskSelected: selectTask,
+          onTaskLongPress: showQuickActions,
+          zoomState: zoomState,
+          onZoomChanged: (scale, offset) {
+            ref.read(atlasZoomProvider.notifier).updateFromTransform(
+                  scale: scale,
+                  offset: offset,
+                );
+          },
+          onZoomIn: () => ref.read(atlasZoomProvider.notifier).zoomIn(),
+          onZoomOut: () => ref.read(atlasZoomProvider.notifier).zoomOut(),
+          onZoomReset: () => ref.read(atlasZoomProvider.notifier).reset(),
+          exportMode: _isExportingAtlas,
+          onGroupTap: (node) {
+            ref.read(atlasZoomProvider.notifier).focusGroup(node.id);
+            ref.read(atlasDrilldownPathProvider.notifier).enter(node);
+          },
+        ),
+      ),
     );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const AtlasToolbar(),
-        const AtlasLegend(),
+        AtlasToolbar(
+          config: config,
+          isExporting: _isExportingAtlas,
+          onExportPng: () => unawaited(exportAtlasPng()),
+        ),
+        AtlasInsightsStrip(
+          insights: insights,
+          compact: deviceClass.isCompact,
+          onInsightSelected: (insight) {
+            final task = taskForInsight(insight);
+            if (task != null) selectTask(task);
+          },
+          onActionSelected: (insight, action) {
+            unawaited(handleInsightAction(insight, action));
+          },
+        ),
+        AtlasLegend(config: config, labelStyle: labelStyle),
         AtlasBreadcrumb(
           path: path,
           onRoot: () {
+            ref.read(atlasZoomProvider.notifier).focusGroup(null);
             ref.read(atlasDrilldownPathProvider.notifier).clear();
           },
           onSelect: (index) {
+            if (index < 0) {
+              ref.read(atlasZoomProvider.notifier).focusGroup(null);
+            }
             ref.read(atlasDrilldownPathProvider.notifier).jumpTo(index);
           },
         ),
@@ -212,9 +510,10 @@ class AtlasScreen extends ConsumerWidget {
                         width: deviceClass.isLarge ? 340 : 300,
                         child: AtlasDetailPanel(
                           task: selectedTask,
+                          labelStyle: labelStyle,
                           onClose: () {
                             ref
-                                .read(atlasSelectedTaskProvider.notifier)
+                                .read(atlasSelectedTaskIdProvider.notifier)
                                 .select(null);
                           },
                           onComplete: () {
@@ -222,16 +521,17 @@ class AtlasScreen extends ConsumerWidget {
                                 .read(matrixControllerProvider.notifier)
                                 .markTaskDone(selectedTask.id);
                           },
-                          onEdit: () {
-                            ref
-                                .read(matrixControllerProvider.notifier)
-                                .select(selectedTask.id);
-                          },
+                          onEdit: () => openEdit(selectedTask),
                           onReclassify: () => openReclassify(selectedTask),
                           onArchive: () {
                             ref
                                 .read(matrixControllerProvider.notifier)
                                 .archiveTask(selectedTask.id);
+                          },
+                          onRestore: () {
+                            ref
+                                .read(matrixControllerProvider.notifier)
+                                .restoreTask(selectedTask.id);
                           },
                         ),
                       ),
@@ -241,6 +541,40 @@ class AtlasScreen extends ConsumerWidget {
               : canvas,
         ),
       ],
+    );
+  }
+
+  void _showMoveQuadrantSheet({
+    required BuildContext context,
+    required WidgetRef ref,
+    required Task task,
+  }) {
+    final labelStyle = ref.read(uiPrefsProvider).quadrantLabelStyle;
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final quadrant in Quadrant.values)
+              ListTile(
+                leading: Icon(
+                  task.quadrant == quadrant
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                ),
+                title: Text(getQuadrantLabel(quadrant, labelStyle).title),
+                onTap: () {
+                  ref
+                      .read(matrixControllerProvider.notifier)
+                      .moveTaskToQuadrant(task.id, quadrant);
+                  Navigator.of(context).pop();
+                },
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -297,5 +631,64 @@ class AtlasScreen extends ConsumerWidget {
     if (task.priority >= 7) return PriorityLevel.high;
     if (task.priority >= 4) return PriorityLevel.medium;
     return PriorityLevel.low;
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    if (bytes >= 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '$bytes B';
+  }
+
+  String _atlasExportSuccessMessage(AtlasExportWriteResult result) {
+    final size = _formatBytes(result.bytes);
+    if (result.downloaded) {
+      return '${result.filename} descargado ($size)';
+    }
+    final path = result.filePath;
+    if (path != null && path.isNotEmpty) {
+      return '${result.filename} guardado en $path ($size)';
+    }
+    return '${result.filename} generado ($size)';
+  }
+
+  String _atlasExportFilterLabel({
+    required bool hasFilters,
+    required bool showArchived,
+  }) {
+    if (hasFilters && showArchived) return 'Activos + archivadas';
+    if (hasFilters) return 'Activos';
+    if (showArchived) return 'Sin filtros + archivadas';
+    return 'Sin filtros';
+  }
+
+  List<String> _exportInsightLabels(List<AtlasInsight> insights) {
+    return [
+      for (final insight in insights.take(3))
+        if (insight.title.trim().isNotEmpty) insight.title.trim(),
+    ];
+  }
+
+  Map<String, dynamic> _atlasExportErrorContext({
+    required AtlasGrouping grouping,
+    required int visibleTaskCount,
+    required int nodeCount,
+    required bool hasFilters,
+    required bool showArchived,
+    required double pixelRatio,
+  }) {
+    return <String, dynamic>{
+      'feature': 'atlas_export',
+      'grouping': grouping.name,
+      'visible_task_count': visibleTaskCount,
+      'root_node_count': nodeCount,
+      'has_filters': hasFilters,
+      'show_archived': showArchived,
+      'pixel_ratio': pixelRatio,
+      'include_header': true,
+    };
   }
 }

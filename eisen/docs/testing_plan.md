@@ -1,5 +1,7 @@
 # Plan de testing
 
+**Last reviewed**: 2026-05-02
+
 ## Tipos de pruebas
 - **Unitarias**: lógica pura de dominio, algoritmos (treemap, bandit, filtros, cálculos de stats).
 - **Widget**: UI aislada (componentes y pantallas), con `ProviderScope` y overrides cuando aplique.
