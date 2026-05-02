@@ -15,11 +15,15 @@ class AtlasToolbar extends ConsumerWidget {
     this.config,
     this.onExportPng,
     this.isExporting = false,
+    this.onExportPdf,
+    this.isExportingPdf = false,
   });
 
   final AtlasResponsiveConfig? config;
   final VoidCallback? onExportPng;
   final bool isExporting;
+  final VoidCallback? onExportPdf;
+  final bool isExportingPdf;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -101,6 +105,8 @@ class AtlasToolbar extends ConsumerWidget {
                       showArchived: showArchived,
                       onExportPng: onExportPng,
                       isExporting: isExporting,
+                      onExportPdf: onExportPdf,
+                      isExportingPdf: isExportingPdf,
                       onClearFilters: () => clearAtlasBackedFilters(ref),
                       onShowArchivedChanged: (value) {
                         ref.read(showArchivedProvider.notifier).update(value);
@@ -184,6 +190,18 @@ class AtlasToolbar extends ConsumerWidget {
                       : const Icon(Icons.file_download_outlined, size: 18),
                   label: Text(isExporting ? 'Exportando' : 'Exportar PNG'),
                 ),
+                OutlinedButton.icon(
+                  onPressed: isExportingPdf ? null : onExportPdf,
+                  icon: isExportingPdf
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                  label: Text(
+                    isExportingPdf ? 'Generando PDF' : 'Exportar PDF',
+                  ),
+                ),
                 if (hasFilters)
                   OutlinedButton.icon(
                     onPressed: () => clearAtlasBackedFilters(ref),
@@ -209,6 +227,8 @@ class _MoreActionsMenu extends StatelessWidget {
     required this.showArchived,
     required this.onExportPng,
     required this.isExporting,
+    required this.onExportPdf,
+    required this.isExportingPdf,
     required this.onClearFilters,
     required this.onShowArchivedChanged,
   });
@@ -217,6 +237,8 @@ class _MoreActionsMenu extends StatelessWidget {
   final bool showArchived;
   final VoidCallback? onExportPng;
   final bool isExporting;
+  final VoidCallback? onExportPdf;
+  final bool isExportingPdf;
   final VoidCallback onClearFilters;
   final ValueChanged<bool> onShowArchivedChanged;
 
@@ -229,6 +251,9 @@ class _MoreActionsMenu extends StatelessWidget {
         switch (action) {
           case _ToolbarAction.exportPng:
             onExportPng?.call();
+            break;
+          case _ToolbarAction.exportPdf:
+            onExportPdf?.call();
             break;
           case _ToolbarAction.toggleArchived:
             onShowArchivedChanged(!showArchived);
@@ -254,6 +279,21 @@ class _MoreActionsMenu extends StatelessWidget {
             title: Text(isExporting ? 'Exportando' : 'Exportar PNG'),
           ),
         ),
+        PopupMenuItem(
+          value: _ToolbarAction.exportPdf,
+          enabled: onExportPdf != null && !isExportingPdf,
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: isExportingPdf
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.picture_as_pdf_outlined),
+            title: Text(isExportingPdf ? 'Generando PDF' : 'Exportar PDF'),
+          ),
+        ),
         const PopupMenuDivider(),
         CheckedPopupMenuItem(
           value: _ToolbarAction.toggleArchived,
@@ -272,6 +312,7 @@ class _MoreActionsMenu extends StatelessWidget {
 
 enum _ToolbarAction {
   exportPng,
+  exportPdf,
   toggleArchived,
   clearFilters,
 }

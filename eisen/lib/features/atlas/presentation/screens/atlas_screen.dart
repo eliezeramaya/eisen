@@ -9,9 +9,13 @@ import 'package:eisen/features/atlas/application/atlas_export_write_result.dart'
 import 'package:eisen/features/atlas/application/atlas_export_writer.dart';
 import 'package:eisen/features/atlas/application/atlas_providers.dart';
 import 'package:eisen/features/atlas/application/atlas_zoom_controller.dart';
+import 'package:eisen/features/atlas/application/export/atlas_pdf_data.dart';
+import 'package:eisen/features/atlas/application/export/atlas_pdf_options.dart';
+import 'package:eisen/features/atlas/application/export/atlas_pdf_summary.dart';
 import 'package:eisen/features/atlas/domain/atlas_grouping.dart';
 import 'package:eisen/features/atlas/domain/atlas_insight.dart';
 import 'package:eisen/features/atlas/domain/atlas_responsive_config.dart';
+import 'package:eisen/features/atlas/presentation/screens/atlas_print_preview_screen.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_breadcrumb.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_canvas.dart';
 import 'package:eisen/features/atlas/presentation/widgets/atlas_detail_panel.dart';
@@ -51,6 +55,7 @@ class _AtlasScreenState extends ConsumerState<AtlasScreen> {
   );
   bool _isExportingAtlas = false;
   DateTime? _exportStartedAt;
+  bool _isExportingPdf = false;
 
   @override
   Widget build(BuildContext context) {
@@ -235,6 +240,74 @@ class _AtlasScreenState extends ConsumerState<AtlasScreen> {
         }
       }
     }
+
+    Future<void> exportAtlasPdf() async {
+      if (_isExportingPdf) return;
+      setState(() => _isExportingPdf = true);
+      try {
+        await WidgetsBinding.instance.endOfFrame;
+        final bytes = await const AtlasExportService().exportBoundaryToPng(
+          repaintBoundaryKey: _atlasExportBoundaryKey,
+          pixelRatio: AtlasExportPixelRatio.standard,
+        );
+        final now = DateTime.now();
+        final summaryQ = atlasSummaryByQuadrant(atlasTasks);
+        final summaryC = atlasSummaryByCategory(atlasTasks);
+        final pdfInsights = atlasPdfInsights(
+          summaryByQuadrant: summaryQ,
+          summaryByCategory: summaryC,
+          visibleTaskCount: atlasTasks.length,
+        );
+        final data = AtlasPdfData(
+          generatedAt: now,
+          groupingLabel: grouping.label,
+          visibleTaskCount: atlasTasks.length,
+          totalTaskCount: allTasks.length,
+          tasks: atlasTasks,
+          atlasImageBytes: bytes,
+          activeFiltersLabel: hasFilters
+              ? _atlasExportFilterLabel(
+                  hasFilters: hasFilters,
+                  showArchived: showArchived,
+                )
+              : null,
+          insights: pdfInsights,
+          summaryByQuadrant: summaryQ,
+          summaryByCategory: summaryC,
+        );
+        if (!context.mounted) return;
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => AtlasPrintPreviewScreen(
+              data: data,
+              initialOptions: const AtlasPdfOptions(),
+            ),
+          ),
+        );
+      } on AtlasExportException catch (error) {
+        await ref.read(errorReporterProvider).captureMessage(
+              'Atlas PDF export capture failed: ${error.message}',
+            );
+        if (context.mounted) {
+          showAtlasFeedback(
+            'No se pudo capturar Atlas. Intenta cuando el mapa termine de cargar.',
+          );
+        }
+      } catch (error, stackTrace) {
+        await ref.read(errorReporterProvider).captureException(
+              error,
+              stackTrace,
+            );
+        if (context.mounted) {
+          showAtlasFeedback(
+            'No se pudo exportar Atlas como PDF. Intenta de nuevo.',
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isExportingPdf = false);
+      }
+    }
+
 
     void selectTask(Task task) {
       ref.read(atlasSelectedTaskIdProvider.notifier).select(task.id);
@@ -472,6 +545,8 @@ class _AtlasScreenState extends ConsumerState<AtlasScreen> {
           config: config,
           isExporting: _isExportingAtlas,
           onExportPng: () => unawaited(exportAtlasPng()),
+          isExportingPdf: _isExportingPdf,
+          onExportPdf: () => unawaited(exportAtlasPdf()),
         ),
         AtlasInsightsStrip(
           insights: insights,
