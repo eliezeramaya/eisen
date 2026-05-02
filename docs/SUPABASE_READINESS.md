@@ -1,5 +1,7 @@
 # Supabase Readiness
 
+**Last reviewed**: 2026-05-02
+
 ## Estado
 
 Eisen no inicializa Supabase todavia. El contrato vive detras de:

@@ -88,6 +88,76 @@ void main() {
       expect(groupRect.contains(child.rect.bottomRight), isTrue);
     }
   });
+
+  test('clampa mínimos al bounds padre', () {
+    final rects = computeAtlasLayout(
+      nodes: [
+        for (var index = 0; index < 12; index++) _node('n$index', 1),
+      ],
+      size: const Size(120, 80),
+      padding: const EdgeInsets.all(6),
+      gap: 8,
+      minInteractiveTileSize: const Size(56, 40),
+    );
+
+    final bounds = const Rect.fromLTWH(0, 0, 120, 80);
+    for (final item in rects) {
+      expect(item.rect.width, greaterThanOrEqualTo(0));
+      expect(item.rect.height, greaterThanOrEqualTo(0));
+      expect(bounds.contains(item.rect.topLeft), isTrue);
+      expect(bounds.contains(item.rect.bottomRight), isTrue);
+    }
+  });
+
+  test('pesos raros no generan rects inválidos', () {
+    final rects = computeAtlasLayout(
+      nodes: [
+        _node('negative', -10),
+        _node('zero', 0),
+        _node('nan', double.nan),
+        _node('infinite', double.infinity),
+        _node('valid', 4),
+      ],
+      size: const Size(300, 160),
+      padding: EdgeInsets.zero,
+    );
+
+    expect(rects.map((item) => item.nodeId), isNot(contains('nan')));
+    expect(rects.map((item) => item.nodeId), isNot(contains('infinite')));
+    for (final item in rects) {
+      expect(item.rect.width.isFinite, isTrue);
+      expect(item.rect.height.isFinite, isTrue);
+      expect(item.rect.width, greaterThanOrEqualTo(0));
+      expect(item.rect.height, greaterThanOrEqualTo(0));
+    }
+  });
+
+  test('maxDepth limita la profundidad semántica del layout', () {
+    final group = AtlasNode(
+      id: 'group',
+      label: 'Grupo',
+      weight: 2,
+      children: [_node('child-a', 1), _node('child-b', 1)],
+      type: AtlasNodeType.group,
+    );
+
+    final overviewRects = computeAtlasLayout(
+      nodes: [group],
+      size: const Size(360, 240),
+      padding: EdgeInsets.zero,
+      maxDepth: 0,
+    );
+    final taskRects = computeAtlasLayout(
+      nodes: [group],
+      size: const Size(360, 240),
+      padding: EdgeInsets.zero,
+      maxDepth: null,
+    );
+
+    expect(overviewRects.map((item) => item.nodeId), ['group']);
+    expect(taskRects.map((item) => item.nodeId), contains('child-a'));
+    expect(taskRects.map((item) => item.nodeId), contains('child-b'));
+  });
 }
 
 AtlasNode _node(String id, double weight) {

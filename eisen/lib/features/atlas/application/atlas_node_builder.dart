@@ -5,16 +5,22 @@ import 'package:eisen/features/classification/domain/enums/energy_level.dart';
 import 'package:eisen/features/classification/domain/enums/entry_kind.dart';
 import 'package:eisen/features/classification/domain/enums/time_horizon.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 
 List<AtlasNode> buildAtlasNodes({
   required List<Task> tasks,
   required AtlasGrouping grouping,
+  QuadrantLabelStyle quadrantLabelStyle = QuadrantLabelStyle.professional,
 }) {
   final buckets = <String, List<Task>>{};
   final labels = <String, String>{};
 
   for (final task in tasks) {
-    final label = atlasGroupLabelForTask(task, grouping);
+    final label = atlasGroupLabelForTask(
+      task,
+      grouping,
+      quadrantLabelStyle: quadrantLabelStyle,
+    );
     final key = label.trim().toLowerCase();
     labels[key] = label;
     buckets.putIfAbsent(key, () => <Task>[]).add(task);
@@ -43,10 +49,17 @@ List<AtlasNode> buildAtlasNodes({
   return groups;
 }
 
-String atlasGroupLabelForTask(Task task, AtlasGrouping grouping) {
+String atlasGroupLabelForTask(
+  Task task,
+  AtlasGrouping grouping, {
+  QuadrantLabelStyle quadrantLabelStyle = QuadrantLabelStyle.professional,
+}) {
   return switch (grouping) {
     AtlasGrouping.category => _categoryLabel(task),
-    AtlasGrouping.quadrant => _quadrantLabel(task.quadrant),
+    AtlasGrouping.quadrant => getQuadrantLabel(
+        task.quadrant,
+        quadrantLabelStyle,
+      ).title,
     AtlasGrouping.horizon => _horizonLabel(task.horizon),
     AtlasGrouping.energy => _energyLabel(task.energy),
     AtlasGrouping.kind => _kindLabel(task.kind),
@@ -80,15 +93,6 @@ String _categoryLabel(Task task) {
   final categoryId = task.categoryId?.trim();
   if (categoryId != null && categoryId.isNotEmpty) return categoryId;
   return 'Sin categoría';
-}
-
-String _quadrantLabel(Quadrant quadrant) {
-  return switch (quadrant) {
-    Quadrant.q1 => 'Crítico',
-    Quadrant.q2 => 'Crecimiento',
-    Quadrant.q3 => 'De otros',
-    Quadrant.q4 => 'Archivar',
-  };
 }
 
 String _horizonLabel(TimeHorizon? horizon) {

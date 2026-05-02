@@ -2,14 +2,18 @@ import 'dart:math' as math;
 
 import 'package:eisen/features/atlas/domain/atlas_layout_rect.dart';
 import 'package:eisen/features/atlas/domain/atlas_node.dart';
+import 'package:eisen/features/atlas/domain/atlas_semantic_zoom.dart';
 import 'package:eisen/features/atlas/domain/atlas_visual_encoding.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
 import 'package:flutter/material.dart';
 
 const int atlasCustomPainterNodeThreshold = 300;
 
-bool shouldUseAtlasCustomPainter(List<AtlasNode> nodes) {
-  return countAtlasRenderableNodes(nodes) > atlasCustomPainterNodeThreshold;
+bool shouldUseAtlasCustomPainter(
+  List<AtlasNode> nodes, {
+  int threshold = atlasCustomPainterNodeThreshold,
+}) {
+  return countAtlasRenderableNodes(nodes) >= threshold;
 }
 
 int countAtlasRenderableNodes(List<AtlasNode> nodes) {
@@ -40,19 +44,27 @@ class AtlasPainterCanvas extends StatefulWidget {
     required this.rects,
     required this.nodeById,
     required this.focusedTaskIds,
+    this.insightTaskIds = const <String>{},
     required this.selectedTaskId,
     required this.onTaskSelected,
     required this.onTaskLongPress,
+    this.largeDatasetThreshold = atlasCustomPainterNodeThreshold,
+    this.semanticLevel = AtlasSemanticLevel.task,
     this.onGroupTap,
+    this.exportMode = false,
   });
 
   final List<AtlasLayoutRect> rects;
   final Map<String, AtlasNode> nodeById;
   final Set<String> focusedTaskIds;
+  final Set<String> insightTaskIds;
   final String? selectedTaskId;
   final ValueChanged<Task> onTaskSelected;
   final ValueChanged<Task> onTaskLongPress;
+  final int largeDatasetThreshold;
+  final AtlasSemanticLevel semanticLevel;
   final ValueChanged<AtlasNode>? onGroupTap;
+  final bool exportMode;
 
   @override
   State<AtlasPainterCanvas> createState() => _AtlasPainterCanvasState();
@@ -64,21 +76,24 @@ class _AtlasPainterCanvasState extends State<AtlasPainterCanvas> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final effectiveHoveredNodeId = widget.exportMode ? null : _hoveredNodeId;
     return SizedBox.expand(
       child: MouseRegion(
-        cursor: _hoveredNodeId == null
+        cursor: effectiveHoveredNodeId == null
             ? SystemMouseCursors.basic
             : SystemMouseCursors.click,
-        onHover: (event) {
-          final hovered = findAtlasNodeAt(
-            rects: widget.rects,
-            nodeById: widget.nodeById,
-            position: event.localPosition,
-          );
-          if (hovered?.id != _hoveredNodeId) {
-            setState(() => _hoveredNodeId = hovered?.id);
-          }
-        },
+        onHover: widget.exportMode
+            ? null
+            : (event) {
+                final hovered = findAtlasNodeAt(
+                  rects: widget.rects,
+                  nodeById: widget.nodeById,
+                  position: event.localPosition,
+                );
+                if (hovered?.id != _hoveredNodeId) {
+                  setState(() => _hoveredNodeId = hovered?.id);
+                }
+              },
         onExit: (_) {
           if (_hoveredNodeId != null) {
             setState(() => _hoveredNodeId = null);
@@ -94,8 +109,11 @@ class _AtlasPainterCanvasState extends State<AtlasPainterCanvas> {
               rects: widget.rects,
               nodeById: widget.nodeById,
               focusedTaskIds: widget.focusedTaskIds,
+              insightTaskIds: widget.insightTaskIds,
               selectedTaskId: widget.selectedTaskId,
-              hoveredNodeId: _hoveredNodeId,
+              hoveredNodeId: effectiveHoveredNodeId,
+              largeDatasetThreshold: widget.largeDatasetThreshold,
+              semanticLevel: widget.semanticLevel,
               theme: theme,
             ),
           ),
@@ -140,19 +158,25 @@ class AtlasTreemapPainter extends CustomPainter {
     required this.rects,
     required this.nodeById,
     required this.focusedTaskIds,
+    required this.insightTaskIds,
     required this.selectedTaskId,
     required this.hoveredNodeId,
+    required this.largeDatasetThreshold,
+    required this.semanticLevel,
     required this.theme,
   });
 
   final List<AtlasLayoutRect> rects;
   final Map<String, AtlasNode> nodeById;
   final Set<String> focusedTaskIds;
+  final Set<String> insightTaskIds;
   final String? selectedTaskId;
   final String? hoveredNodeId;
+  final int largeDatasetThreshold;
+  final AtlasSemanticLevel semanticLevel;
   final ThemeData theme;
 
-  bool get _isLargeDataset => rects.length > atlasCustomPainterNodeThreshold;
+  bool get _isLargeDataset => rects.length >= largeDatasetThreshold;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -218,6 +242,7 @@ class AtlasTreemapPainter extends CustomPainter {
     final selected = task.id == selectedTaskId;
     final hovered = node.id == hoveredNodeId;
     final focused = focusedTaskIds.contains(task.id);
+    final insightHighlighted = insightTaskIds.contains(task.id);
     final encoding = resolveAtlasVisualEncoding(
       task: task,
       theme: theme,
@@ -252,14 +277,30 @@ class AtlasTreemapPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = selected
             ? 2.4
-            : encoding.showConfidenceBorder
-                ? 1.6
-                : 0.8
-        ..color = selected ? theme.colorScheme.primary : encoding.borderColor,
+            : insightHighlighted
+                ? 2
+                : encoding.showConfidenceBorder
+                    ? 1.6
+                    : 0.8
+        ..color = selected
+            ? theme.colorScheme.primary
+            : insightHighlighted
+                ? theme.colorScheme.tertiary
+                : encoding.borderColor,
     );
 
+    if (insightHighlighted && rect.width >= 34 && rect.height >= 24) {
+      canvas.drawCircle(
+        Offset(rect.left + 9, rect.bottom - 9),
+        3,
+        Paint()..color = theme.colorScheme.tertiary,
+      );
+    }
+
     final onlyBlock = rect.width < 36 || rect.height < 24;
-    if (onlyBlock || _isLargeDataset) return;
+    if (onlyBlock || _isLargeDataset || !semanticLevel.showRichTaskContent) {
+      return;
+    }
 
     final showFullText = rect.width >= 92 && rect.height >= 52;
     final showShortText = rect.width >= 60 && rect.height >= 36;

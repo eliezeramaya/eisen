@@ -1,6 +1,8 @@
 # Refactoring Summary: Clean Architecture Implementation
 
-> **Nota histórica**: Este documento refleja una refactorización anterior. Puede no corresponder al estado actual del código.
+> **⚠️ HISTORICAL DOCUMENT**: This document reflects refactoring work completed prior to May 2026. The codebase has evolved significantly since then. For current architecture, see [ARCHITECTURE.md](ARCHITECTURE.md).
+> 
+> **Last reviewed**: 2026-05-02 (marked as historical)
 
 ## Overview
 Successfully refactored the Eisenhower Matrix Flutter app by implementing Clean Architecture principles and eliminating technical debt identified in the code audit.

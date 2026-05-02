@@ -1,5 +1,7 @@
 # Responsive Design Guide
 
+**Last reviewed**: 2026-05-02
+
 This document summarizes the responsive system adopted by the app.
 
 ## Breakpoints (DeviceClass)

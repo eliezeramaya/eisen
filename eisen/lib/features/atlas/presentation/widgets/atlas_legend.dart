@@ -1,31 +1,73 @@
-import 'package:eisen/core/responsive/app_breakpoints.dart';
 import 'package:eisen/features/atlas/domain/atlas_color_resolver.dart';
+import 'package:eisen/features/atlas/domain/atlas_responsive_config.dart';
 import 'package:eisen/features/eisen_matrix/domain/entities.dart';
+import 'package:eisen/features/eisen_matrix/domain/quadrant_labels.dart';
 import 'package:flutter/material.dart';
 
 class AtlasLegend extends StatefulWidget {
-  const AtlasLegend({super.key});
+  const AtlasLegend({
+    super.key,
+    this.config,
+    required this.labelStyle,
+  });
+
+  final AtlasResponsiveConfig? config;
+  final QuadrantLabelStyle labelStyle;
 
   @override
   State<AtlasLegend> createState() => _AtlasLegendState();
 }
 
 class _AtlasLegendState extends State<AtlasLegend> {
-  bool _expanded = true;
+  late bool _expanded;
+  bool _userOverrodeExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = _defaultExpanded;
+  }
+
+  @override
+  void didUpdateWidget(covariant AtlasLegend oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_userOverrodeExpanded &&
+        oldWidget.config?.showLegendExpandedByDefault !=
+            widget.config?.showLegendExpandedByDefault) {
+      _expanded = _defaultExpanded;
+    }
+  }
+
+  bool get _defaultExpanded =>
+      widget.config?.showLegendExpandedByDefault ?? true;
 
   @override
   Widget build(BuildContext context) {
-    final isNarrow = !deviceClassFromContext(context).isExpandedUp;
+    final resolvedConfig = widget.config ??
+        atlasResponsiveConfigForWidth(MediaQuery.sizeOf(context).width);
+    final canCollapse = !resolvedConfig.showLegendExpandedByDefault;
     final theme = Theme.of(context);
     final body = Wrap(
       spacing: 12,
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        _LegendItem(label: 'Crítico', quadrant: Quadrant.q1),
-        _LegendItem(label: 'Crecimiento', quadrant: Quadrant.q2),
-        _LegendItem(label: 'De otros', quadrant: Quadrant.q3),
-        _LegendItem(label: 'Archivar', quadrant: Quadrant.q4),
+        _LegendItem(
+          label: getQuadrantLabel(Quadrant.q1, widget.labelStyle).title,
+          quadrant: Quadrant.q1,
+        ),
+        _LegendItem(
+          label: getQuadrantLabel(Quadrant.q2, widget.labelStyle).title,
+          quadrant: Quadrant.q2,
+        ),
+        _LegendItem(
+          label: getQuadrantLabel(Quadrant.q3, widget.labelStyle).title,
+          quadrant: Quadrant.q3,
+        ),
+        _LegendItem(
+          label: getQuadrantLabel(Quadrant.q4, widget.labelStyle).title,
+          quadrant: Quadrant.q4,
+        ),
         _Meaning(icon: Icons.aspect_ratio, label: 'Tamaño = peso / impacto'),
         _Meaning(icon: Icons.palette_outlined, label: 'Color = cuadrante'),
         _Meaning(icon: Icons.border_outer, label: 'Borde = confianza'),
@@ -45,12 +87,15 @@ class _AtlasLegendState extends State<AtlasLegend> {
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: isNarrow
+          child: canCollapse
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     InkWell(
-                      onTap: () => setState(() => _expanded = !_expanded),
+                      onTap: () => setState(() {
+                        _userOverrodeExpanded = true;
+                        _expanded = !_expanded;
+                      }),
                       child: Row(
                         children: [
                           const Text('Leyenda'),

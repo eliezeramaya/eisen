@@ -6,6 +6,13 @@ enum AtlasGrouping {
   kind,
 }
 
+AtlasGrouping atlasGroupingFromName(String? name) {
+  for (final grouping in AtlasGrouping.values) {
+    if (grouping.name == name) return grouping;
+  }
+  return AtlasGrouping.category;
+}
+
 extension AtlasGroupingLabel on AtlasGrouping {
   String get label => switch (this) {
         AtlasGrouping.category => 'Categoría',

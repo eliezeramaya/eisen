@@ -1,9 +1,10 @@
 # 📘 EISEN – Guía Completa de Desarrollo y Roadmap
 
 **Estado del repositorio**: Commit `latest` | Versión `1.1.0+2`  
-**Documento técnico maestro** para desarrollo con VS Code + Copilot  
-**Autor**: ChatGPT – Ingeniería UX/UI & Flutter Clean Architecture  
-**Última actualización**: 02 de May 2026
+**Documento técnico maestro** para desarrollo  
+**Autor**: Eliezer Amaya Sanchez  
+**Última actualización**: 02 de May 2026  
+**Last reviewed**: 2026-05-02
 
 ---
 
@@ -23,12 +24,12 @@
 
 ## 1. Introducción
 
-**Eisen** es una aplicación de productividad basada en la **Matriz de Eisenhower** para gestión de tareas por urgencia e importancia. Este documento sirve como **referencia técnica única** del proyecto.
+**Eisen** es una aplicación de productividad basada en la para gestión de tareas por urgencia e importancia. Este documento sirve como **referencia técnica única** del proyecto.
 
 ### 1.1 Propósito del Documento
 
 - ✅ **Desarrolladores**: Entender el estado completo del proyecto
-- 🤖 **GitHub Copilot / IA**: Recibir contexto preciso para implementaciones
+- 🤖 **IA**: Recibir contexto preciso para implementaciones
 - 📊 **Product Managers**: Trackear progreso y prioridades
 - 🧪 **QA**: Validar funcionalidades contra especificaciones
 - 👥 **Stakeholders**: Visibilidad del roadmap y timeline
@@ -621,8 +622,8 @@ Esta estrategia define una arquitectura escalable de IA/ML que evoluciona desde 
 
 ##### **Capa 0: Instrumentación y Datos (Fundación)**
 
-**Estado**: ⚠️ Parcialmente implementado  
-**Prioridad**: P2 (8-12h)  
+**Estado**: ✅ Completamente implementado  
+**Módulo**: `core/analytics/`  
 **Objetivo**: Captura estructurada de eventos para todo el análisis posterior
 
 **Datos clave a capturar:**
@@ -652,10 +653,10 @@ Esta estrategia define una arquitectura escalable de IA/ML que evoluciona desde 
    - Dismiss
    - Tiempo hasta acción
 
-**Implementación propuesta:**
+**Implementación actual:**
 
 ```dart
-// lib/core/analytics/user_event.dart
+// lib/core/analytics/user_event.dart (✅ implementado)
 enum EventType {
   taskCreated, taskCompleted, taskRescheduled, taskDeleted,
   focusSessionStarted, focusSessionCompleted, focusSessionAbandoned,
@@ -674,7 +675,7 @@ class UserEvent {
   final String anonymousUserId;
 }
 
-// lib/core/analytics/analytics_service.dart
+// lib/core/analytics/analytics_service.dart (✅ implementado)
 class AnalyticsService {
   // Solo registra eventos localmente
   Future<void> logEvent(UserEvent event);
@@ -688,7 +689,7 @@ class AnalyticsService {
   Future<void> resetAnonymousId();
 }
 
-// lib/core/analytics/user_behavior_snapshot.dart
+// lib/core/analytics/user_behavior_snapshot.dart (✅ implementado)
 class UserBehaviorSnapshot {
   final DateTime periodStart;
   final DateTime periodEnd;
@@ -729,8 +730,9 @@ class UserBehaviorSnapshot {
 
 ##### **Capa 1: IA Clásica (Predicciones Útiles)**
 
-**Estado**: ❌ No implementado  
-**Prioridad**: P3 (15-20h)  
+**Estado**: ✅ Implementado (scoring heurístico)  
+**Módulo**: `features/insights_ml/`  
+**Prioridad**: P3 para mejora con modelos ML remotos (15-20h)  
 **Objetivo**: Inferencias sistemáticas basadas en patrones históricos del usuario
 
 **Modelos clave:**
@@ -758,7 +760,7 @@ class UserBehaviorSnapshot {
 **Arquitectura técnica:**
 
 ```dart
-// lib/features/ml/domain/task_completion_model.dart
+// lib/features/insights_ml/domain/productivity_scoring_service.dart (✅ implementado con heurística)
 class TaskCompletionModel {
   // Modelo entrenado offline (XGBoost → pesos)
   final Map<String, double> weights;
@@ -917,7 +919,7 @@ class BanditArm {
 **Clustering de arquetipos:**
 
 ```dart
-// lib/features/ml/domain/productivity_archetype.dart
+// lib/features/insights_adaptive/data/productivity_clustering.dart (✅ implementado)
 enum ProductivityArchetype {
   morningPerson, nightOwl,
   sprinter, marathoner,
@@ -1009,7 +1011,7 @@ Con bandits, cada tipo de nudge es un "brazo" con recompensas:
 **Implementación avanzada:**
 
 ```dart
-// lib/features/ml/domain/contextual_bandit.dart
+// lib/features/insights_adaptive/data/thompson_bandit.dart (✅ implementado)
 class ContextualBandit {
   // Un bandit por contexto
   final Map<String, AdaptiveNudgeSelector> contextBandits;
@@ -1189,9 +1191,11 @@ List<Nudge> generateNudges({
 
 ##### **Capa 3: IA Generativa (Asistencia Avanzada)**
 
-**Estado**: ❌ No implementado  
+**Estado**: 🚧 No implementado (aspiracional)  
 **Prioridad**: P3 (30-40h)  
 **Objetivo**: Integración de LLM para planificación y coaching
+
+> **Nota**: Los ejemplos de código a continuación son aspiracionales y muestran cómo podría implementarse en el futuro. Los paths `lib/features/ai/` no existen actualmente.
 
 Aquí combinamos los datos estructurados + modelos ML con un LLM para crear una experiencia de "coach personal" que entiende contexto y habla en lenguaje natural.
 
@@ -1219,7 +1223,7 @@ Aquí combinamos los datos estructurados + modelos ML con un LLM para crear una 
 **Arquitectura técnica:**
 
 ```dart
-// lib/features/ai/domain/llm_service.dart
+// lib/features/ai/domain/llm_service.dart (🚧 futuro - no implementado)
 abstract class LLMService {
   Future<DailyPlan> generateDailyPlan({
     required List<Task> tasks,
@@ -1237,7 +1241,7 @@ abstract class LLMService {
   });
 }
 
-// lib/features/ai/data/llm_service_openai.dart (example)
+// lib/features/ai/data/llm_service_openai.dart (🚧 futuro - no implementado)
 class OpenAILLMService implements LLMService {
   final String apiKey;
   
@@ -1327,7 +1331,7 @@ Te propongo este plan:
 **UI - Modal Interactivo**:
 
 ```dart
-// lib/features/ai/presentation/daily_plan_dialog.dart
+// lib/features/ai/presentation/daily_plan_dialog.dart (🚧 futuro - no implementado)
 class DailyPlanDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1479,7 +1483,7 @@ Total: 210min (ajustado por overhead)
 **Implementación**:
 
 ```dart
-// lib/features/ai/domain/task_breakdown_service.dart
+// lib/features/ai/domain/task_breakdown_service.dart (🚧 futuro - no implementado)
 class TaskBreakdownService {
   final LLMService llm;
   
@@ -1516,7 +1520,7 @@ Format: JSON array of {title, minutes, quadrant, dependencies}
   }
 }
 
-// lib/features/ai/presentation/task_breakdown_sheet.dart
+// lib/features/ai/presentation/task_breakdown_sheet.dart (🚧 futuro - no implementado)
 void showTaskBreakdownSheet(BuildContext context, Task task) {
   showModalBottomSheet(
     context: context,
