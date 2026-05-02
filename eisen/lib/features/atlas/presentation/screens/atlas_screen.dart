@@ -128,9 +128,7 @@ class _AtlasScreenState extends ConsumerState<AtlasScreen> {
         ref.read(atlasSelectedTaskIdProvider.notifier).select(updatedTask!.id);
       }
 
-      await ref
-          .read(classificationReviewControllerProvider.notifier)
-          .recordCorrection(
+      await ref.read(classificationReviewControllerProvider.notifier).recordCorrection(
             taskId: task.id,
             inputText: original.inputText,
             original: original,
@@ -308,7 +306,6 @@ class _AtlasScreenState extends ConsumerState<AtlasScreen> {
       }
     }
 
-
     void selectTask(Task task) {
       ref.read(atlasSelectedTaskIdProvider.notifier).select(task.id);
       ref.read(matrixControllerProvider.notifier).select(task.id);
@@ -332,9 +329,7 @@ class _AtlasScreenState extends ConsumerState<AtlasScreen> {
                     task: liveTask ?? task,
                     labelStyle: labelStyle,
                     onComplete: () {
-                      ref
-                          .read(matrixControllerProvider.notifier)
-                          .markTaskDone(task.id);
+                      ref.read(matrixControllerProvider.notifier).markTaskDone(task.id);
                       Navigator.of(context).pop();
                     },
                     onEdit: () {
@@ -350,15 +345,11 @@ class _AtlasScreenState extends ConsumerState<AtlasScreen> {
                       );
                     },
                     onArchive: () {
-                      ref
-                          .read(matrixControllerProvider.notifier)
-                          .archiveTask(task.id);
+                      ref.read(matrixControllerProvider.notifier).archiveTask(task.id);
                       Navigator.of(context).pop();
                     },
                     onRestore: () {
-                      ref
-                          .read(matrixControllerProvider.notifier)
-                          .restoreTask(task.id);
+                      ref.read(matrixControllerProvider.notifier).restoreTask(task.id);
                       Navigator.of(context).pop();
                     },
                   );
@@ -390,15 +381,11 @@ class _AtlasScreenState extends ConsumerState<AtlasScreen> {
           await openReclassify(task);
           break;
         case AtlasInsightActionKind.filterLowConfidence:
-          await ref
-              .read(activeConfidenceFiltersProvider.notifier)
-              .update(const [ConfidenceLevel.low]);
+          await ref.read(activeConfidenceFiltersProvider.notifier).update(const [ConfidenceLevel.low]);
           showAtlasFeedback('Mostrando tareas con baja confianza');
           break;
         case AtlasInsightActionKind.groupByQuadrant:
-          ref
-              .read(atlasGroupingProvider.notifier)
-              .update(AtlasGrouping.quadrant);
+          ref.read(atlasGroupingProvider.notifier).update(AtlasGrouping.quadrant);
           ref.read(atlasDrilldownPathProvider.notifier).clear();
           ref.read(atlasZoomProvider.notifier).reset();
           showAtlasFeedback('Atlas agrupado por cuadrante');
@@ -430,9 +417,7 @@ class _AtlasScreenState extends ConsumerState<AtlasScreen> {
                 leading: const Icon(Icons.check_circle_outline),
                 title: const Text('Completar'),
                 onTap: () {
-                  ref
-                      .read(matrixControllerProvider.notifier)
-                      .markTaskDone(task.id);
+                  ref.read(matrixControllerProvider.notifier).markTaskDone(task.id);
                   close();
                 },
               ),
@@ -472,20 +457,14 @@ class _AtlasScreenState extends ConsumerState<AtlasScreen> {
               ),
               ListTile(
                 leading: Icon(
-                  task.isArchived
-                      ? Icons.unarchive_outlined
-                      : Icons.archive_outlined,
+                  task.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
                 ),
                 title: Text(task.isArchived ? 'Restaurar' : 'Archivar'),
                 onTap: () {
                   if (task.isArchived) {
-                    ref
-                        .read(matrixControllerProvider.notifier)
-                        .restoreTask(task.id);
+                    ref.read(matrixControllerProvider.notifier).restoreTask(task.id);
                   } else {
-                    ref
-                        .read(matrixControllerProvider.notifier)
-                        .archiveTask(task.id);
+                    ref.read(matrixControllerProvider.notifier).archiveTask(task.id);
                   }
                   close();
                 },
@@ -587,26 +566,18 @@ class _AtlasScreenState extends ConsumerState<AtlasScreen> {
                           task: selectedTask,
                           labelStyle: labelStyle,
                           onClose: () {
-                            ref
-                                .read(atlasSelectedTaskIdProvider.notifier)
-                                .select(null);
+                            ref.read(atlasSelectedTaskIdProvider.notifier).select(null);
                           },
                           onComplete: () {
-                            ref
-                                .read(matrixControllerProvider.notifier)
-                                .markTaskDone(selectedTask.id);
+                            ref.read(matrixControllerProvider.notifier).markTaskDone(selectedTask.id);
                           },
                           onEdit: () => openEdit(selectedTask),
                           onReclassify: () => openReclassify(selectedTask),
                           onArchive: () {
-                            ref
-                                .read(matrixControllerProvider.notifier)
-                                .archiveTask(selectedTask.id);
+                            ref.read(matrixControllerProvider.notifier).archiveTask(selectedTask.id);
                           },
                           onRestore: () {
-                            ref
-                                .read(matrixControllerProvider.notifier)
-                                .restoreTask(selectedTask.id);
+                            ref.read(matrixControllerProvider.notifier).restoreTask(selectedTask.id);
                           },
                         ),
                       ),
@@ -635,15 +606,11 @@ class _AtlasScreenState extends ConsumerState<AtlasScreen> {
             for (final quadrant in Quadrant.values)
               ListTile(
                 leading: Icon(
-                  task.quadrant == quadrant
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked,
+                  task.quadrant == quadrant ? Icons.radio_button_checked : Icons.radio_button_unchecked,
                 ),
                 title: Text(getQuadrantLabel(quadrant, labelStyle).title),
                 onTap: () {
-                  ref
-                      .read(matrixControllerProvider.notifier)
-                      .moveTaskToQuadrant(task.id, quadrant);
+                  ref.read(matrixControllerProvider.notifier).moveTaskToQuadrant(task.id, quadrant);
                   Navigator.of(context).pop();
                 },
               ),
@@ -669,9 +636,7 @@ class _AtlasScreenState extends ConsumerState<AtlasScreen> {
     if (existing != null) {
       return existing.copyWith(
         inputText: existing.inputText.isEmpty ? task.title : existing.inputText,
-        normalizedText: existing.normalizedText.isEmpty
-            ? task.title.trim().toLowerCase()
-            : existing.normalizedText,
+        normalizedText: existing.normalizedText.isEmpty ? task.title.trim().toLowerCase() : existing.normalizedText,
         suggestedQuadrant: existing.suggestedQuadrant ?? task.quadrant,
       );
     }

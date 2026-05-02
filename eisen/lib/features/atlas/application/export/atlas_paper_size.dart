@@ -46,20 +46,13 @@ PdfPageFormat atlasPdfPageFormat(
     AtlasPaperSize.a4 => PdfPageFormat.a4,
     AtlasPaperSize.legal => PdfPageFormat.legal,
     AtlasPaperSize.a3 => PdfPageFormat.a3,
-    AtlasPaperSize.archA =>
-      PdfPageFormat(9 * PdfPageFormat.inch, 12 * PdfPageFormat.inch),
-    AtlasPaperSize.archB =>
-      PdfPageFormat(12 * PdfPageFormat.inch, 18 * PdfPageFormat.inch),
-    AtlasPaperSize.archC =>
-      PdfPageFormat(18 * PdfPageFormat.inch, 24 * PdfPageFormat.inch),
-    AtlasPaperSize.archD =>
-      PdfPageFormat(24 * PdfPageFormat.inch, 36 * PdfPageFormat.inch),
-    AtlasPaperSize.archE =>
-      PdfPageFormat(36 * PdfPageFormat.inch, 48 * PdfPageFormat.inch),
-    AtlasPaperSize.archE1 =>
-      PdfPageFormat(30 * PdfPageFormat.inch, 42 * PdfPageFormat.inch),
-    AtlasPaperSize.custom => customWidthInches != null &&
-            customHeightInches != null
+    AtlasPaperSize.archA => PdfPageFormat(9 * PdfPageFormat.inch, 12 * PdfPageFormat.inch),
+    AtlasPaperSize.archB => PdfPageFormat(12 * PdfPageFormat.inch, 18 * PdfPageFormat.inch),
+    AtlasPaperSize.archC => PdfPageFormat(18 * PdfPageFormat.inch, 24 * PdfPageFormat.inch),
+    AtlasPaperSize.archD => PdfPageFormat(24 * PdfPageFormat.inch, 36 * PdfPageFormat.inch),
+    AtlasPaperSize.archE => PdfPageFormat(36 * PdfPageFormat.inch, 48 * PdfPageFormat.inch),
+    AtlasPaperSize.archE1 => PdfPageFormat(30 * PdfPageFormat.inch, 42 * PdfPageFormat.inch),
+    AtlasPaperSize.custom => customWidthInches != null && customHeightInches != null
         ? PdfPageFormat(
             customWidthInches * PdfPageFormat.inch,
             customHeightInches * PdfPageFormat.inch,
@@ -75,14 +68,8 @@ PdfPageFormat atlasPdfPageFormat(
 
 double marginForPaperSize(AtlasPaperSize size) {
   return switch (size) {
-    AtlasPaperSize.letter ||
-    AtlasPaperSize.a4 ||
-    AtlasPaperSize.legal =>
-      24,
-    AtlasPaperSize.a3 ||
-    AtlasPaperSize.archA ||
-    AtlasPaperSize.archB =>
-      30,
+    AtlasPaperSize.letter || AtlasPaperSize.a4 || AtlasPaperSize.legal => 24,
+    AtlasPaperSize.a3 || AtlasPaperSize.archA || AtlasPaperSize.archB => 30,
     AtlasPaperSize.archC ||
     AtlasPaperSize.archD ||
     AtlasPaperSize.archE ||

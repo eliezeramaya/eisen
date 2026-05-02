@@ -38,24 +38,20 @@ void main() {
     });
 
     test('ARCH E1 is 30 × 42 inches in portrait', () {
-      final f =
-          atlasPdfPageFormat(AtlasPaperSize.archE1, orientation: portrait);
+      final f = atlasPdfPageFormat(AtlasPaperSize.archE1, orientation: portrait);
       expect(f.width, closeTo(30 * PdfPageFormat.inch, 0.1));
       expect(f.height, closeTo(42 * PdfPageFormat.inch, 0.1));
     });
 
     test('landscape inverts width and height for ARCH B', () {
-      final portrait =
-          atlasPdfPageFormat(AtlasPaperSize.archB, orientation: AtlasPaperOrientation.portrait);
-      final land =
-          atlasPdfPageFormat(AtlasPaperSize.archB, orientation: landscape);
+      final portrait = atlasPdfPageFormat(AtlasPaperSize.archB, orientation: AtlasPaperOrientation.portrait);
+      final land = atlasPdfPageFormat(AtlasPaperSize.archB, orientation: landscape);
       expect(land.width, closeTo(portrait.height, 0.1));
       expect(land.height, closeTo(portrait.width, 0.1));
     });
 
     test('custom without values falls back to letter', () {
-      final f =
-          atlasPdfPageFormat(AtlasPaperSize.custom, orientation: portrait);
+      final f = atlasPdfPageFormat(AtlasPaperSize.custom, orientation: portrait);
       expect(f.width, closeTo(PdfPageFormat.letter.width, 0.1));
       expect(f.height, closeTo(PdfPageFormat.letter.height, 0.1));
     });

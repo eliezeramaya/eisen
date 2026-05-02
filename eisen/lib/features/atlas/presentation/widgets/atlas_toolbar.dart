@@ -32,8 +32,7 @@ class AtlasToolbar extends ConsumerWidget {
     final showArchived = ref.watch(showArchivedProvider);
     final savedViews = ref.watch(savedAtlasViewsProvider);
     final activeSavedViewId = ref.watch(activeSavedAtlasViewProvider);
-    final resolvedConfig = config ??
-        atlasResponsiveConfigForWidth(MediaQuery.sizeOf(context).width);
+    final resolvedConfig = config ?? atlasResponsiveConfigForWidth(MediaQuery.sizeOf(context).width);
     final deviceClass = deviceClassFromContext(context);
     final isCompact = deviceClass.isCompact;
     final theme = Theme.of(context);
@@ -42,8 +41,7 @@ class AtlasToolbar extends ConsumerWidget {
       label: const Text('Agrupar'),
       width: isCompact ? 210 : null,
       dropdownMenuEntries: [
-        for (final item in AtlasGrouping.values)
-          DropdownMenuEntry(value: item, label: item.label),
+        for (final item in AtlasGrouping.values) DropdownMenuEntry(value: item, label: item.label),
       ],
       onSelected: (value) {
         if (value != null) {
@@ -73,30 +71,22 @@ class AtlasToolbar extends ConsumerWidget {
                       activeViewId: activeSavedViewId,
                       onApply: (view) {
                         unawaited(
-                          ref
-                              .read(savedAtlasViewsProvider.notifier)
-                              .applyView(view),
+                          ref.read(savedAtlasViewsProvider.notifier).applyView(view),
                         );
                       },
                       onSave: (name) {
                         unawaited(
-                          ref
-                              .read(savedAtlasViewsProvider.notifier)
-                              .saveCurrentView(name),
+                          ref.read(savedAtlasViewsProvider.notifier).saveCurrentView(name),
                         );
                       },
                       onRename: (view, name) {
                         unawaited(
-                          ref
-                              .read(savedAtlasViewsProvider.notifier)
-                              .renameView(view.id, name),
+                          ref.read(savedAtlasViewsProvider.notifier).renameView(view.id, name),
                         );
                       },
                       onDelete: (view) {
                         unawaited(
-                          ref
-                              .read(savedAtlasViewsProvider.notifier)
-                              .deleteView(view.id),
+                          ref.read(savedAtlasViewsProvider.notifier).deleteView(view.id),
                         );
                       },
                     ),
@@ -153,30 +143,22 @@ class AtlasToolbar extends ConsumerWidget {
                   activeViewId: activeSavedViewId,
                   onApply: (view) {
                     unawaited(
-                      ref
-                          .read(savedAtlasViewsProvider.notifier)
-                          .applyView(view),
+                      ref.read(savedAtlasViewsProvider.notifier).applyView(view),
                     );
                   },
                   onSave: (name) {
                     unawaited(
-                      ref
-                          .read(savedAtlasViewsProvider.notifier)
-                          .saveCurrentView(name),
+                      ref.read(savedAtlasViewsProvider.notifier).saveCurrentView(name),
                     );
                   },
                   onRename: (view, name) {
                     unawaited(
-                      ref
-                          .read(savedAtlasViewsProvider.notifier)
-                          .renameView(view.id, name),
+                      ref.read(savedAtlasViewsProvider.notifier).renameView(view.id, name),
                     );
                   },
                   onDelete: (view) {
                     unawaited(
-                      ref
-                          .read(savedAtlasViewsProvider.notifier)
-                          .deleteView(view.id),
+                      ref.read(savedAtlasViewsProvider.notifier).deleteView(view.id),
                     );
                   },
                 ),
@@ -375,9 +357,7 @@ class _ViewsMenu extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  view.id == activeViewId
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked,
+                  view.id == activeViewId ? Icons.radio_button_checked : Icons.radio_button_unchecked,
                   size: 18,
                 ),
                 const SizedBox(width: 8),
@@ -444,16 +424,13 @@ enum _ViewsMenuActionKind {
 class _ViewsMenuAction {
   const _ViewsMenuAction._(this.kind, this.view);
 
-  const _ViewsMenuAction.apply(SavedAtlasView view)
-      : this._(_ViewsMenuActionKind.apply, view);
+  const _ViewsMenuAction.apply(SavedAtlasView view) : this._(_ViewsMenuActionKind.apply, view);
 
   const _ViewsMenuAction.save() : this._(_ViewsMenuActionKind.save, null);
 
-  const _ViewsMenuAction.rename(SavedAtlasView? view)
-      : this._(_ViewsMenuActionKind.rename, view);
+  const _ViewsMenuAction.rename(SavedAtlasView? view) : this._(_ViewsMenuActionKind.rename, view);
 
-  const _ViewsMenuAction.delete(SavedAtlasView? view)
-      : this._(_ViewsMenuActionKind.delete, view);
+  const _ViewsMenuAction.delete(SavedAtlasView? view) : this._(_ViewsMenuActionKind.delete, view);
 
   final _ViewsMenuActionKind kind;
   final SavedAtlasView? view;

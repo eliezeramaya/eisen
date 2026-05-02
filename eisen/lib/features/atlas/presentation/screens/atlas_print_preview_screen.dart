@@ -16,8 +16,7 @@ class AtlasPrintPreviewScreen extends StatefulWidget {
   final AtlasPdfOptions initialOptions;
 
   @override
-  State<AtlasPrintPreviewScreen> createState() =>
-      _AtlasPrintPreviewScreenState();
+  State<AtlasPrintPreviewScreen> createState() => _AtlasPrintPreviewScreenState();
 }
 
 class _AtlasPrintPreviewScreenState extends State<AtlasPrintPreviewScreen> {

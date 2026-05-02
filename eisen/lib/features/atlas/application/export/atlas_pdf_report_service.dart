@@ -49,8 +49,7 @@ class AtlasPdfReportService {
                 pw.SizedBox(height: marginPt * 0.4),
                 _buildInsights(data.insights),
               ],
-              if (options.includeTaskSummary &&
-                  data.summaryByQuadrant.isNotEmpty) ...[
+              if (options.includeTaskSummary && data.summaryByQuadrant.isNotEmpty) ...[
                 pw.SizedBox(height: marginPt * 0.4),
                 _buildSummary(data),
               ],
@@ -182,15 +181,13 @@ class AtlasPdfReportService {
                 height: 10,
                 decoration: pw.BoxDecoration(
                   color: item.$1,
-                  borderRadius:
-                      const pw.BorderRadius.all(pw.Radius.circular(2)),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
                 ),
               ),
               pw.SizedBox(width: 4),
               pw.Text(
                 item.$2,
-                style:
-                    pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
               ),
             ],
           ),
@@ -215,14 +212,11 @@ class AtlasPdfReportService {
           pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('• ',
-                  style:
-                      pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+              pw.Text('• ', style: pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
               pw.Expanded(
                 child: pw.Text(
                   insight,
-                  style:
-                      pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                  style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
                 ),
               ),
             ],
@@ -232,9 +226,7 @@ class AtlasPdfReportService {
   }
 
   pw.Widget _buildSummary(AtlasPdfData data) {
-    final entries = data.summaryByQuadrant.entries
-        .where((e) => e.value > 0)
-        .toList();
+    final entries = data.summaryByQuadrant.entries.where((e) => e.value > 0).toList();
 
     if (entries.isEmpty) return pw.SizedBox();
 
@@ -352,13 +344,11 @@ class AtlasPdfReportService {
                   children: [
                     pw.Text(
                       'Eisen',
-                      style: pw.TextStyle(
-                          fontSize: 7, color: PdfColors.grey400),
+                      style: pw.TextStyle(fontSize: 7, color: PdfColors.grey400),
                     ),
                     pw.Text(
                       'Página ${ctx.pageNumber} / ${ctx.pagesCount}',
-                      style: pw.TextStyle(
-                          fontSize: 7, color: PdfColors.grey400),
+                      style: pw.TextStyle(fontSize: 7, color: PdfColors.grey400),
                     ),
                   ],
                 ),

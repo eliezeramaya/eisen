@@ -13,8 +13,7 @@ class AtlasExportOptionsSheet extends StatefulWidget {
   final ValueChanged<AtlasPdfOptions> onChanged;
 
   @override
-  State<AtlasExportOptionsSheet> createState() =>
-      _AtlasExportOptionsSheetState();
+  State<AtlasExportOptionsSheet> createState() => _AtlasExportOptionsSheetState();
 }
 
 class _AtlasExportOptionsSheetState extends State<AtlasExportOptionsSheet> {
@@ -66,8 +65,7 @@ class _AtlasExportOptionsSheetState extends State<AtlasExportOptionsSheet> {
                         AtlasPaperSize.a3,
                       ],
                       selected: _options.paperSize,
-                      onSelected: (s) =>
-                          _update(_options.copyWith(paperSize: s)),
+                      onSelected: (s) => _update(_options.copyWith(paperSize: s)),
                     ),
                     _PaperSizeGroup(
                       label: 'Arquitectónico',
@@ -80,15 +78,13 @@ class _AtlasExportOptionsSheetState extends State<AtlasExportOptionsSheet> {
                         AtlasPaperSize.archE1,
                       ],
                       selected: _options.paperSize,
-                      onSelected: (s) =>
-                          _update(_options.copyWith(paperSize: s)),
+                      onSelected: (s) => _update(_options.copyWith(paperSize: s)),
                     ),
                     const Divider(),
                     _SectionHeader(label: 'Orientación'),
                     _OrientationToggle(
                       orientation: _options.orientation,
-                      onChanged: (o) =>
-                          _update(_options.copyWith(orientation: o)),
+                      onChanged: (o) => _update(_options.copyWith(orientation: o)),
                     ),
                     const Divider(),
                     _SectionHeader(label: 'Contenido'),
@@ -102,32 +98,27 @@ class _AtlasExportOptionsSheetState extends State<AtlasExportOptionsSheet> {
                     _ContentToggle(
                       label: 'Leyenda',
                       value: _options.includeLegend,
-                      onChanged: (v) =>
-                          _update(_options.copyWith(includeLegend: v)),
+                      onChanged: (v) => _update(_options.copyWith(includeLegend: v)),
                     ),
                     _ContentToggle(
                       label: 'Insights',
                       value: _options.includeInsights,
-                      onChanged: (v) =>
-                          _update(_options.copyWith(includeInsights: v)),
+                      onChanged: (v) => _update(_options.copyWith(includeInsights: v)),
                     ),
                     _ContentToggle(
                       label: 'Filtros activos',
                       value: _options.includeFilters,
-                      onChanged: (v) =>
-                          _update(_options.copyWith(includeFilters: v)),
+                      onChanged: (v) => _update(_options.copyWith(includeFilters: v)),
                     ),
                     _ContentToggle(
                       label: 'Resumen por cuadrante',
                       value: _options.includeTaskSummary,
-                      onChanged: (v) =>
-                          _update(_options.copyWith(includeTaskSummary: v)),
+                      onChanged: (v) => _update(_options.copyWith(includeTaskSummary: v)),
                     ),
                     _ContentToggle(
                       label: 'Lista de tareas',
                       value: _options.includeTaskList,
-                      onChanged: (v) =>
-                          _update(_options.copyWith(includeTaskList: v)),
+                      onChanged: (v) => _update(_options.copyWith(includeTaskList: v)),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -266,9 +257,7 @@ class _OrientationChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: selected
-              ? colorScheme.primaryContainer
-              : colorScheme.surfaceContainerHighest,
+          color: selected ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: selected ? colorScheme.primary : Colors.transparent,
@@ -285,10 +274,8 @@ class _OrientationChip extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color:
-                    selected ? colorScheme.primary : colorScheme.onSurface,
-                fontWeight:
-                    selected ? FontWeight.w600 : FontWeight.normal,
+                color: selected ? colorScheme.primary : colorScheme.onSurface,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],

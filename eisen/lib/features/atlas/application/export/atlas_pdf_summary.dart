@@ -58,8 +58,7 @@ List<String> atlasPdfInsights({
   }
 
   if (summaryByCategory.isNotEmpty) {
-    final sorted = summaryByCategory.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final sorted = summaryByCategory.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     final top = sorted.first;
     if (top.value / visibleTaskCount > 0.6) {
       insights.add(

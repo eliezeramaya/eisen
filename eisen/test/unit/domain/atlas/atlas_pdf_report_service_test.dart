@@ -114,8 +114,7 @@ void main() {
 /// Returns bytes for a minimal valid 1×1 white PNG.
 Uint8List _minimalPng() {
   // Valid 1×1 white pixel PNG (generated, verified CRC)
-  const b64 =
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP4'
+  const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP4'
       '//8/AAX+Av4zEpUUAAAAAElFTkSuQmCC';
   return Uint8List.fromList(base64.decode(b64));
 }

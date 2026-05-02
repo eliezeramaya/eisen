@@ -61,8 +61,7 @@ void main() {
     });
 
     test('copyWith changes orientation', () {
-      final updated =
-          opts.copyWith(orientation: AtlasPaperOrientation.portrait);
+      final updated = opts.copyWith(orientation: AtlasPaperOrientation.portrait);
       expect(updated.orientation, AtlasPaperOrientation.portrait);
     });
 
